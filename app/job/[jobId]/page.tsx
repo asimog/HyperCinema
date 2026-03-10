@@ -194,9 +194,7 @@ export default function JobPage() {
           job.status === "payment_confirmed") ? (
           <PaymentInstructionsCard
             amountSol={payment.amountSol}
-            paymentWallet={payment.paymentWallet}
-            memo={payment.memo}
-            solanaPayUrl={payment.solanaPayUrl}
+            paymentAddress={payment.paymentAddress}
             receivedSol={payment.receivedSol}
             remainingSol={payment.remainingSol}
             statusText={statusLabel(job.status, job.progress)}

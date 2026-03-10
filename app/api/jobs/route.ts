@@ -1,5 +1,5 @@
 import { createJob } from "@/lib/jobs/repository";
-import { createSolanaPayUrl, getPlatformPaymentWallet } from "@/lib/payments/solana-pay";
+import { lamportsToSol } from "@/lib/payments/solana-pay";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { getRequestIp } from "@/lib/security/request-ip";
 import { PackageType } from "@/lib/types/domain";
@@ -74,20 +74,11 @@ export async function POST(request: NextRequest) {
       packageType: parsed.data.packageType as PackageType,
     });
 
-    const paymentWallet = getPlatformPaymentWallet();
-    const solanaPayUrl = createSolanaPayUrl({
-      amountSol: job.priceSol,
-      memo: job.jobId,
-      label: "HASHCINEMA",
-      message: "Generate Wallet Cinema",
-    });
-
     return NextResponse.json({
       jobId: job.jobId,
       priceSol: job.priceSol,
-      paymentWallet,
-      memo: job.jobId,
-      solanaPayUrl,
+      paymentAddress: job.paymentAddress,
+      amountSol: lamportsToSol(job.requiredLamports),
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";

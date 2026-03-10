@@ -11,6 +11,10 @@ import { processJob } from "@/workers/process-job";
 export async function triggerJobProcessing(jobId: string): Promise<void> {
   const env = getEnv();
   if (env.WORKER_URL) {
+    if (!env.WORKER_TOKEN) {
+      throw new Error("WORKER_TOKEN is required when WORKER_URL is configured");
+    }
+
     await withRetry(
       async () => {
         const response = await fetchWithTimeout(
@@ -19,9 +23,7 @@ export async function triggerJobProcessing(jobId: string): Promise<void> {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              ...(env.WORKER_TOKEN
-                ? { Authorization: `Bearer ${env.WORKER_TOKEN}` }
-                : {}),
+              Authorization: `Bearer ${env.WORKER_TOKEN}`,
             },
             body: JSON.stringify({ jobId }),
           },
@@ -57,7 +59,13 @@ export async function triggerJobProcessing(jobId: string): Promise<void> {
     return;
   }
 
-  // Local/dev fallback when Cloud Run worker URL is not configured.
+  if (!env.ALLOW_IN_PROCESS_WORKER) {
+    throw new Error(
+      "WORKER_URL is not configured and ALLOW_IN_PROCESS_WORKER is disabled",
+    );
+  }
+
+  // Local/dev fallback when remote worker dispatch is intentionally disabled.
   void processJob(jobId).catch((error) => {
     logger.error("local_worker_execution_failed", {
       component: "jobs_trigger",

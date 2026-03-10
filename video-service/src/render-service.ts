@@ -1,11 +1,13 @@
 import { promises as fs } from "fs";
 import path from "path";
 import {
+  claimRenderJob,
   createOrGetRenderJob,
   getRenderJob,
+  listRecoverableRenderJobs,
   markRenderFailed,
-  markRenderProcessing,
   markRenderReady,
+  touchRenderJob,
 } from "./repository";
 import { getVideoServiceEnv } from "./env";
 import { NormalizedRenderRequest, RenderJobRecord } from "./types";
@@ -39,6 +41,8 @@ export interface ClipGenerator {
 }
 
 export class RenderService {
+  private readonly activeRenders = new Set<string>();
+
   constructor(private readonly clipGenerator: ClipGenerator = new VertexVeoClient()) {}
 
   async startOrGet(request: NormalizedRenderRequest): Promise<RenderServiceStartResult> {
@@ -59,6 +63,7 @@ export class RenderService {
         };
       }
 
+      this.kickRender(existing.id);
       return {
         mode: "async",
         id: existing.id,
@@ -67,11 +72,7 @@ export class RenderService {
     }
 
     const created = await createOrGetRenderJob(normalizedRequest.jobId, normalizedRequest);
-    if (created.created) {
-      void this.processRender(created.record).catch(async (error) => {
-        await markRenderFailed(created.record.id, error instanceof Error ? error.message : "Unknown error");
-      });
-    }
+    this.kickRender(created.record.id);
 
     if (created.record.status === "ready" && created.record.videoUrl) {
       return {
@@ -94,9 +95,50 @@ export class RenderService {
     return getRenderJob(id);
   }
 
+  async resumePendingJobs(limit?: number): Promise<number> {
+    const env = getVideoServiceEnv();
+    const jobs = await listRecoverableRenderJobs({
+      limit: limit ?? env.RENDER_RECOVERY_BATCH_LIMIT,
+      staleAfterMs: env.RENDER_STALE_MS,
+    });
+
+    for (const job of jobs) {
+      this.kickRender(job.id);
+    }
+
+    return jobs.length;
+  }
+
+  private kickRender(jobId: string): void {
+    if (this.activeRenders.has(jobId)) {
+      return;
+    }
+
+    this.activeRenders.add(jobId);
+    void this.runRender(jobId).finally(() => {
+      this.activeRenders.delete(jobId);
+    });
+  }
+
+  private async runRender(jobId: string): Promise<void> {
+    const env = getVideoServiceEnv();
+    const claimed = await claimRenderJob(jobId, env.RENDER_STALE_MS);
+    if (!claimed) {
+      return;
+    }
+
+    try {
+      await this.processRender(claimed);
+    } catch (error) {
+      await markRenderFailed(
+        claimed.id,
+        error instanceof Error ? error.message : "Unknown error",
+      );
+    }
+  }
+
   private async processRender(record: RenderJobRecord): Promise<void> {
     const env = getVideoServiceEnv();
-    await markRenderProcessing(record.id);
 
     const metadata = record.request.metadata ?? record.request.googleVeo;
     const model = metadata?.model ?? env.VERTEX_VEO_MODEL;
@@ -120,6 +162,7 @@ export class RenderService {
         styleHints,
       });
       clipUris.push(clip.videoUris[0]!);
+      await touchRenderJob(record.id);
     }
 
     const { directory, clipPaths } = await stageClipFiles({ clipUris });

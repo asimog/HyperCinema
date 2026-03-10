@@ -1,9 +1,9 @@
 import { getEnv } from "@/lib/env";
+import { dispatchSingleJob } from "@/lib/jobs/dispatch";
 import {
   applyConfirmedPayment,
-  getJob,
+  getJobByPaymentAddress,
 } from "@/lib/jobs/repository";
-import { triggerJobProcessing } from "@/lib/jobs/trigger";
 import {
   HeliusEnhancedWebhookTransaction,
 } from "@/lib/payments/webhook";
@@ -86,14 +86,17 @@ export async function POST(request: NextRequest) {
     const results: Array<{
       signature: string | null;
       jobId: string | null;
+      destination?: string;
       result:
         | "ignored"
         | "job_not_found"
         | "partial_payment"
         | "duplicate"
         | "confirmed";
-      lamportsToPlatform?: number;
+      lamports?: number;
       remainingLamports?: number;
+      dispatch?: "ok" | "retry_scheduled" | "skipped";
+      dispatchError?: string;
     }> = [];
 
     for (const tx of transactions) {
@@ -109,76 +112,109 @@ export async function POST(request: NextRequest) {
         continue;
       }
 
-      if (onChain.lamportsToPlatform <= 0) {
+      if (onChain.transfers.length === 0) {
         results.push({ signature, jobId: null, result: "ignored" });
         continue;
       }
 
-      const memo = onChain.memo?.trim();
-      if (!memo) {
-        results.push({ signature, jobId: null, result: "ignored" });
-        continue;
-      }
+      for (const transfer of onChain.transfers) {
+        if (transfer.lamports <= 0) {
+          continue;
+        }
 
-      const job = await getJob(memo);
-      if (!job) {
-        results.push({ signature, jobId: memo, result: "job_not_found" });
-        continue;
-      }
+        const job = await getJobByPaymentAddress(transfer.destination);
+        if (!job) {
+          results.push({
+            signature,
+            jobId: null,
+            destination: transfer.destination,
+            result: "job_not_found",
+            lamports: transfer.lamports,
+          });
+          continue;
+        }
 
-      if (job.status === "complete" || job.status === "failed") {
-        results.push({ signature, jobId: job.jobId, result: "duplicate" });
-        continue;
-      }
+        if (job.status === "complete" || job.status === "failed" || job.status === "processing") {
+          results.push({
+            signature,
+            jobId: job.jobId,
+            destination: transfer.destination,
+            result: "duplicate",
+            lamports: transfer.lamports,
+          });
+          continue;
+        }
 
-      if (job.status === "processing") {
-        results.push({ signature, jobId: job.jobId, result: "duplicate" });
-        continue;
-      }
+        const payment = await applyConfirmedPayment({
+          jobId: job.jobId,
+          signature,
+          lamports: transfer.lamports,
+        });
 
-      const payment = await applyConfirmedPayment({
-        jobId: job.jobId,
-        signature,
-        lamports: onChain.lamportsToPlatform,
-      });
+        if (!payment.job) {
+          results.push({
+            signature,
+            jobId: job.jobId,
+            destination: transfer.destination,
+            result: "job_not_found",
+            lamports: transfer.lamports,
+          });
+          continue;
+        }
 
-      if (!payment.job) {
-        results.push({ signature, jobId: job.jobId, result: "job_not_found" });
-        continue;
-      }
+        if (payment.duplicate) {
+          results.push({
+            signature,
+            jobId: job.jobId,
+            destination: transfer.destination,
+            result: "duplicate",
+            lamports: transfer.lamports,
+          });
+          continue;
+        }
 
-      if (payment.duplicate) {
-        results.push({ signature, jobId: job.jobId, result: "duplicate" });
-        continue;
-      }
+        const remainingLamports = Math.max(
+          payment.job.requiredLamports - payment.job.receivedLamports,
+          0,
+        );
 
-      const remainingLamports = Math.max(
-        payment.job.requiredLamports - payment.job.receivedLamports,
-        0,
-      );
+        if (payment.job.status === "payment_confirmed") {
+          let dispatch: "ok" | "retry_scheduled" | "skipped" | undefined;
+          let dispatchError: string | undefined;
+          if (payment.newlyConfirmed) {
+            const dispatchResult = await dispatchSingleJob(job.jobId);
+            if (dispatchResult.status === "dispatched") {
+              dispatch = "ok";
+            } else if (dispatchResult.status === "retry_scheduled") {
+              dispatch = "retry_scheduled";
+              dispatchError = dispatchResult.error;
+            } else {
+              dispatch = "skipped";
+            }
+          }
 
-      if (payment.job.status === "payment_confirmed") {
-        if (payment.newlyConfirmed) {
-          await triggerJobProcessing(job.jobId);
+          results.push({
+            signature,
+            jobId: job.jobId,
+            destination: transfer.destination,
+            result: "confirmed",
+            lamports: transfer.lamports,
+            remainingLamports,
+            dispatch,
+            dispatchError,
+          });
+          continue;
         }
 
         results.push({
           signature,
           jobId: job.jobId,
-          result: "confirmed",
-          lamportsToPlatform: onChain.lamportsToPlatform,
+          destination: transfer.destination,
+          result: "partial_payment",
+          lamports: transfer.lamports,
           remainingLamports,
         });
-        continue;
       }
-
-      results.push({
-        signature,
-        jobId: job.jobId,
-        result: "partial_payment",
-        lamportsToPlatform: onChain.lamportsToPlatform,
-        remainingLamports,
-      });
     }
 
     return NextResponse.json({ ok: true, processed: results.length, results });

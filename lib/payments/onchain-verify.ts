@@ -1,5 +1,4 @@
 import { withSolanaRpcFallback } from "@/lib/helius/connection";
-import { getPlatformPaymentWallet } from "@/lib/payments/solana-pay";
 import {
   ParsedInstruction,
   ParsedTransactionWithMeta,
@@ -8,53 +7,43 @@ import {
 
 type ParsedInstructionLike = ParsedInstruction | PartiallyDecodedInstruction;
 
+export interface ParsedNativeTransfer {
+  destination: string;
+  lamports: number;
+}
+
 function isParsedInstruction(
   instruction: ParsedInstructionLike,
 ): instruction is ParsedInstruction {
   return "parsed" in instruction;
 }
 
-function maybeMemoFromInstruction(instruction: ParsedInstructionLike): string | null {
-  if (!isParsedInstruction(instruction)) {
-    return null;
+function normalizeLamports(value: unknown): number {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return Math.max(0, Math.floor(value));
   }
 
-  const programId = instruction.programId.toBase58();
-  const isMemoProgram =
-    instruction.program === "spl-memo" ||
-    instruction.program === "memo" ||
-    programId === "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr";
-
-  if (!isMemoProgram) {
-    return null;
-  }
-
-  if (typeof instruction.parsed === "string") {
-    return instruction.parsed.trim() || null;
-  }
-
-  if (instruction.parsed && typeof instruction.parsed === "object") {
-    const parsed = instruction.parsed as Record<string, unknown>;
-    if (typeof parsed.memo === "string") {
-      return parsed.memo.trim() || null;
+  if (typeof value === "string") {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) {
+      return Math.max(0, Math.floor(parsed));
     }
   }
 
-  return null;
+  return 0;
 }
 
-function lamportsToWalletFromInstruction(
+function maybeTransferFromInstruction(
   instruction: ParsedInstructionLike,
-  wallet: string,
-): number {
+): ParsedNativeTransfer | null {
   if (!isParsedInstruction(instruction) || !instruction.parsed) {
-    return 0;
+    return null;
   }
 
   const parsed = instruction.parsed as Record<string, unknown>;
   const type = typeof parsed.type === "string" ? parsed.type : null;
   if (type !== "transfer") {
-    return 0;
+    return null;
   }
 
   const info =
@@ -62,7 +51,7 @@ function lamportsToWalletFromInstruction(
       ? (parsed.info as Record<string, unknown>)
       : null;
   if (!info) {
-    return 0;
+    return null;
   }
 
   const destination =
@@ -71,74 +60,73 @@ function lamportsToWalletFromInstruction(
       : typeof info.to === "string"
         ? info.to
         : null;
-  if (destination !== wallet) {
-    return 0;
+
+  if (!destination) {
+    return null;
   }
 
-  if (typeof info.lamports === "number" && Number.isFinite(info.lamports)) {
-    return Math.max(0, Math.floor(info.lamports));
+  const lamports = normalizeLamports(info.lamports);
+  if (lamports <= 0) {
+    return null;
   }
 
-  if (typeof info.lamports === "string") {
-    const parsedLamports = Number(info.lamports);
-    if (Number.isFinite(parsedLamports)) {
-      return Math.max(0, Math.floor(parsedLamports));
-    }
-  }
-
-  return 0;
+  return {
+    destination,
+    lamports,
+  };
 }
 
-export function extractMemoFromParsedTransaction(
+export function extractNativeTransfersFromParsedTransaction(
   transaction: ParsedTransactionWithMeta | null,
-): string | null {
-  if (!transaction) return null;
+): ParsedNativeTransfer[] {
+  if (!transaction) return [];
+
+  const transfers: ParsedNativeTransfer[] = [];
 
   for (const instruction of transaction.transaction.message.instructions) {
-    const memo = maybeMemoFromInstruction(instruction);
-    if (memo) return memo;
+    const transfer = maybeTransferFromInstruction(instruction);
+    if (transfer) {
+      transfers.push(transfer);
+    }
   }
 
   for (const inner of transaction.meta?.innerInstructions ?? []) {
     for (const instruction of inner.instructions) {
-      const memo = maybeMemoFromInstruction(instruction);
-      if (memo) return memo;
+      const transfer = maybeTransferFromInstruction(instruction);
+      if (transfer) {
+        transfers.push(transfer);
+      }
     }
   }
 
-  return null;
+  return transfers;
 }
 
-export function extractLamportsToWalletFromParsedTransaction(
-  transaction: ParsedTransactionWithMeta | null,
-  wallet: string,
-): number {
-  if (!transaction) return 0;
-  let total = 0;
+export function aggregateNativeTransfersByDestination(
+  transfers: ParsedNativeTransfer[],
+): ParsedNativeTransfer[] {
+  const totals = new Map<string, number>();
 
-  for (const instruction of transaction.transaction.message.instructions) {
-    total += lamportsToWalletFromInstruction(instruction, wallet);
+  for (const transfer of transfers) {
+    totals.set(
+      transfer.destination,
+      (totals.get(transfer.destination) ?? 0) + transfer.lamports,
+    );
   }
 
-  for (const inner of transaction.meta?.innerInstructions ?? []) {
-    for (const instruction of inner.instructions) {
-      total += lamportsToWalletFromInstruction(instruction, wallet);
-    }
-  }
-
-  return total;
+  return [...totals.entries()].map(([destination, lamports]) => ({
+    destination,
+    lamports,
+  }));
 }
 
 export interface OnChainPaymentVerification {
   signature: string;
   confirmed: boolean;
-  memo: string | null;
-  lamportsToPlatform: number;
+  transfers: ParsedNativeTransfer[];
 }
 
 export async function verifyOnChainPayment(signature: string): Promise<OnChainPaymentVerification> {
-  const platformWallet = getPlatformPaymentWallet();
-
   const [status, transaction] = await Promise.all([
     withSolanaRpcFallback((connection) =>
       connection.getSignatureStatus(signature, {
@@ -163,15 +151,16 @@ export async function verifyOnChainPayment(signature: string): Promise<OnChainPa
     return {
       signature,
       confirmed: false,
-      memo: null,
-      lamportsToPlatform: 0,
+      transfers: [],
     };
   }
 
   return {
     signature,
     confirmed,
-    memo: extractMemoFromParsedTransaction(transaction),
-    lamportsToPlatform: extractLamportsToWalletFromParsedTransaction(transaction, platformWallet),
+    transfers: aggregateNativeTransfersByDestination(
+      extractNativeTransfersFromParsedTransaction(transaction),
+    ),
   };
 }
+

@@ -117,3 +117,71 @@ export async function markRenderFailed(id: string, error: string): Promise<void>
     completedAt: nowIso(),
   });
 }
+
+export async function claimRenderJob(
+  id: string,
+  staleAfterMs: number,
+): Promise<RenderJobRecord | null> {
+  return getVideoServiceDb().runTransaction(async (tx) => {
+    const ref = collection().doc(id);
+    const snap = await tx.get(ref);
+    if (!snap.exists) {
+      return null;
+    }
+
+    const current = normalize(snap.data() as RenderJobRecord);
+    if (current.status === "ready" || current.status === "failed") {
+      return null;
+    }
+
+    if (current.status === "processing") {
+      const updatedAtMs = Date.parse(current.updatedAt);
+      if (
+        Number.isFinite(updatedAtMs) &&
+        Date.now() - updatedAtMs < staleAfterMs
+      ) {
+        return null;
+      }
+    }
+
+    const updated: RenderJobRecord = {
+      ...current,
+      status: "processing",
+      renderStatus: "processing",
+      startedAt: current.startedAt ?? nowIso(),
+      updatedAt: nowIso(),
+      error: null,
+    };
+
+    tx.set(ref, updated, { merge: true });
+    return updated;
+  });
+}
+
+export async function touchRenderJob(id: string): Promise<void> {
+  await updateRenderJob(id, {});
+}
+
+export async function listRecoverableRenderJobs(params: {
+  limit: number;
+  staleAfterMs: number;
+}): Promise<RenderJobRecord[]> {
+  const snapshot = await collection()
+    .where("status", "in", ["queued", "processing"])
+    .limit(params.limit)
+    .get();
+
+  const now = Date.now();
+  return snapshot.docs
+    .map((doc) => normalize(doc.data() as RenderJobRecord))
+    .filter((record) => {
+      if (record.status === "queued") {
+        return true;
+      }
+      const updatedAtMs = Date.parse(record.updatedAt);
+      if (!Number.isFinite(updatedAtMs)) {
+        return true;
+      }
+      return now - updatedAtMs >= params.staleAfterMs;
+    });
+}

@@ -44,10 +44,18 @@ export interface JobDocument {
   updatedAt: string;
   errorCode: string | null;
   errorMessage: string | null;
+  paymentAddress: string;
+  paymentIndex: number | null;
+  paymentRouting: "dedicated_address" | "legacy_memo";
   requiredLamports: number;
   receivedLamports: number;
   paymentSignatures: string[];
   lastPaymentAt: string | null;
+  sweepStatus: "pending" | "swept" | "failed";
+  sweepSignature: string | null;
+  sweptLamports: number;
+  lastSweepAt: string | null;
+  sweepError: string | null;
 }
 
 export interface ReportTimelineItem {

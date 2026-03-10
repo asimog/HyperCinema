@@ -5,11 +5,12 @@ HASHCINEMA generates:
 - 1 combined Pump memecoin report (PDF)
 
 Payments are crypto-native and wallet-based:
-- one platform wallet
-- memo = `jobId`
+- one dedicated payment address per job
+- no memo required
 - Helius webhook auto-detection
+- durable worker dispatch retries (outbox-backed)
 
-No deposit wallet generation.
+Dedicated deposit addresses are deterministically derived from `PAYMENT_MASTER_SEED_HEX`.
 
 ## Stack
 
@@ -47,7 +48,10 @@ VIDEO_API_KEY=
 HELIUS_WEBHOOK_SECRET=
 FIREBASE_PROJECT_ID=
 HASHCINEMA_PAYMENT_WALLET=
+PAYMENT_MASTER_SEED_HEX=
 ```
+
+`HASHCINEMA_PAYMENT_WALLET` is the revenue sweep destination wallet.
 
 `FIREBASE_CLIENT_EMAIL` + `FIREBASE_PRIVATE_KEY` are optional when running on
 Google Cloud with Application Default Credentials (Cloud Run service account).
@@ -60,12 +64,20 @@ SOLANA_RPC_FALLBACK_URL=https://api.mainnet-beta.solana.com
 FIREBASE_STORAGE_BUCKET=
 WORKER_URL=
 WORKER_TOKEN=
+ALLOW_IN_PROCESS_WORKER=true
+JOB_DISPATCH_BATCH_LIMIT=25
+WORKER_MAX_BODY_BYTES=32768
+PAYMENT_DERIVATION_PREFIX=hashcinema-job
+SWEEP_MIN_LAMPORTS=5000
+SWEEP_BATCH_LIMIT=50
 OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
 OPENROUTER_APP_NAME=HASHCINEMA
 OPENROUTER_SITE_URL=
 VIDEO_API_BASE_URL=
 VIDEO_ENGINE=generic
 VIDEO_VEO_MODEL=veo-3
+VIDEO_RENDER_POLL_INTERVAL_MS=5000
+VIDEO_RENDER_MAX_POLL_ATTEMPTS=2160
 ANALYTICS_ENGINE_MODE=v2_fallback_legacy
 ```
 
@@ -81,6 +93,9 @@ VERTEX_VEO_MODEL=veo-3
 VEO_MAX_CLIP_SECONDS=8
 VERTEX_POLL_INTERVAL_MS=5000
 VERTEX_MAX_POLL_ATTEMPTS=180
+RENDER_RECOVERY_INTERVAL_MS=30000
+RENDER_STALE_MS=1200000
+RENDER_RECOVERY_BATCH_LIMIT=20
 FFMPEG_PATH=ffmpeg
 ```
 
@@ -88,14 +103,14 @@ FFMPEG_PATH=ffmpeg
 
 - `POST /api/jobs`
   - creates job
-  - returns `jobId`, `priceSol`, `paymentWallet`, `memo`, `solanaPayUrl`
+  - returns `jobId`, `priceSol`, `paymentAddress`, `amountSol`
 - `GET /api/jobs/[jobId]`
-  - returns `status`, `progress`, job/report/video payload + payment instructions
+  - returns `status`, `progress`, job/report/video payload + payment instructions (`paymentAddress`, `amountSol`, `remainingSol`)
 - `POST /api/helius-webhook`
-  - parses tx, destination, amount, memo
+  - parses tx and destination transfers
   - validates webhook shared secret
-  - verifies amount/destination/memo from on-chain RPC data (not webhook body)
-  - cumulatively settles partial payments by `jobId` memo until required amount is met
+  - verifies amount/destination from on-chain RPC data (not webhook body)
+  - cumulatively settles partial payments by destination address until required amount is met
   - idempotently confirms payment and starts worker
 - `GET /api/report/[jobId]`
 - `GET /api/video/[jobId]`
@@ -106,17 +121,16 @@ Video backend contract reference:
 ## Payment Flow
 
 1. User creates job
-2. UI shows platform wallet + amount + memo (`jobId`) + copy/paste payload + Solana Pay QR/deep link
-3. User sends SOL to platform wallet with memo (manual send or scan)
+2. UI shows dedicated payment address + amount + copy/paste payload + optional address QR
+3. User sends SOL to the dedicated address (manual send or scan)
 4. Helius webhook hits `/api/helius-webhook`
 5. Backend verifies:
    - webhook secret is valid
-   - destination is platform wallet (on-chain)
-   - memo maps to valid job (on-chain)
+   - destination maps to a valid job payment address (on-chain)
    - signature is confirmed
    - payment may be cumulative across multiple signatures
-6. Job transitions to `payment_confirmed`
-7. Worker pipeline starts and status becomes `processing`
+6. Job transitions to `payment_confirmed` and enqueues durable dispatch
+7. Worker dispatch is retried until accepted, then status becomes `processing`
 8. Job finishes at `complete`
 
 ## Worker Pipeline
@@ -128,6 +142,8 @@ Video backend contract reference:
 5. generate cinematic script + video
 6. upload assets
 7. mark complete
+8. worker `/dispatch` retries pending processing dispatches
+9. worker `/sweep` can be triggered by Cloud Scheduler to sweep dedicated payment addresses to revenue wallet
 
 ## Local Development
 
@@ -185,6 +201,30 @@ gcloud run deploy hashart-worker \
   --project hashart-fun \
   --region us-central1 \
   --image us-central1-docker.pkg.dev/hashart-fun/hashart-containers/hashart-worker:latest
+```
+
+Example Cloud Scheduler job for payment sweeps:
+
+```bash
+gcloud scheduler jobs create http hashart-payment-sweep \
+  --project hashart-fun \
+  --location us-central1 \
+  --schedule "*/5 * * * *" \
+  --http-method POST \
+  --uri "https://<worker-service-url>/sweep" \
+  --headers "Authorization=Bearer <WORKER_TOKEN>"
+```
+
+Example Cloud Scheduler job for dispatch retries:
+
+```bash
+gcloud scheduler jobs create http hashart-job-dispatch \
+  --project hashart-fun \
+  --location us-central1 \
+  --schedule "*/1 * * * *" \
+  --http-method POST \
+  --uri "https://<worker-service-url>/dispatch" \
+  --headers "Authorization=Bearer <WORKER_TOKEN>"
 ```
 
 Firebase App Hosting is intentionally not deployed in this flow.

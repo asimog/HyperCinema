@@ -8,6 +8,7 @@ import { generateReportSummary } from "../lib/ai/report";
 import { getEnv } from "../lib/env";
 import { fetchRecentTransactionsByWallet } from "../lib/helius/fetch-transactions";
 import {
+  beginJobProcessing,
   getJob,
   markJobFailed,
   updateJobProgress,
@@ -120,30 +121,28 @@ export async function processJob(jobId: string): Promise<void> {
   const env = getEnv();
   const mode: AnalyticsEngineMode = env.ANALYTICS_ENGINE_MODE;
 
-  const job = await getJob(jobId);
-  if (!job) {
+  const current = await getJob(jobId);
+  if (!current) {
     throw new Error(`Job ${jobId} not found`);
   }
 
-  if (job.status === "complete") {
+  if (current.status === "complete") {
     return;
   }
 
-  if (job.status === "processing") {
+  const begin = await beginJobProcessing(jobId);
+  if (!begin.job) {
+    throw new Error(`Job ${jobId} not found`);
+  }
+
+  if (!begin.acquired) {
     return;
   }
 
-  if (job.status !== "payment_confirmed") {
-    throw new Error(`Job ${jobId} cannot run before payment confirmation`);
-  }
-
+  const job = begin.job;
   const context = { jobId: job.jobId, wallet: job.wallet };
 
   try {
-    await updateJobStatus(jobId, "processing", {
-      progress: "fetching_transactions",
-    });
-
     let computed:
       | {
           report: Omit<ReportDocument, "summary" | "downloadUrl">;
@@ -332,4 +331,3 @@ if (process.argv[1]?.includes("process-job") && process.argv[2]) {
     process.exit(1);
   });
 }
-

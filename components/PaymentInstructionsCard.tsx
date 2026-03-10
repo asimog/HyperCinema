@@ -1,13 +1,10 @@
-"use client";
+﻿"use client";
 
-import Image from "next/image";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 
 interface PaymentInstructionsCardProps {
   amountSol: number;
-  paymentWallet: string;
-  memo: string;
-  solanaPayUrl: string;
+  paymentAddress: string;
   receivedSol?: number;
   remainingSol?: number;
   statusText?: string;
@@ -17,29 +14,65 @@ function formatSol(value: number): string {
   return value.toFixed(6).replace(/\.?0+$/, "");
 }
 
+function fallbackCopy(value: string): boolean {
+  if (typeof document === "undefined") return false;
+
+  const textarea = document.createElement("textarea");
+  textarea.value = value;
+  textarea.setAttribute("readonly", "");
+  textarea.style.position = "fixed";
+  textarea.style.opacity = "0";
+  textarea.style.pointerEvents = "none";
+
+  document.body.appendChild(textarea);
+  textarea.focus();
+  textarea.select();
+  textarea.setSelectionRange(0, textarea.value.length);
+
+  const copied = document.execCommand("copy");
+  document.body.removeChild(textarea);
+
+  return copied;
+}
+
 export function PaymentInstructionsCard(props: PaymentInstructionsCardProps) {
   const [copyError, setCopyError] = useState<string | null>(null);
+  const [copySuccess, setCopySuccess] = useState<string | null>(null);
 
-  const qrUrl = useMemo(() => {
-    return `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(
-      props.solanaPayUrl,
-    )}`;
-  }, [props.solanaPayUrl]);
+  const payableSol = props.remainingSol ?? props.amountSol;
 
   const copyPayload = [
-    `Wallet: ${props.paymentWallet}`,
-    `Amount (SOL): ${formatSol(props.remainingSol ?? props.amountSol)}`,
-    `Memo: ${props.memo}`,
-    `Solana Pay: ${props.solanaPayUrl}`,
+    "HASHCINEMA manual payment",
+    `Address: ${props.paymentAddress}`,
+    `Amount (SOL): ${formatSol(payableSol)}`,
+    "Network: Solana",
+    "Send exactly the amount above.",
   ].join("\n");
 
-  async function copy(value: string) {
+  async function copy(label: string, value: string) {
+    let copied = false;
+
     try {
-      await navigator.clipboard.writeText(value);
-      setCopyError(null);
+      if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(value);
+        copied = true;
+      }
     } catch {
-      setCopyError("Clipboard copy failed.");
+      copied = false;
     }
+
+    if (!copied) {
+      copied = fallbackCopy(value);
+    }
+
+    if (copied) {
+      setCopySuccess(`${label} copied.`);
+      setCopyError(null);
+      return;
+    }
+
+    setCopySuccess(null);
+    setCopyError("Clipboard copy failed. Please copy manually.");
   }
 
   return (
@@ -48,7 +81,7 @@ export function PaymentInstructionsCard(props: PaymentInstructionsCardProps) {
         <h2 className="text-xl font-semibold text-zinc-100">Payment Instructions</h2>
 
         <p className="text-sm text-zinc-300">
-          Manual send fallback: paste the wallet + amount below, include memo exactly, then send.
+          Manual send only: copy the address and amount exactly, then send from your wallet app.
         </p>
 
         <p className="text-sm text-zinc-300">
@@ -56,75 +89,61 @@ export function PaymentInstructionsCard(props: PaymentInstructionsCardProps) {
           <span className="font-semibold text-cyan-200">{formatSol(props.amountSol)} SOL</span>
           {typeof props.receivedSol === "number" ? (
             <>
-              {" · "}Received:{" "}
+              {" | "}Received:{" "}
               <span className="font-semibold text-zinc-100">{formatSol(props.receivedSol)} SOL</span>
             </>
           ) : null}
           {typeof props.remainingSol === "number" && props.remainingSol > 0 ? (
             <>
-              {" · "}Remaining:{" "}
+              {" | "}Remaining:{" "}
               <span className="font-semibold text-amber-200">{formatSol(props.remainingSol)} SOL</span>
             </>
           ) : null}
         </p>
 
         <div className="rounded-xl border border-zinc-800 bg-zinc-950/70 p-3">
-          <p className="text-xs uppercase tracking-[0.16em] text-zinc-400">Wallet</p>
-          <p className="mt-1 break-all text-sm text-zinc-100">{props.paymentWallet}</p>
+          <p className="text-xs uppercase tracking-[0.16em] text-zinc-400">Payment Address</p>
+          <p className="mt-1 break-all text-sm text-zinc-100">{props.paymentAddress}</p>
           <button
             type="button"
-            onClick={() => copy(props.paymentWallet)}
+            onClick={() => void copy("Address", props.paymentAddress)}
             className="mt-2 rounded-md border border-zinc-700 px-3 py-1 text-xs text-zinc-200 hover:bg-zinc-800"
           >
-            Copy wallet
+            Copy address
           </button>
         </div>
 
         <div className="rounded-xl border border-zinc-800 bg-zinc-950/70 p-3">
           <p className="text-xs uppercase tracking-[0.16em] text-zinc-400">Amount (SOL)</p>
-          <p className="mt-1 break-all text-sm text-zinc-100">
-            {formatSol(props.remainingSol ?? props.amountSol)}
-          </p>
+          <p className="mt-1 break-all text-sm text-zinc-100">{formatSol(payableSol)}</p>
           <button
             type="button"
-            onClick={() => copy(formatSol(props.remainingSol ?? props.amountSol))}
+            onClick={() => void copy("Amount", formatSol(payableSol))}
             className="mt-2 rounded-md border border-zinc-700 px-3 py-1 text-xs text-zinc-200 hover:bg-zinc-800"
           >
             Copy amount
           </button>
         </div>
 
-        <div className="rounded-xl border border-zinc-800 bg-zinc-950/70 p-3">
-          <p className="text-xs uppercase tracking-[0.16em] text-zinc-400">Memo</p>
-          <p className="mt-1 break-all text-sm text-zinc-100">{props.memo}</p>
-          <button
-            type="button"
-            onClick={() => copy(props.memo)}
-            className="mt-2 rounded-md border border-zinc-700 px-3 py-1 text-xs text-zinc-200 hover:bg-zinc-800"
-          >
-            Copy memo
-          </button>
-        </div>
-
         <div className="flex flex-wrap gap-3">
-          <a
-            href={props.solanaPayUrl}
-            className="inline-flex rounded-lg border border-cyan-500 px-4 py-2 text-sm text-cyan-200 hover:bg-cyan-500/10"
-          >
-            Open Solana Pay Link
-          </a>
           <button
             type="button"
-            onClick={() => copy(copyPayload)}
+            onClick={() => void copy("Payment payload", copyPayload)}
             className="inline-flex rounded-lg border border-zinc-700 px-4 py-2 text-sm text-zinc-200 hover:bg-zinc-800"
           >
-            Copy full payment payload
+            Copy full payment instructions
           </button>
         </div>
 
         {props.statusText ? (
           <p className="text-sm text-zinc-300">
             Status: <span className="font-semibold text-cyan-200">{props.statusText}</span>
+          </p>
+        ) : null}
+
+        {copySuccess ? (
+          <p className="rounded-lg border border-emerald-400/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200">
+            {copySuccess}
           </p>
         ) : null}
 
@@ -136,14 +155,11 @@ export function PaymentInstructionsCard(props: PaymentInstructionsCardProps) {
       </div>
 
       <div className="rounded-xl border border-zinc-800 bg-zinc-950/70 p-3">
-        <p className="mb-3 text-xs uppercase tracking-[0.16em] text-zinc-400">Scan to Pay</p>
-        <Image
-          src={qrUrl}
-          alt="Solana Pay QR"
-          width={260}
-          height={260}
-          className="h-[260px] w-[260px] rounded-lg bg-white p-2"
-        />
+        <p className="mb-3 text-xs uppercase tracking-[0.16em] text-zinc-400">QR</p>
+        <p className="text-sm leading-relaxed text-zinc-300">
+          QR rendering is disabled to avoid sending payment addresses to third-party
+          services.
+        </p>
       </div>
     </section>
   );

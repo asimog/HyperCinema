@@ -1,4 +1,5 @@
 import { getDb } from "@/lib/firebase/admin";
+import { Timestamp } from "firebase-admin/firestore";
 
 const RATE_LIMIT_COLLECTION = "rate_limits";
 
@@ -85,8 +86,10 @@ export async function enforceRateLimit(input: {
           windowSec: entry.rule.windowSec,
           bucketStart: entry.start,
           count: (current.count ?? 0) + 1,
-          updatedAt: now.toISOString(),
-          expiresAt: new Date((entry.start + entry.rule.windowSec) * 1000).toISOString(),
+          updatedAt: Timestamp.fromDate(now),
+          expiresAt: Timestamp.fromMillis(
+            (entry.start + entry.rule.windowSec) * 1000,
+          ),
         },
         { merge: true },
       );
@@ -98,4 +101,3 @@ export async function enforceRateLimit(input: {
     };
   });
 }
-

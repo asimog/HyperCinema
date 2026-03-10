@@ -1,6 +1,7 @@
 import { PACKAGE_CONFIG } from "@/lib/constants";
 import { getDb } from "@/lib/firebase/admin";
 import { assertTransition } from "@/lib/jobs/state-machine";
+import { derivePaymentAddress } from "@/lib/payments/dedicated-address";
 import { applyPaymentSettlement } from "@/lib/payments/settlement";
 import { solToLamports } from "@/lib/payments/solana-pay";
 import {
@@ -18,20 +19,82 @@ function nowIso(): string {
   return new Date().toISOString();
 }
 
+function isoToMs(value: string | null | undefined): number {
+  if (!value) return 0;
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function computeDispatchRetryDelayMs(attempt: number): number {
+  const safeAttempt = Math.max(1, Math.floor(attempt));
+  return Math.min(5 * 60_000, 5_000 * 2 ** (safeAttempt - 1));
+}
+
+export interface JobDispatchOutboxDocument {
+  jobId: string;
+  status: "pending" | "in_progress" | "dispatched";
+  attempts: number;
+  nextAttemptAt: string;
+  lockUntil: string | null;
+  lastError: string | null;
+  createdAt: string;
+  updatedAt: string;
+  dispatchedAt: string | null;
+}
+
+function normalizeDispatchOutboxDocument(
+  jobId: string,
+  raw: Partial<JobDispatchOutboxDocument>,
+): JobDispatchOutboxDocument {
+  return {
+    jobId,
+    status:
+      raw.status === "in_progress" || raw.status === "dispatched"
+        ? raw.status
+        : "pending",
+    attempts: Math.max(0, Math.floor(raw.attempts ?? 0)),
+    nextAttemptAt: raw.nextAttemptAt ?? nowIso(),
+    lockUntil: raw.lockUntil ?? null,
+    lastError: raw.lastError ?? null,
+    createdAt: raw.createdAt ?? nowIso(),
+    updatedAt: raw.updatedAt ?? nowIso(),
+    dispatchedAt: raw.dispatchedAt ?? null,
+  };
+}
+
 function normalizeJobDocument(raw: JobDocument): JobDocument {
   return {
     ...raw,
+    paymentAddress: raw.paymentAddress ?? "",
+    paymentIndex:
+      typeof raw.paymentIndex === "number" && Number.isInteger(raw.paymentIndex)
+        ? raw.paymentIndex
+        : null,
+    paymentRouting:
+      raw.paymentRouting === "dedicated_address" ? "dedicated_address" : "legacy_memo",
     requiredLamports: raw.requiredLamports ?? solToLamports(raw.priceSol),
     receivedLamports: raw.receivedLamports ?? 0,
     paymentSignatures: Array.isArray(raw.paymentSignatures)
       ? raw.paymentSignatures
       : [],
     lastPaymentAt: raw.lastPaymentAt ?? null,
+    sweepStatus:
+      raw.sweepStatus === "swept" || raw.sweepStatus === "failed"
+        ? raw.sweepStatus
+        : "pending",
+    sweepSignature: raw.sweepSignature ?? null,
+    sweptLamports: Math.max(0, Math.floor(raw.sweptLamports ?? 0)),
+    lastSweepAt: raw.lastSweepAt ?? null,
+    sweepError: raw.sweepError ?? null,
   };
 }
 
 function jobsCollection() {
   return getDb().collection("jobs");
+}
+
+function paymentCounterCollection() {
+  return getDb().collection("_meta");
 }
 
 function reportsCollection() {
@@ -46,36 +109,89 @@ function metadataCollection() {
   return getDb().collection("pump_metadata_cache");
 }
 
+function dispatchOutboxCollection() {
+  return getDb().collection("job_dispatch_outbox");
+}
+
+async function upsertDispatchOutboxPending(jobId: string): Promise<void> {
+  const createdAt = nowIso();
+  await dispatchOutboxCollection().doc(jobId).set(
+    {
+      jobId,
+      status: "pending",
+      attempts: 0,
+      nextAttemptAt: createdAt,
+      lockUntil: null,
+      lastError: null,
+      createdAt,
+      updatedAt: createdAt,
+      dispatchedAt: null,
+    } satisfies JobDispatchOutboxDocument,
+    { merge: true },
+  );
+}
+
 export async function createJob(input: {
   wallet: string;
   packageType: PackageType;
 }): Promise<JobDocument> {
   const pkg = PACKAGE_CONFIG[input.packageType];
-  const createdAt = nowIso();
   const jobId = randomUUID();
 
-  const job: JobDocument = {
-    jobId,
-    wallet: input.wallet,
-    packageType: pkg.packageType,
-    rangeDays: pkg.rangeDays,
-    priceSol: pkg.priceSol,
-    videoSeconds: pkg.videoSeconds,
-    status: "awaiting_payment",
-    progress: "awaiting_payment",
-    txSignature: null,
-    createdAt,
-    updatedAt: createdAt,
-    errorCode: null,
-    errorMessage: null,
-    requiredLamports: solToLamports(pkg.priceSol),
-    receivedLamports: 0,
-    paymentSignatures: [],
-    lastPaymentAt: null,
-  };
+  return getDb().runTransaction(async (tx) => {
+    const createdAt = nowIso();
+    const counterRef = paymentCounterCollection().doc("payment_counter");
+    const counterSnap = await tx.get(counterRef);
+    const currentCounter = counterSnap.exists
+      ? (counterSnap.data()?.nextPaymentIndex as number | undefined)
+      : undefined;
+    const paymentIndex =
+      typeof currentCounter === "number" && Number.isInteger(currentCounter) && currentCounter > 0
+        ? currentCounter
+        : 1;
 
-  await jobsCollection().doc(jobId).set(job);
-  return job;
+    const paymentAddress = derivePaymentAddress(paymentIndex);
+
+    tx.set(
+      counterRef,
+      {
+        nextPaymentIndex: paymentIndex + 1,
+        updatedAt: createdAt,
+      },
+      { merge: true },
+    );
+
+    const job: JobDocument = {
+      jobId,
+      wallet: input.wallet,
+      packageType: pkg.packageType,
+      rangeDays: pkg.rangeDays,
+      priceSol: pkg.priceSol,
+      videoSeconds: pkg.videoSeconds,
+      status: "awaiting_payment",
+      progress: "awaiting_payment",
+      txSignature: null,
+      createdAt,
+      updatedAt: createdAt,
+      errorCode: null,
+      errorMessage: null,
+      paymentAddress,
+      paymentIndex,
+      paymentRouting: "dedicated_address",
+      requiredLamports: solToLamports(pkg.priceSol),
+      receivedLamports: 0,
+      paymentSignatures: [],
+      lastPaymentAt: null,
+      sweepStatus: "pending",
+      sweepSignature: null,
+      sweptLamports: 0,
+      lastSweepAt: null,
+      sweepError: null,
+    };
+
+    tx.set(jobsCollection().doc(jobId), job);
+    return job;
+  });
 }
 
 export async function getJob(jobId: string): Promise<JobDocument | null> {
@@ -84,6 +200,58 @@ export async function getJob(jobId: string): Promise<JobDocument | null> {
     return null;
   }
   return normalizeJobDocument(doc.data() as JobDocument);
+}
+
+export async function getJobByPaymentAddress(
+  paymentAddress: string,
+): Promise<JobDocument | null> {
+  const snapshot = await jobsCollection()
+    .where("paymentAddress", "==", paymentAddress)
+    .limit(1)
+    .get();
+
+  if (snapshot.empty) {
+    return null;
+  }
+
+  return normalizeJobDocument(snapshot.docs[0]!.data() as JobDocument);
+}
+
+export async function listSweepCandidateJobs(limit: number): Promise<JobDocument[]> {
+  const queryLimit = Math.max(limit * 2, limit);
+  const [pendingSnapshot, failedSnapshot] = await Promise.all([
+    jobsCollection()
+      .where("paymentRouting", "==", "dedicated_address")
+      .where("sweepStatus", "==", "pending")
+      .orderBy("lastSweepAt", "asc")
+      .limit(queryLimit)
+      .get(),
+    jobsCollection()
+      .where("paymentRouting", "==", "dedicated_address")
+      .where("sweepStatus", "==", "failed")
+      .orderBy("lastSweepAt", "asc")
+      .limit(queryLimit)
+      .get(),
+  ]);
+
+  const seen = new Set<string>();
+  return [...pendingSnapshot.docs, ...failedSnapshot.docs]
+    .map((doc) => normalizeJobDocument(doc.data() as JobDocument))
+    .filter((job) => {
+      if (seen.has(job.jobId)) {
+        return false;
+      }
+      seen.add(job.jobId);
+      return (
+        !!job.paymentAddress &&
+        !!job.paymentIndex &&
+        (job.status === "payment_confirmed" ||
+          job.status === "processing" ||
+          job.status === "complete")
+      );
+    })
+    .sort((a, b) => isoToMs(a.lastSweepAt) - isoToMs(b.lastSweepAt))
+    .slice(0, limit);
 }
 
 export async function getReport(jobId: string): Promise<ReportDocument | null> {
@@ -217,6 +385,7 @@ export async function markPaymentConfirmed(
       progress: "payment_confirmed",
       lastPaymentAt: nowIso(),
     });
+    await upsertDispatchOutboxPending(jobId);
     return;
   }
 
@@ -226,6 +395,7 @@ export async function markPaymentConfirmed(
       progress: "payment_confirmed",
       lastPaymentAt: nowIso(),
     });
+    await upsertDispatchOutboxPending(jobId);
   }
 }
 
@@ -292,6 +462,8 @@ export async function applyConfirmedPayment(input: {
       receivedLamports: settlement.next.receivedLamports,
       paymentSignatures: settlement.next.paymentSignatures,
       lastPaymentAt: nowIso(),
+      sweepStatus: "pending",
+      sweepError: null,
       errorCode: null,
       errorMessage: null,
       updatedAt: nowIso(),
@@ -299,11 +471,50 @@ export async function applyConfirmedPayment(input: {
 
     tx.set(ref, updated, { merge: true });
 
+    if (settlement.newlyConfirmed) {
+      const createdAt = nowIso();
+      tx.set(dispatchOutboxCollection().doc(input.jobId), {
+        jobId: input.jobId,
+        status: "pending",
+        attempts: 0,
+        nextAttemptAt: createdAt,
+        lockUntil: null,
+        lastError: null,
+        createdAt,
+        updatedAt: createdAt,
+        dispatchedAt: null,
+      } satisfies JobDispatchOutboxDocument);
+    }
+
     return {
       job: updated,
       duplicate: false,
       newlyConfirmed: settlement.newlyConfirmed,
     };
+  });
+}
+
+export async function markSweepResult(input: {
+  jobId: string;
+  status: "pending" | "swept" | "failed";
+  signature?: string | null;
+  sweptLamportsDelta?: number;
+  error?: string | null;
+}): Promise<void> {
+  const current = await getJob(input.jobId);
+  if (!current) {
+    return;
+  }
+
+  const nextSweptLamports =
+    current.sweptLamports + Math.max(0, Math.floor(input.sweptLamportsDelta ?? 0));
+
+  await updateJob(input.jobId, {
+    sweepStatus: input.status,
+    sweepSignature: input.signature ?? current.sweepSignature,
+    sweptLamports: nextSweptLamports,
+    lastSweepAt: nowIso(),
+    sweepError: input.error ?? null,
   });
 }
 
@@ -328,6 +539,183 @@ export async function markJobFailed(
     errorCode,
     errorMessage,
     progress: "failed",
+  });
+}
+
+export async function beginJobProcessing(jobId: string): Promise<{
+  acquired: boolean;
+  job: JobDocument | null;
+}> {
+  return getDb().runTransaction(async (tx) => {
+    const ref = jobsCollection().doc(jobId);
+    const snap = await tx.get(ref);
+    if (!snap.exists) {
+      return {
+        acquired: false,
+        job: null,
+      };
+    }
+
+    const current = normalizeJobDocument(snap.data() as JobDocument);
+    if (current.status === "complete" || current.status === "failed") {
+      return {
+        acquired: false,
+        job: current,
+      };
+    }
+
+    if (current.status === "processing") {
+      return {
+        acquired: false,
+        job: current,
+      };
+    }
+
+    if (current.status !== "payment_confirmed") {
+      throw new Error(`Job ${jobId} cannot enter processing from ${current.status}`);
+    }
+
+    assertTransition(current.status, "processing");
+    const updated: JobDocument = {
+      ...current,
+      status: "processing",
+      progress: "fetching_transactions",
+      updatedAt: nowIso(),
+      errorCode: null,
+      errorMessage: null,
+    };
+
+    tx.set(ref, updated, { merge: true });
+    return {
+      acquired: true,
+      job: updated,
+    };
+  });
+}
+
+async function tryClaimDispatchJob(jobId: string): Promise<JobDispatchOutboxDocument | null> {
+  return getDb().runTransaction(async (tx) => {
+    const now = new Date();
+    const nowTime = now.getTime();
+    const ref = dispatchOutboxCollection().doc(jobId);
+    const snap = await tx.get(ref);
+    if (!snap.exists) {
+      return null;
+    }
+
+    const current = normalizeDispatchOutboxDocument(
+      jobId,
+      snap.data() as Partial<JobDispatchOutboxDocument>,
+    );
+
+    if (current.status === "dispatched") {
+      return null;
+    }
+
+    if (current.status === "in_progress" && isoToMs(current.lockUntil) > nowTime) {
+      return null;
+    }
+
+    if (current.status === "pending" && isoToMs(current.nextAttemptAt) > nowTime) {
+      return null;
+    }
+
+    const updated: JobDispatchOutboxDocument = {
+      ...current,
+      status: "in_progress",
+      lockUntil: new Date(nowTime + 2 * 60_000).toISOString(),
+      updatedAt: now.toISOString(),
+    };
+
+    tx.set(ref, updated, { merge: true });
+    return updated;
+  });
+}
+
+export async function claimDispatchJob(jobId: string): Promise<JobDispatchOutboxDocument | null> {
+  return tryClaimDispatchJob(jobId);
+}
+
+export async function claimDueDispatchJobs(limit: number): Promise<JobDispatchOutboxDocument[]> {
+  const queryLimit = Math.max(limit * 3, limit);
+  const snapshot = await dispatchOutboxCollection()
+    .where("status", "in", ["pending", "in_progress"])
+    .limit(queryLimit)
+    .get();
+
+  const candidates = snapshot.docs
+    .map((doc) =>
+      normalizeDispatchOutboxDocument(
+        doc.id,
+        doc.data() as Partial<JobDispatchOutboxDocument>,
+      ),
+    )
+    .sort((a, b) => isoToMs(a.nextAttemptAt) - isoToMs(b.nextAttemptAt));
+
+  const claimed: JobDispatchOutboxDocument[] = [];
+  for (const candidate of candidates) {
+    if (claimed.length >= limit) break;
+    const record = await tryClaimDispatchJob(candidate.jobId);
+    if (record) {
+      claimed.push(record);
+    }
+  }
+
+  return claimed;
+}
+
+export async function markDispatchJobSuccess(jobId: string): Promise<void> {
+  const now = nowIso();
+  await dispatchOutboxCollection().doc(jobId).set(
+    {
+      status: "dispatched",
+      lockUntil: null,
+      updatedAt: now,
+      dispatchedAt: now,
+      lastError: null,
+      nextAttemptAt: now,
+    } satisfies Partial<JobDispatchOutboxDocument>,
+    { merge: true },
+  );
+}
+
+export async function rescheduleDispatchJob(
+  jobId: string,
+  errorMessage: string,
+): Promise<void> {
+  await getDb().runTransaction(async (tx) => {
+    const now = new Date();
+    const ref = dispatchOutboxCollection().doc(jobId);
+    const snap = await tx.get(ref);
+    if (!snap.exists) {
+      return;
+    }
+
+    const current = normalizeDispatchOutboxDocument(
+      jobId,
+      snap.data() as Partial<JobDispatchOutboxDocument>,
+    );
+    if (current.status === "dispatched") {
+      return;
+    }
+
+    const attempts = current.attempts + 1;
+    const nextAttemptAt = new Date(
+      now.getTime() + computeDispatchRetryDelayMs(attempts),
+    ).toISOString();
+
+    tx.set(
+      ref,
+      {
+        status: "pending",
+        attempts,
+        nextAttemptAt,
+        lockUntil: null,
+        lastError: errorMessage,
+        updatedAt: now.toISOString(),
+      } satisfies Partial<JobDispatchOutboxDocument>,
+      { merge: true },
+    );
   });
 }
 

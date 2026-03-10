@@ -1,4 +1,23 @@
 {
-  "indexes": [],
+  "indexes": [
+    {
+      "collectionGroup": "jobs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "paymentRouting",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "sweepStatus",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "lastSweepAt",
+          "order": "ASCENDING"
+        }
+      ]
+    }
+  ],
   "fieldOverrides": []
 }

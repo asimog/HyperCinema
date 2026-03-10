@@ -11,9 +11,8 @@ import { useEffect, useState } from "react";
 interface CreateJobResponse {
   jobId: string;
   priceSol: number;
-  paymentWallet: string;
-  memo: string;
-  solanaPayUrl: string;
+  paymentAddress: string;
+  amountSol: number;
 }
 
 interface JobStatusResponse {
@@ -134,11 +133,11 @@ export default function HomePage() {
             HASHCINEMA
           </p>
           <h1 className="mt-3 max-w-3xl text-4xl font-semibold leading-tight text-zinc-100 md:text-5xl">
-            Pay Once, Memo the Job, Generate the Cinema
+            Pay to a Unique Address, Generate the Cinema
           </h1>
           <p className="mt-4 max-w-2xl text-base leading-relaxed text-zinc-300">
-            Create a job, send SOL to the platform wallet with memo = jobId, and
-            Helius will auto-detect and start generation.
+            Create a job, copy the dedicated payment address and amount, then send SOL.
+            Payment is detected on-chain and generation starts automatically.
           </p>
         </header>
 
@@ -167,10 +166,10 @@ export default function HomePage() {
         {jobPayment ? (
           <div className="mt-6 space-y-4">
             <PaymentInstructionsCard
-              amountSol={jobStatus?.payment?.amountSol ?? jobPayment.priceSol}
-              paymentWallet={jobStatus?.payment?.paymentWallet ?? jobPayment.paymentWallet}
-              memo={jobStatus?.payment?.memo ?? jobPayment.memo}
-              solanaPayUrl={jobStatus?.payment?.solanaPayUrl ?? jobPayment.solanaPayUrl}
+              amountSol={jobStatus?.payment?.amountSol ?? jobPayment.amountSol}
+              paymentAddress={
+                jobStatus?.payment?.paymentAddress ?? jobPayment.paymentAddress
+              }
               receivedSol={jobStatus?.payment?.receivedSol}
               remainingSol={jobStatus?.payment?.remainingSol}
               statusText={statusLabel(

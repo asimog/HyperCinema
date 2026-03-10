@@ -10,6 +10,13 @@ const serviceEnvSchema = z.object({
   VEO_MAX_CLIP_SECONDS: z.coerce.number().int().min(2).max(30).default(8),
   VERTEX_POLL_INTERVAL_MS: z.coerce.number().int().min(500).default(5000),
   VERTEX_MAX_POLL_ATTEMPTS: z.coerce.number().int().min(1).default(180),
+  RENDER_RECOVERY_INTERVAL_MS: z.coerce
+    .number()
+    .int()
+    .min(1_000)
+    .default(30_000),
+  RENDER_STALE_MS: z.coerce.number().int().min(60_000).default(20 * 60_000),
+  RENDER_RECOVERY_BATCH_LIMIT: z.coerce.number().int().positive().default(20),
   FFMPEG_PATH: z.string().min(1).default("ffmpeg"),
   FIREBASE_PROJECT_ID: z.string().min(1),
   FIREBASE_CLIENT_EMAIL: z.string().min(1).optional(),

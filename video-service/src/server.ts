@@ -29,6 +29,10 @@ export interface RenderServicePort {
   } | null>;
 }
 
+interface RecoverableRenderServicePort extends RenderServicePort {
+  resumePendingJobs?(limit?: number): Promise<number>;
+}
+
 function unauthorized(reply: FastifyReply): FastifyReply {
   return reply.status(401).send({ error: "Unauthorized" });
 }
@@ -73,12 +77,54 @@ export function buildVideoService(input?: {
     logger: true,
   });
 
+  const recoverable = service as RecoverableRenderServicePort;
+  let recoveryTimer: NodeJS.Timeout | null = null;
+
+  if (recoverable.resumePendingJobs) {
+    app.addHook("onReady", async () => {
+      const resumed = await recoverable.resumePendingJobs?.(
+        env().RENDER_RECOVERY_BATCH_LIMIT,
+      );
+      app.log.info(
+        { resumed: resumed ?? 0 },
+        "video-service recovery pass completed",
+      );
+
+      recoveryTimer = setInterval(() => {
+        void recoverable
+          .resumePendingJobs?.(env().RENDER_RECOVERY_BATCH_LIMIT)
+          .catch((error) => {
+            app.log.error(
+              { err: error },
+              "video-service recovery loop failed",
+            );
+          });
+      }, env().RENDER_RECOVERY_INTERVAL_MS);
+    });
+
+    app.addHook("onClose", async () => {
+      if (recoveryTimer) {
+        clearInterval(recoveryTimer);
+        recoveryTimer = null;
+      }
+    });
+  }
+
   app.addHook("onRequest", async (request, reply) => {
+    const path = request.url.split("?")[0];
+    if (request.method === "GET" && path === "/healthz") {
+      return;
+    }
+
     const token = extractBearer(request.headers.authorization);
     if (token !== authToken) {
       return unauthorized(reply);
     }
   });
+
+  app.get("/healthz", async () => ({
+    ok: true,
+  }));
 
   app.post("/render", async (request, reply) => {
     try {

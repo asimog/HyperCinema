@@ -1,51 +1,48 @@
 import {
-  extractMemo,
-  hasSufficientPayment,
-  transactionTargetsPlatformWallet,
+  totalLamportsByDestination,
+  transactionTargetsAddress,
 } from "@/lib/payments/webhook";
 
-vi.mock("@/lib/payments/solana-pay", () => ({
-  getPlatformPaymentWallet: () => "PLATFORM_WALLET",
-  solToLamports: (sol: number) => Math.round(sol * 1_000_000_000),
-}));
-
 describe("payment webhook helpers", () => {
-  it("extracts memo from instruction payload", () => {
-    const memo = extractMemo({
-      instructions: [
-        {
-          programName: "memo",
-          parsed: { memo: "job-123" },
-        },
-      ],
-    });
-
-    expect(memo).toBe("job-123");
-  });
-
-  it("falls back to memo in transaction description", () => {
-    const memo = extractMemo({
-      description: "Payment settled memo: job-xyz",
-      instructions: [],
-    });
-
-    expect(memo).toBe("job-xyz");
-  });
-
-  it("checks platform wallet targeting and sufficient payment", () => {
+  it("totals transfers by destination address", () => {
     const tx = {
       nativeTransfers: [
         {
           fromUserAccount: "sender",
-          toUserAccount: "PLATFORM_WALLET",
+          toUserAccount: "ADDR_A",
+          amount: 25_000_000,
+        },
+        {
+          fromUserAccount: "sender",
+          toUserAccount: "ADDR_A",
+          amount: 5_000_000,
+        },
+        {
+          fromUserAccount: "sender",
+          toUserAccount: "ADDR_B",
+          amount: 2_000_000,
+        },
+      ],
+    };
+
+    expect(totalLamportsByDestination(tx)).toEqual({
+      ADDR_A: 30_000_000,
+      ADDR_B: 2_000_000,
+    });
+  });
+
+  it("checks whether a transaction targets a specific address", () => {
+    const tx = {
+      nativeTransfers: [
+        {
+          fromUserAccount: "sender",
+          toUserAccount: "ADDR_A",
           amount: 25_000_000,
         },
       ],
     };
 
-    expect(transactionTargetsPlatformWallet(tx)).toBe(true);
-    expect(hasSufficientPayment({ tx, requiredPriceSol: 0.02 })).toBe(true);
-    expect(hasSufficientPayment({ tx, requiredPriceSol: 0.03 })).toBe(false);
+    expect(transactionTargetsAddress(tx, "ADDR_A")).toBe(true);
+    expect(transactionTargetsAddress(tx, "ADDR_B")).toBe(false);
   });
 });
-

@@ -111,8 +111,12 @@ export async function renderCinematicVideo(params: {
     throw new Error("Video API did not return a render identifier.");
   }
 
-  for (let attempt = 0; attempt < 60; attempt += 1) {
-    await sleep(5000);
+  for (
+    let attempt = 0;
+    attempt < env.VIDEO_RENDER_MAX_POLL_ATTEMPTS;
+    attempt += 1
+  ) {
+    await sleep(env.VIDEO_RENDER_POLL_INTERVAL_MS);
     const pollUrl =
       startPayload.statusUrl ?? `${env.VIDEO_API_BASE_URL}/render/${renderId}`;
     let pollResponse: Response | null = null;
@@ -171,5 +175,7 @@ export async function renderCinematicVideo(params: {
     }
   }
 
-  throw new Error("Video rendering timed out.");
+  throw new Error(
+    `Video rendering timed out after ${env.VIDEO_RENDER_MAX_POLL_ATTEMPTS} polling attempts.`,
+  );
 }

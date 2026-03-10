@@ -14,10 +14,24 @@ const envSchema = z.object({
   FIREBASE_CLIENT_EMAIL: z.string().min(1).optional(),
   FIREBASE_PRIVATE_KEY: z.string().min(1).optional(),
   HASHCINEMA_PAYMENT_WALLET: z.string().min(32).max(64),
+  PAYMENT_MASTER_SEED_HEX: z.string().min(64),
+  PAYMENT_DERIVATION_PREFIX: z.string().default("hashcinema-job"),
   FIREBASE_STORAGE_BUCKET: z.string().optional(),
   APP_BASE_URL: z.string().url().default("http://localhost:3000"),
   WORKER_URL: z.string().url().optional(),
   WORKER_TOKEN: z.string().optional(),
+  ALLOW_IN_PROCESS_WORKER: z.coerce.boolean().optional(),
+  JOB_DISPATCH_BATCH_LIMIT: z.coerce.number().int().positive().default(25),
+  VIDEO_RENDER_POLL_INTERVAL_MS: z.coerce
+    .number()
+    .int()
+    .min(1_000)
+    .default(5_000),
+  VIDEO_RENDER_MAX_POLL_ATTEMPTS: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .default(2_160),
   OPENROUTER_BASE_URL: z
     .string()
     .url()
@@ -27,6 +41,8 @@ const envSchema = z.object({
   VIDEO_API_BASE_URL: z.string().url().optional(),
   VIDEO_ENGINE: z.enum(["generic", "google_veo"]).default("generic"),
   VIDEO_VEO_MODEL: z.string().default("veo-3"),
+  SWEEP_MIN_LAMPORTS: z.coerce.number().int().nonnegative().default(5_000),
+  SWEEP_BATCH_LIMIT: z.coerce.number().int().positive().default(50),
   ANALYTICS_ENGINE_MODE: z
     .enum(["v2_fallback_legacy", "v2", "legacy"])
     .default("v2_fallback_legacy"),
@@ -41,6 +57,9 @@ export function getEnv(): AppEnv {
 
   const parsed = envSchema.safeParse({
     ...process.env,
+    ALLOW_IN_PROCESS_WORKER:
+      process.env.ALLOW_IN_PROCESS_WORKER ??
+      (process.env.NODE_ENV === "production" ? "false" : "true"),
     FIREBASE_PRIVATE_KEY: process.env.FIREBASE_PRIVATE_KEY?.replace(
       /\\n/g,
       "\n",

@@ -51,6 +51,7 @@ export async function renderCinematicVideo(params: {
     wallet: params.wallet,
     durationSeconds: params.durationSeconds,
     withSound: true,
+    resolution: params.googleVeo?.resolution ?? env.VIDEO_RESOLUTION,
     hookLine: params.script.hookLine,
     scenes: scenePayload,
     videoEngine: env.VIDEO_ENGINE,

@@ -57,8 +57,11 @@ const envSchema = z.object({
   OPENROUTER_APP_NAME: z.string().default("HASHCINEMA"),
   OPENROUTER_SITE_URL: z.string().url().optional(),
   VIDEO_API_BASE_URL: z.string().url().optional(),
-  VIDEO_ENGINE: z.enum(["generic", "google_veo"]).default("generic"),
-  VIDEO_VEO_MODEL: z.string().default("veo-3"),
+  VIDEO_ENGINE: z.literal("google_veo").default("google_veo"),
+  VIDEO_VEO_MODEL: z
+    .literal("veo-3.1-fast-generate-001")
+    .default("veo-3.1-fast-generate-001"),
+  VIDEO_RESOLUTION: z.enum(["720p", "1080p"]).default("1080p"),
   SWEEP_MIN_LAMPORTS: z.coerce.number().int().nonnegative().default(5_000),
   SWEEP_BATCH_LIMIT: z.coerce.number().int().positive().default(50),
   ANALYTICS_ENGINE_MODE: z

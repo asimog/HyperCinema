@@ -90,11 +90,14 @@ describe("google veo prompt engine", () => {
     const payload = buildGoogleVeoRenderPayload({
       walletStory: buildStory(),
       script: buildScript(),
-      model: "veo-3",
+      model: "veo-3.1-fast-generate-001",
+      resolution: "1080p",
     });
 
     expect(payload.provider).toBe("google_veo");
-    expect(payload.model).toBe("veo-3");
+    expect(payload.model).toBe("veo-3.1-fast-generate-001");
+    expect(payload.resolution).toBe("1080p");
+    expect(payload.generateAudio).toBe(true);
     expect(payload.tokenMetadata).toHaveLength(2);
     expect(payload.tokenMetadata[0]?.mint).toBe("mint-a");
     expect(payload.sceneMetadata).toHaveLength(3);

@@ -142,6 +142,10 @@ export class RenderService {
 
     const metadata = record.request.metadata ?? record.request.googleVeo;
     const model = metadata?.model ?? env.VERTEX_VEO_MODEL;
+    const resolution =
+      metadata?.resolution ??
+      record.request.resolution ??
+      env.VEO_OUTPUT_RESOLUTION;
     const styleHints = metadata?.styleHints ?? [];
     const chunks = buildSceneChunks({
       request: record.request,
@@ -156,10 +160,12 @@ export class RenderService {
     for (const chunk of chunks) {
       const clip = await this.clipGenerator.generateClip({
         model,
+        resolution,
         prompt: chunk.prompt,
         durationSeconds: chunk.durationSeconds,
         imageUrl: chunk.imageUrl,
         styleHints,
+        generateAudio: true,
       });
       clipUris.push(clip.videoUris[0]!);
       await touchRenderJob(record.id);

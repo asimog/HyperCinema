@@ -16,8 +16,12 @@ interface VertexOperationResponse {
   response?: unknown;
 }
 
+const ALLOWED_VEO_MODEL = "veo-3.1-fast-generate-001" as const;
+
 export interface GenerateClipInput {
-  model: string;
+  model: typeof ALLOWED_VEO_MODEL;
+  resolution: "720p" | "1080p";
+  generateAudio: true;
   prompt: string;
   durationSeconds: number;
   imageUrl?: string | null;
@@ -96,15 +100,28 @@ export class VertexVeoClient {
     return `https://${input.location}-aiplatform.googleapis.com/v1/${input.operationName}`;
   }
 
+  private withApiKey(url: string, apiKey?: string): string {
+    if (!apiKey) return url;
+    const next = new URL(url);
+    next.searchParams.set("key", apiKey);
+    return next.toString();
+  }
+
   async generateClip(input: GenerateClipInput): Promise<{ operationName: string; videoUris: string[] }> {
     const env = getVideoServiceEnv();
+    if (input.model !== ALLOWED_VEO_MODEL) {
+      throw new Error(`Only ${ALLOWED_VEO_MODEL} is allowed.`);
+    }
     const authHeader = await this.getAuthHeader();
 
-    const endpoint = this.buildPredictEndpoint({
-      projectId: env.VERTEX_PROJECT_ID,
-      location: env.VERTEX_LOCATION,
-      model: input.model,
-    });
+    const endpoint = this.withApiKey(
+      this.buildPredictEndpoint({
+        projectId: env.VERTEX_PROJECT_ID,
+        location: env.VERTEX_LOCATION,
+        model: input.model,
+      }),
+      env.VERTEX_API_KEY,
+    );
 
     const requestBody: Record<string, unknown> = {
       instances: [
@@ -115,6 +132,8 @@ export class VertexVeoClient {
       ],
       parameters: {
         durationSeconds: input.durationSeconds,
+        resolution: input.resolution,
+        generateAudio: input.generateAudio,
         ...(input.styleHints?.length ? { styleHints: input.styleHints } : {}),
       },
     };
@@ -123,6 +142,7 @@ export class VertexVeoClient {
       method: "POST",
       headers: {
         Authorization: authHeader,
+        ...(env.VERTEX_API_KEY ? { "x-goog-api-key": env.VERTEX_API_KEY } : {}),
         "Content-Type": "application/json",
       },
       body: JSON.stringify(requestBody),
@@ -138,10 +158,13 @@ export class VertexVeoClient {
       throw new Error("Veo did not return an operation name.");
     }
 
-    const operationEndpoint = this.buildOperationEndpoint({
-      location: env.VERTEX_LOCATION,
-      operationName: started.name,
-    });
+    const operationEndpoint = this.withApiKey(
+      this.buildOperationEndpoint({
+        location: env.VERTEX_LOCATION,
+        operationName: started.name,
+      }),
+      env.VERTEX_API_KEY,
+    );
 
     for (let attempt = 0; attempt < env.VERTEX_MAX_POLL_ATTEMPTS; attempt += 1) {
       await sleep(env.VERTEX_POLL_INTERVAL_MS);
@@ -149,6 +172,7 @@ export class VertexVeoClient {
       const operationResponse = await fetch(operationEndpoint, {
         headers: {
           Authorization: authHeader,
+          ...(env.VERTEX_API_KEY ? { "x-goog-api-key": env.VERTEX_API_KEY } : {}),
         },
       });
 

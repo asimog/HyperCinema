@@ -75,6 +75,7 @@ function buildPayload(jobId: string) {
     wallet: "wallet",
     durationSeconds: 30,
     withSound: true,
+    resolution: "1080p",
     hookLine: "hook line",
     scenes: [
       {
@@ -91,7 +92,9 @@ function buildPayload(jobId: string) {
     prompt: "global prompt",
     metadata: {
       provider: "google_veo",
-      model: "veo-3",
+      model: "veo-3.1-fast-generate-001",
+      resolution: "1080p",
+      generateAudio: true,
       prompt: "global prompt",
       styleHints: ["memetic"],
       tokenMetadata: [],
@@ -147,6 +150,40 @@ describe("video-service /render contract", () => {
     const payload = buildPayload("job-invalid");
     // @ts-expect-error test invalid payload shape
     delete payload.metadata;
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/render",
+      headers: {
+        authorization: "Bearer video-secret",
+      },
+      payload,
+    });
+
+    expect(response.statusCode).toBe(400);
+  });
+
+  it("rejects Veo renders when audio is disabled", async () => {
+    const payload = buildPayload("job-audio-disabled");
+    payload.withSound = false;
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/render",
+      headers: {
+        authorization: "Bearer video-secret",
+      },
+      payload,
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json().error).toContain("withSound must be true");
+  });
+
+  it("rejects unsupported Veo model IDs", async () => {
+    const payload = buildPayload("job-wrong-model");
+    // @ts-expect-error test invalid model value
+    payload.metadata.model = "veo-3";
 
     const response = await app.inject({
       method: "POST",

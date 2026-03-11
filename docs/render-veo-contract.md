@@ -34,6 +34,7 @@ Optional:
   "wallet": "string",
   "durationSeconds": 30,
   "withSound": true,
+  "resolution": "720p | 1080p",
   "hookLine": "string",
   "scenes": [
     {
@@ -45,13 +46,15 @@ Optional:
       "includeAudio": true
     }
   ],
-  "videoEngine": "generic | google_veo",
+  "videoEngine": "google_veo",
 
   "provider": "google_veo",
   "prompt": "string",
   "metadata": {
     "provider": "google_veo",
-    "model": "veo-3",
+    "model": "veo-3.1-fast-generate-001",
+    "resolution": "720p | 1080p",
+    "generateAudio": true,
     "prompt": "string",
     "styleHints": ["memetic", "cinematic"],
     "tokenMetadata": [
@@ -101,8 +104,8 @@ Optional:
 ```
 
 Notes:
-- For `videoEngine=generic`, Veo-specific fields may be omitted.
-- For `videoEngine=google_veo`, backend should treat `metadata` and `googleVeo` as equivalent payloads; `metadata` is the canonical key, `googleVeo` is compatibility mirror.
+- HASHCINEMA supports `videoEngine=google_veo` only.
+- Backend should treat `metadata` and `googleVeo` as equivalent payloads; `metadata` is the canonical key, `googleVeo` is compatibility mirror.
 
 ## Required vs Optional
 
@@ -112,7 +115,9 @@ Always required:
 Required when `videoEngine=google_veo`:
 - `provider` (must be `google_veo`)
 - `prompt`
-- `metadata.model`
+- `metadata.model` (must be `veo-3.1-fast-generate-001`)
+- `metadata.resolution` (must be `720p` or `1080p`)
+- `metadata.generateAudio` (must be `true`)
 - `metadata.sceneMetadata`
 - `metadata.storyMetadata`
 
@@ -175,26 +180,29 @@ Recommended status codes:
 Backend mapping guide:
 
 1. **Model selection**
-- `metadata.model` -> Veo model field (for example `veo-3`).
+- `metadata.model` -> Veo model field (`veo-3.1-fast-generate-001` only).
 
-2. **Prompt construction**
+2. **Resolution**
+- `metadata.resolution` (or top-level `resolution`) -> Veo `resolution` parameter (`720p` or `1080p` only).
+
+3. **Prompt construction**
 - Prefer `metadata.prompt`.
 - If absent, fallback to top-level `prompt`.
 - If still absent, synthesize from `hookLine + scenes`.
 
-3. **Scene control**
+4. **Scene control**
 - `metadata.sceneMetadata` and top-level `scenes` define per-scene timing and narrative.
 - Backend may stitch multi-scene Veo outputs or run single prompt with timeline directives.
 
-4. **Reference image conditioning**
+5. **Reference image conditioning**
 - Use `metadata.tokenMetadata[].imageUrl` and `scenes[].imageUrl` as reference images / style anchors.
 - Preserve token-image affinity where possible (scene token continuity).
 
-5. **Audio / voiceover**
-- `withSound=true`: generate/attach audio track.
+6. **Audio / voiceover**
+- `withSound=true` and `metadata.generateAudio=true`: generate/attach audio track.
 - `scenes[].narration` is canonical voiceover text input.
 
-6. **Safety + style**
+7. **Safety + style**
 - `metadata.styleHints` informs tone and edit style.
 - Backend applies provider safety filters and falls back gracefully if a scene fails.
 

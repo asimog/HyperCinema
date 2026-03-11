@@ -55,6 +55,8 @@ env:
     secret: VIDEO_RENDER_POLL_INTERVAL_MS
   - variable: VIDEO_VEO_MODEL
     secret: VIDEO_VEO_MODEL
+  - variable: VIDEO_RESOLUTION
+    secret: VIDEO_RESOLUTION
   - variable: WORKER_MAX_BODY_BYTES
     secret: WORKER_MAX_BODY_BYTES
   - variable: WORKER_TOKEN

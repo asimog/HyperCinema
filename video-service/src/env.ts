@@ -5,8 +5,12 @@ const serviceEnvSchema = z.object({
   VIDEO_API_KEY: z.string().min(1),
   VIDEO_SERVICE_BASE_URL: z.string().url().optional(),
   VERTEX_PROJECT_ID: z.string().min(1),
+  VERTEX_API_KEY: z.string().min(1).optional(),
   VERTEX_LOCATION: z.string().min(1).default("us-central1"),
-  VERTEX_VEO_MODEL: z.string().min(1).default("veo-3"),
+  VERTEX_VEO_MODEL: z
+    .literal("veo-3.1-fast-generate-001")
+    .default("veo-3.1-fast-generate-001"),
+  VEO_OUTPUT_RESOLUTION: z.enum(["720p", "1080p"]).default("1080p"),
   VEO_MAX_CLIP_SECONDS: z.coerce.number().int().min(2).max(30).default(8),
   VERTEX_POLL_INTERVAL_MS: z.coerce.number().int().min(500).default(5000),
   VERTEX_MAX_POLL_ATTEMPTS: z.coerce.number().int().min(1).default(180),

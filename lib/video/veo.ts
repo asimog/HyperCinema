@@ -15,7 +15,9 @@ export interface VeoTokenMetadata {
 
 export interface GoogleVeoRenderPayload {
   provider: "google_veo";
-  model: string;
+  model: "veo-3.1-fast-generate-001";
+  resolution: "720p" | "1080p";
+  generateAudio: true;
   prompt: string;
   styleHints: string[];
   tokenMetadata: VeoTokenMetadata[];
@@ -123,13 +125,16 @@ function buildPrompt(input: {
 export function buildGoogleVeoRenderPayload(input: {
   walletStory: WalletStory;
   script: GeneratedCinematicScript;
-  model?: string;
+  model?: "veo-3.1-fast-generate-001";
+  resolution?: "720p" | "1080p";
 }): GoogleVeoRenderPayload {
   const tokenMetadata = buildTokenMetadata(input.walletStory);
 
   return {
     provider: "google_veo",
-    model: input.model ?? "veo-3",
+    model: input.model ?? "veo-3.1-fast-generate-001",
+    resolution: input.resolution ?? "1080p",
+    generateAudio: true,
     prompt: buildPrompt({
       story: input.walletStory,
       script: input.script,

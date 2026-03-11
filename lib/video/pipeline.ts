@@ -18,6 +18,7 @@ export async function buildAndRenderVideo(input: {
     walletStory: input.walletStory,
     script,
     model: env.VIDEO_VEO_MODEL,
+    resolution: env.VIDEO_RESOLUTION,
   });
 
   const rendered = await renderCinematicVideo({

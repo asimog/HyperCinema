@@ -1,5 +1,8 @@
 import { z } from "zod";
 
+const ALLOWED_VEO_MODEL = "veo-3.1-fast-generate-001" as const;
+const resolutionSchema = z.enum(["720p", "1080p"]);
+
 const sceneSchema = z.object({
   sceneNumber: z.number().int().positive(),
   visualPrompt: z.string().min(1),
@@ -51,7 +54,9 @@ const storyMetadataSchema = z.object({
 
 const googleVeoMetadataSchema = z.object({
   provider: z.literal("google_veo"),
-  model: z.string().min(1),
+  model: z.literal(ALLOWED_VEO_MODEL),
+  resolution: resolutionSchema,
+  generateAudio: z.literal(true).default(true),
   prompt: z.string().min(1),
   styleHints: z.array(z.string()).default([]),
   tokenMetadata: z.array(tokenMetadataSchema).default([]),
@@ -64,9 +69,10 @@ export const renderRequestSchema = z.object({
   wallet: z.string().min(1),
   durationSeconds: z.number().int().positive(),
   withSound: z.boolean(),
+  resolution: resolutionSchema.optional(),
   hookLine: z.string().min(1),
   scenes: z.array(sceneSchema).min(1),
-  videoEngine: z.enum(["generic", "google_veo"]),
+  videoEngine: z.literal("google_veo"),
   provider: z.string().optional(),
   prompt: z.string().optional(),
   metadata: googleVeoMetadataSchema.optional(),
@@ -103,36 +109,64 @@ export interface RenderJobRecord {
 export function parseRenderRequest(payload: unknown): NormalizedRenderRequest {
   const parsed = renderRequestSchema.parse(payload);
 
-  if (parsed.videoEngine === "google_veo") {
-    if (parsed.provider !== "google_veo") {
-      throw new Error("provider must be 'google_veo' when videoEngine=google_veo");
-    }
+  if (parsed.provider !== "google_veo") {
+    throw new Error("provider must be 'google_veo' when videoEngine=google_veo");
+  }
 
-    if (!parsed.prompt || !parsed.prompt.trim()) {
-      throw new Error("prompt is required when videoEngine=google_veo");
-    }
+  if (parsed.withSound !== true) {
+    throw new Error("withSound must be true for Veo renders.");
+  }
 
-    const metadata = parsed.metadata ?? parsed.googleVeo;
-    if (!metadata) {
-      throw new Error("metadata or googleVeo is required when videoEngine=google_veo");
-    }
+  if (parsed.scenes.some((scene) => scene.includeAudio === false)) {
+    throw new Error("scenes[].includeAudio cannot be false for Veo renders.");
+  }
 
-    if (!metadata.model || !metadata.sceneMetadata?.length || !metadata.storyMetadata) {
-      throw new Error(
-        "metadata.model, metadata.sceneMetadata, and metadata.storyMetadata are required for Veo renders",
-      );
-    }
+  if (!parsed.prompt || !parsed.prompt.trim()) {
+    throw new Error("prompt is required when videoEngine=google_veo");
+  }
 
-    return {
-      ...parsed,
-      metadata,
-      googleVeo: metadata,
-    };
+  const metadata = parsed.metadata ?? parsed.googleVeo;
+  if (!metadata) {
+    throw new Error("metadata or googleVeo is required when videoEngine=google_veo");
+  }
+
+  if (!metadata.model || !metadata.sceneMetadata?.length || !metadata.storyMetadata) {
+    throw new Error(
+      "metadata.model, metadata.sceneMetadata, and metadata.storyMetadata are required for Veo renders",
+    );
+  }
+
+  if (metadata.model !== ALLOWED_VEO_MODEL) {
+    throw new Error(`Only ${ALLOWED_VEO_MODEL} is allowed for Veo renders.`);
+  }
+
+  const requestedResolution = parsed.resolution ?? metadata.resolution;
+  if (!requestedResolution) {
+    throw new Error("resolution is required and must be 720p or 1080p.");
+  }
+  if (parsed.resolution && metadata.resolution && parsed.resolution !== metadata.resolution) {
+    throw new Error("resolution mismatch between request.resolution and metadata.resolution.");
   }
 
   return {
     ...parsed,
-    metadata: parsed.metadata,
-    googleVeo: parsed.googleVeo,
+    withSound: true,
+    resolution: requestedResolution,
+    scenes: parsed.scenes.map((scene) => ({
+      ...scene,
+      includeAudio: true,
+    })),
+    metadata: {
+      ...metadata,
+      model: ALLOWED_VEO_MODEL,
+      resolution: requestedResolution,
+      generateAudio: true,
+    },
+    googleVeo: {
+      ...metadata,
+      model: ALLOWED_VEO_MODEL,
+      resolution: requestedResolution,
+      generateAudio: true,
+    },
   };
 }

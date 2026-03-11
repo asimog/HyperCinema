@@ -28,6 +28,9 @@ import { buildAndRenderVideo } from "../lib/video/pipeline";
 import { computeAnalyticsFromTrades } from "../lib/analytics/compute";
 
 type AnalyticsEngineMode = ReturnType<typeof getEnv>["ANALYTICS_ENGINE_MODE"];
+const ANALYTICS_STAGE_TIMEOUT_MS = 4 * 60_000;
+const LEGACY_STAGE_TIMEOUT_MS = 5 * 60_000;
+const STAGE_HEARTBEAT_MS = 15_000;
 
 function toRangeHours(rangeDays: number): 24 | 48 | 72 {
   if (rangeDays === 1) return 24;
@@ -80,6 +83,61 @@ async function timedStage<T>(
   }
 }
 
+function stageTimedOutMessage(stage: string, timeoutMs: number): string {
+  return `Stage '${stage}' timed out after ${timeoutMs}ms`;
+}
+
+async function withTimeout<T>(
+  input: { stage: string; timeoutMs: number; operation: () => Promise<T> },
+): Promise<T> {
+  let timeoutHandle: NodeJS.Timeout | null = null;
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutHandle = setTimeout(() => {
+      reject(new Error(stageTimedOutMessage(input.stage, input.timeoutMs)));
+    }, input.timeoutMs);
+  });
+
+  try {
+    return await Promise.race([input.operation(), timeoutPromise]);
+  } finally {
+    if (timeoutHandle) {
+      clearTimeout(timeoutHandle);
+    }
+  }
+}
+
+async function withProgressHeartbeat<T>(
+  input: {
+    jobId: string;
+    progress:
+      | "fetching_transactions"
+      | "filtering_pump_activity"
+      | "generating_report"
+      | "generating_script"
+      | "generating_video"
+      | "uploading_assets";
+    operation: () => Promise<T>;
+  },
+): Promise<T> {
+  const interval = setInterval(() => {
+    void updateJobProgress(input.jobId, input.progress).catch((error) => {
+      logger.warn("pipeline_stage_heartbeat_failed", {
+        component: "worker",
+        stage: input.progress,
+        jobId: input.jobId,
+        errorCode: "pipeline_stage_heartbeat_failed",
+        errorMessage: error instanceof Error ? error.message : "Unknown error",
+      });
+    });
+  }, STAGE_HEARTBEAT_MS);
+
+  try {
+    return await input.operation();
+  } finally {
+    clearInterval(interval);
+  }
+}
+
 async function computeLegacyArtifacts(input: {
   jobId: string;
   wallet: string;
@@ -106,13 +164,18 @@ async function computeLegacyArtifacts(input: {
     { jobId: input.jobId, wallet: input.wallet },
     "legacy_compute_analytics",
     async () =>
-      computeAnalyticsFromTrades({
-        jobId: input.jobId,
-        wallet: input.wallet,
-        rangeDays: input.rangeDays,
-        packageType: input.packageType,
-        durationSeconds: input.durationSeconds,
-        trades,
+      withTimeout({
+        stage: "legacy_compute_analytics",
+        timeoutMs: LEGACY_STAGE_TIMEOUT_MS,
+        operation: async () =>
+          computeAnalyticsFromTrades({
+            jobId: input.jobId,
+            wallet: input.wallet,
+            rangeDays: input.rangeDays,
+            packageType: input.packageType,
+            durationSeconds: input.durationSeconds,
+            trades,
+          }),
       }),
   );
 }
@@ -166,12 +229,23 @@ export async function processJob(jobId: string): Promise<void> {
       await updateJobProgress(jobId, "generating_report");
 
       try {
-        const analysis = await timedStage(context, "v2_analyze_wallet_profile", async () => {
-          const result = await analyzeWalletProfile({
-            wallet: job.wallet,
-            rangeHours: toRangeHours(job.rangeDays),
-          });
-          return walletAnalysisResultSchema.parse(result);
+        const analysis = await withProgressHeartbeat({
+          jobId,
+          progress: "generating_report",
+          operation: async () =>
+            timedStage(context, "v2_analyze_wallet_profile", async () =>
+              withTimeout({
+                stage: "v2_analyze_wallet_profile",
+                timeoutMs: ANALYTICS_STAGE_TIMEOUT_MS,
+                operation: async () => {
+                  const result = await analyzeWalletProfile({
+                    wallet: job.wallet,
+                    rangeHours: toRangeHours(job.rangeDays),
+                  });
+                  return walletAnalysisResultSchema.parse(result);
+                },
+              }),
+            ),
         });
 
         computed = await timedStage(context, "v2_adapt_legacy_contract", async () =>

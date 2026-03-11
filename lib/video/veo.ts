@@ -71,11 +71,32 @@ function buildPrompt(input: {
         `Scene ${scene.sceneNumber} (${scene.durationSeconds}s) | visual="${scene.visualPrompt}" | narration="${scene.narration}" | image=${scene.imageUrl ?? "none"}`,
     )
     .join("\n");
+  const personalityLine = [
+    input.story.walletPersonality,
+    input.story.walletSecondaryPersonality,
+  ]
+    .filter((value): value is string => Boolean(value && value.trim().length))
+    .join(" + ");
+  const modifiersLine = (input.story.walletModifiers ?? []).slice(0, 4).join(", ");
+  const behaviorLine = (input.story.behaviorPatterns ?? []).slice(0, 3).join(" | ");
+  const narrativeSummary = input.story.narrativeSummary?.trim() ?? "";
+  const keyEventLines = (input.story.keyEvents ?? [])
+    .slice(0, 3)
+    .map(
+      (event, index) =>
+        `Key Event ${index + 1}: token=${event.token}, type=${event.type}, interpretation="${event.interpretation}"`,
+    )
+    .join("\n");
 
   return [
     "Create a fast-paced, funny-memetic cinematic wallet recap with coherent scene transitions.",
     `Wallet: ${walletShort}, package=${input.story.packageType}, duration=${input.story.durationSeconds}s.`,
     `Facts to preserve: buys=${input.story.analytics.buyCount}, sells=${input.story.analytics.sellCount}, spent=${input.story.analytics.solSpent} SOL, received=${input.story.analytics.solReceived} SOL, pnl=${input.story.analytics.estimatedPnlSol} SOL.`,
+    personalityLine ? `Wallet personality profile: ${personalityLine}.` : "Wallet personality profile: unknown.",
+    modifiersLine ? `Behavior modifiers: ${modifiersLine}.` : "Behavior modifiers: unavailable.",
+    behaviorLine ? `Behavior pattern highlights: ${behaviorLine}.` : "Behavior pattern highlights: unavailable.",
+    narrativeSummary ? `Narrative summary: ${narrativeSummary}` : "Narrative summary: unavailable.",
+    keyEventLines ? keyEventLines : "Key events: unavailable.",
     `Hook line: ${input.script.hookLine}`,
     `Token media references (prioritize these image assets): ${tokenRefs || "none provided"}.`,
     "Use captions and kinetic motion graphics that match narration timing without fabricating extra trades.",

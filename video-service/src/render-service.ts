@@ -40,6 +40,40 @@ export interface ClipGenerator {
   generateClip(input: GenerateClipInput): Promise<{ operationName: string; videoUris: string[] }>;
 }
 
+const ALLOWED_VEO_MODEL = "veo-3.1-fast-generate-001" as const;
+
+function normalizeVeoModel(
+  value: unknown,
+  fallback: typeof ALLOWED_VEO_MODEL,
+): typeof ALLOWED_VEO_MODEL {
+  return value === ALLOWED_VEO_MODEL ? ALLOWED_VEO_MODEL : fallback;
+}
+
+function normalizeResolution(
+  value: unknown,
+  fallback: "720p" | "1080p",
+): "720p" | "1080p" {
+  if (value === "720p" || value === "1080p") {
+    return value;
+  }
+  return fallback;
+}
+
+export function resolveRenderConfig(input: {
+  metadata?: { model?: unknown; resolution?: unknown } | null;
+  requestResolution?: unknown;
+  envModel: typeof ALLOWED_VEO_MODEL;
+  envResolution: "720p" | "1080p";
+}): { model: typeof ALLOWED_VEO_MODEL; resolution: "720p" | "1080p" } {
+  return {
+    model: normalizeVeoModel(input.metadata?.model, input.envModel),
+    resolution: normalizeResolution(
+      input.metadata?.resolution ?? input.requestResolution,
+      input.envResolution,
+    ),
+  };
+}
+
 export class RenderService {
   private readonly activeRenders = new Set<string>();
 
@@ -141,11 +175,12 @@ export class RenderService {
     const env = getVideoServiceEnv();
 
     const metadata = record.request.metadata ?? record.request.googleVeo;
-    const model = metadata?.model ?? env.VERTEX_VEO_MODEL;
-    const resolution =
-      metadata?.resolution ??
-      record.request.resolution ??
-      env.VEO_OUTPUT_RESOLUTION;
+    const { model, resolution } = resolveRenderConfig({
+      metadata,
+      requestResolution: record.request.resolution,
+      envModel: env.VERTEX_VEO_MODEL,
+      envResolution: env.VEO_OUTPUT_RESOLUTION,
+    });
     const styleHints = metadata?.styleHints ?? [];
     const chunks = buildSceneChunks({
       request: record.request,

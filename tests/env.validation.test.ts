@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 const VALID_WALLET = "D1CRgh1Ty3yjDwN9CkwtsRWKmsmKQ2BbRbtKvCTfAN8Z";
 const VALID_MASTER_SEED =
   "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+const VALID_WEBHOOK_ID = "b22ab57c-ed5f-4674-90d7-11a540ecafe6";
 
 function applyBaseEnv(): void {
   process.env.HELIUS_API_KEY = "test-helius";
@@ -33,5 +34,33 @@ describe.sequential("environment validation", () => {
     const { getEnv } = await import("@/lib/env");
 
     expect(() => getEnv()).toThrow(/HASHCINEMA_PAYMENT_WALLET/);
+  });
+
+  it("trims whitespace from strict webhook/video env vars", async () => {
+    vi.resetModules();
+    applyBaseEnv();
+    process.env.HELIUS_WEBHOOK_ID = ` ${VALID_WEBHOOK_ID}\n`;
+    process.env.VIDEO_ENGINE = " google_veo ";
+    process.env.VIDEO_VEO_MODEL = " veo-3.1-fast-generate-001\n";
+    process.env.VIDEO_RESOLUTION = " 1080p ";
+
+    const { getEnv } = await import("@/lib/env");
+    const env = getEnv();
+
+    expect(env.HELIUS_WEBHOOK_ID).toBe(VALID_WEBHOOK_ID);
+    expect(env.VIDEO_ENGINE).toBe("google_veo");
+    expect(env.VIDEO_VEO_MODEL).toBe("veo-3.1-fast-generate-001");
+    expect(env.VIDEO_RESOLUTION).toBe("1080p");
+  });
+
+  it("treats blank HELIUS_WEBHOOK_ID as undefined", async () => {
+    vi.resetModules();
+    applyBaseEnv();
+    process.env.HELIUS_WEBHOOK_ID = " \n";
+
+    const { getEnv } = await import("@/lib/env");
+    const env = getEnv();
+
+    expect(env.HELIUS_WEBHOOK_ID).toBeUndefined();
   });
 });

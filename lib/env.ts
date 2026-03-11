@@ -11,6 +11,15 @@ function isValidSolanaPublicKey(value: string): boolean {
   }
 }
 
+function trimEnvValue(value: string | undefined): string | undefined {
+  return typeof value === "string" ? value.trim() : value;
+}
+
+function trimOptionalEnvValue(value: string | undefined): string | undefined {
+  const trimmed = trimEnvValue(value);
+  return trimmed && trimmed.length > 0 ? trimmed : undefined;
+}
+
 const envSchema = z.object({
   HELIUS_API_KEY: z.string().min(1),
   HELIUS_WEBHOOK_ID: z.string().uuid().optional(),
@@ -78,6 +87,10 @@ export function getEnv(): AppEnv {
 
   const parsed = envSchema.safeParse({
     ...process.env,
+    HELIUS_WEBHOOK_ID: trimOptionalEnvValue(process.env.HELIUS_WEBHOOK_ID),
+    VIDEO_ENGINE: trimEnvValue(process.env.VIDEO_ENGINE),
+    VIDEO_VEO_MODEL: trimEnvValue(process.env.VIDEO_VEO_MODEL),
+    VIDEO_RESOLUTION: trimEnvValue(process.env.VIDEO_RESOLUTION),
     ALLOW_IN_PROCESS_WORKER:
       process.env.ALLOW_IN_PROCESS_WORKER ??
       (process.env.NODE_ENV === "production" ? "false" : "true"),

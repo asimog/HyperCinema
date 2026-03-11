@@ -1,5 +1,9 @@
 import { z } from "zod";
 
+function trimEnvValue(value: string | undefined): string | undefined {
+  return typeof value === "string" ? value.trim() : value;
+}
+
 const serviceEnvSchema = z.object({
   PORT: z.coerce.number().int().positive().default(8090),
   VIDEO_API_KEY: z.string().min(1),
@@ -39,6 +43,8 @@ export function getVideoServiceEnv(): VideoServiceEnv {
 
   const parsed = serviceEnvSchema.safeParse({
     ...process.env,
+    VERTEX_VEO_MODEL: trimEnvValue(process.env.VERTEX_VEO_MODEL),
+    VEO_OUTPUT_RESOLUTION: trimEnvValue(process.env.VEO_OUTPUT_RESOLUTION),
     FIREBASE_PRIVATE_KEY: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
   });
 

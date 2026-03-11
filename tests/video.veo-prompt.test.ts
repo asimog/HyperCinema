@@ -99,7 +99,10 @@ describe("google veo prompt engine", () => {
     expect(payload.resolution).toBe("1080p");
     expect(payload.generateAudio).toBe(true);
     expect(payload.tokenMetadata).toHaveLength(2);
-    expect(payload.tokenMetadata[0]?.mint).toBe("mint-a");
+    expect(payload.tokenMetadata.map((item) => item.mint).sort()).toEqual([
+      "mint-a",
+      "mint-b",
+    ]);
     expect(payload.sceneMetadata).toHaveLength(3);
     expect(payload.prompt.includes("Hook line")).toBe(true);
     expect(payload.prompt.includes("Wallet woke up and chose velocity.")).toBe(true);

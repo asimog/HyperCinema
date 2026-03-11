@@ -8,6 +8,7 @@ import {
   WalletProfile,
   WalletStory,
 } from "@/lib/types/domain";
+import { buildTokenMetadataFromTrades } from "@/lib/tokens/metadata-selection";
 import {
   CinematicSummary,
   ModifierResult,
@@ -339,6 +340,17 @@ export function adaptWalletAnalysisToLegacyArtifacts(
     storyBeats: report.storyBeats,
     keyEvents: report.keyEvents,
     walletProfile: report.walletProfile,
+    tokenMetadata: buildTokenMetadataFromTrades(
+      analysis.normalizedTrades.map((trade) => ({
+        mint: trade.mint,
+        symbol: trade.symbol,
+        name: trade.name,
+        image: trade.image ?? null,
+        side: trade.side === "BUY" ? "buy" : "sell",
+        solAmount: trade.solAmount,
+        timestamp: trade.timestamp,
+      })),
+    ),
   };
 
   return { report, story };

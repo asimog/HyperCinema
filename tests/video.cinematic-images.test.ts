@@ -54,12 +54,42 @@ function createStory(): WalletStory {
 }
 
 describe("cinematic image plumbing", () => {
-  it("builds deduped pump image references ranked by trade density", () => {
+  it("builds deduped pump image references ranked by impact", () => {
     const references = buildPumpImageReferences(createStory());
     expect(references).toHaveLength(2);
-    expect(references[0]?.mint).toBe("mint-a");
-    expect(references[0]?.tradeCount).toBe(2);
-    expect(references[1]?.mint).toBe("mint-b");
+    expect(references.map((item) => item.mint).sort()).toEqual(["mint-a", "mint-b"]);
+    const byMint = new Map(references.map((item) => [item.mint, item]));
+    expect(byMint.get("mint-a")?.tradeCount).toBe(2);
+    expect(byMint.get("mint-b")?.tradeCount).toBe(1);
+  });
+
+  it("limits image candidates by duration and keeps high-impact coins", () => {
+    const story: WalletStory = {
+      ...createStory(),
+      durationSeconds: 30,
+      timeline: [],
+      tokenMetadata: Array.from({ length: 12 }, (_, index) => ({
+        mint: `mint-${index}`,
+        symbol: `TOK${index}`,
+        name: `Token ${index}`,
+        imageUrl: `https://cdn.example.com/${index}.png`,
+        tradeCount: 1,
+        buyCount: 1,
+        sellCount: 0,
+        solVolume: index === 0 ? 25 : index === 1 ? 14 : 0.1,
+        netSolFlow: index === 0 ? 25 : index === 1 ? 14 : 0.1,
+        firstSeenTimestamp: index + 1,
+        lastSeenTimestamp: index + 1,
+      })),
+    };
+
+    const references = buildPumpImageReferences(story);
+
+    // 30s package should cap image references at 10.
+    expect(references).toHaveLength(10);
+    // Ensure high-impact early coins are retained, not dropped by recency slicing.
+    expect(references.some((item) => item.mint === "mint-0")).toBe(true);
+    expect(references.some((item) => item.mint === "mint-1")).toBe(true);
   });
 
   it("fills missing scene image urls using the available image pool", () => {

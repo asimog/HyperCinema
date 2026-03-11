@@ -1,5 +1,9 @@
 import { openRouterJson } from "@/lib/ai/openrouter";
 import {
+  isHttpUrl,
+  rankTokenMetadataForStory,
+} from "@/lib/tokens/metadata-selection";
+import {
   CinematicScene,
   GeneratedCinematicScript,
   WalletStory,
@@ -28,52 +32,19 @@ interface TokenImageReference {
   imageUrl: string;
   tradeCount: number;
   lastSeenTimestamp: number;
-}
-
-function isHttpUrl(value: string | null | undefined): value is string {
-  if (!value) return false;
-
-  try {
-    const url = new URL(value);
-    return url.protocol === "http:" || url.protocol === "https:";
-  } catch {
-    return false;
-  }
+  impactScore: number;
 }
 
 export function buildPumpImageReferences(story: WalletStory): TokenImageReference[] {
-  const byMint = new Map<string, TokenImageReference>();
-
-  for (const item of story.timeline) {
-    if (!isHttpUrl(item.image)) {
-      continue;
-    }
-
-    const existing = byMint.get(item.mint);
-    if (existing) {
-      existing.tradeCount += 1;
-      existing.lastSeenTimestamp = Math.max(existing.lastSeenTimestamp, item.timestamp);
-      continue;
-    }
-
-    byMint.set(item.mint, {
-      mint: item.mint,
-      symbol: item.symbol,
-      name: item.name ?? null,
-      imageUrl: item.image,
-      tradeCount: 1,
-      lastSeenTimestamp: item.timestamp,
-    });
-  }
-
-  return [...byMint.values()]
-    .sort((a, b) => {
-      if (b.tradeCount !== a.tradeCount) {
-        return b.tradeCount - a.tradeCount;
-      }
-      return b.lastSeenTimestamp - a.lastSeenTimestamp;
-    })
-    .slice(0, 8);
+  return rankTokenMetadataForStory(story).map((item) => ({
+    mint: item.mint,
+    symbol: item.symbol,
+    name: item.name,
+    imageUrl: item.imageUrl,
+    tradeCount: item.tradeCount,
+    lastSeenTimestamp: item.lastSeenTimestamp,
+    impactScore: item.impactScore,
+  }));
 }
 
 export function assignSceneImageUrls(
@@ -139,6 +110,7 @@ export async function generateCinematicScript(
     name: reference.name,
     imageUrl: reference.imageUrl,
     tradeCount: reference.tradeCount,
+    impactScore: reference.impactScore,
   }));
 
   const raw = await openRouterJson<unknown>({

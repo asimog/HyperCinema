@@ -1,4 +1,5 @@
 import { round } from "@/lib/utils";
+import { rankTokenMetadataForStory } from "@/lib/tokens/metadata-selection";
 import { GeneratedCinematicScript, WalletStory } from "@/lib/types/domain";
 
 export interface VeoTokenMetadata {
@@ -37,56 +38,18 @@ export interface GoogleVeoRenderPayload {
   };
 }
 
-function isHttpUrl(value: string | null | undefined): value is string {
-  if (!value) return false;
-
-  try {
-    const url = new URL(value);
-    return url.protocol === "http:" || url.protocol === "https:";
-  } catch {
-    return false;
-  }
-}
-
 function buildTokenMetadata(story: WalletStory): VeoTokenMetadata[] {
-  const byMint = new Map<string, VeoTokenMetadata>();
-
-  for (const item of story.timeline) {
-    if (!isHttpUrl(item.image)) {
-      continue;
-    }
-
-    const current = byMint.get(item.mint);
-    if (current) {
-      current.tradeCount += 1;
-      if (item.side === "buy") current.buyCount += 1;
-      if (item.side === "sell") current.sellCount += 1;
-      current.solVolume = round(current.solVolume + item.solAmount, 6);
-      current.lastSeenTimestamp = Math.max(current.lastSeenTimestamp, item.timestamp);
-      continue;
-    }
-
-    byMint.set(item.mint, {
-      mint: item.mint,
-      symbol: item.symbol,
-      name: item.name ?? null,
-      imageUrl: item.image,
-      tradeCount: 1,
-      buyCount: item.side === "buy" ? 1 : 0,
-      sellCount: item.side === "sell" ? 1 : 0,
-      solVolume: round(item.solAmount, 6),
-      lastSeenTimestamp: item.timestamp,
-    });
-  }
-
-  return [...byMint.values()]
-    .sort((a, b) => {
-      if (b.tradeCount !== a.tradeCount) {
-        return b.tradeCount - a.tradeCount;
-      }
-      return b.solVolume - a.solVolume;
-    })
-    .slice(0, 8);
+  return rankTokenMetadataForStory(story).map((item) => ({
+    mint: item.mint,
+    symbol: item.symbol,
+    name: item.name,
+    imageUrl: item.imageUrl,
+    tradeCount: item.tradeCount,
+    buyCount: item.buyCount,
+    sellCount: item.sellCount,
+    solVolume: round(item.solVolume, 6),
+    lastSeenTimestamp: item.lastSeenTimestamp,
+  }));
 }
 
 function buildPrompt(input: {

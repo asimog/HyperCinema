@@ -186,6 +186,20 @@ export interface PumpTrade {
   solAmount: number;
 }
 
+export interface WalletStoryTokenMetadata {
+  mint: string;
+  symbol: string;
+  name: string | null;
+  imageUrl: string;
+  tradeCount: number;
+  buyCount: number;
+  sellCount: number;
+  solVolume: number;
+  netSolFlow: number;
+  firstSeenTimestamp: number;
+  lastSeenTimestamp: number;
+}
+
 export interface WalletStory {
   wallet: string;
   rangeDays: number;
@@ -213,6 +227,7 @@ export interface WalletStory {
   storyBeats?: string[];
   keyEvents?: WalletKeyEvent[];
   walletProfile?: WalletProfile;
+  tokenMetadata?: WalletStoryTokenMetadata[];
 }
 
 export interface WalletPersonalization {

@@ -7,6 +7,7 @@ import {
   WalletProfile,
   WalletStory,
 } from "@/lib/types/domain";
+import { buildTokenMetadataFromTrades } from "@/lib/tokens/metadata-selection";
 import { round } from "@/lib/utils";
 
 const EPSILON = 1e-9;
@@ -1096,6 +1097,17 @@ export function computeAnalyticsFromTrades(input: {
     estimatedPnlSol,
   });
   const timeline = buildTimeline(trades);
+  const tokenMetadata = buildTokenMetadataFromTrades(
+    trades.map((trade) => ({
+      mint: trade.mint,
+      symbol: trade.symbol,
+      name: trade.name,
+      image: trade.image,
+      side: trade.side,
+      solAmount: trade.solAmount,
+      timestamp: trade.timestamp,
+    })),
+  );
 
   const walletProfile: WalletProfile = {
     personality: personality.primary,
@@ -1167,6 +1179,7 @@ export function computeAnalyticsFromTrades(input: {
       storyBeats: walletProfile.storyBeats,
       keyEvents: walletProfile.keyEvents,
       walletProfile,
+      tokenMetadata,
     },
   };
 }

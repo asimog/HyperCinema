@@ -19,6 +19,8 @@ env:
     secret: HELIUS_API_KEY
   - variable: HELIUS_WEBHOOK_SECRET
     secret: HELIUS_WEBHOOK_SECRET
+  - variable: HELIUS_WEBHOOK_ID
+    secret: HELIUS_WEBHOOK_ID
   - variable: JOB_DISPATCH_BATCH_LIMIT
     secret: JOB_DISPATCH_BATCH_LIMIT
   - variable: OPENROUTER_API_KEY

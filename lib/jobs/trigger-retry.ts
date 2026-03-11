@@ -42,6 +42,16 @@ export async function triggerFailedJobRetry(
       );
 
       if (!response.ok) {
+        if (response.status === 404) {
+          logger.warn("failed_job_retry_endpoint_missing_fallback_local", {
+            component: "jobs_retry",
+            stage: "trigger_retry",
+            jobId,
+            errorCode: "failed_job_retry_endpoint_missing",
+          });
+          return retryFailedJob(jobId);
+        }
+
         const body = await response.text();
         const message = `Failed to trigger failed-job retry (${response.status}): ${body || "empty response"}`;
         if (isRetryableHttpStatus(response.status)) {
@@ -86,4 +96,3 @@ export async function triggerFailedJobRetry(
     },
   );
 }
-

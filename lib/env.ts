@@ -63,6 +63,7 @@ const envSchema = z.object({
     .string()
     .url()
     .default("https://openrouter.ai/api/v1"),
+  OPENROUTER_MODEL: z.string().min(1).optional(),
   OPENROUTER_APP_NAME: z.string().default("HASHCINEMA"),
   OPENROUTER_SITE_URL: z.string().url().optional(),
   VIDEO_API_BASE_URL: z.string().url().optional(),
@@ -88,6 +89,7 @@ export function getEnv(): AppEnv {
   const parsed = envSchema.safeParse({
     ...process.env,
     HELIUS_WEBHOOK_ID: trimOptionalEnvValue(process.env.HELIUS_WEBHOOK_ID),
+    OPENROUTER_MODEL: trimOptionalEnvValue(process.env.OPENROUTER_MODEL),
     VIDEO_ENGINE: trimEnvValue(process.env.VIDEO_ENGINE),
     VIDEO_VEO_MODEL: trimEnvValue(process.env.VIDEO_VEO_MODEL),
     VIDEO_RESOLUTION: trimEnvValue(process.env.VIDEO_RESOLUTION),

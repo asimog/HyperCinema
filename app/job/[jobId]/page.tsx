@@ -139,6 +139,8 @@ export default function JobPage() {
   }, [loadJob]);
 
   const isComplete = job?.status === "complete";
+  const hasVideo = Boolean(video?.videoUrl);
+  const hasReport = Boolean(report);
   const retryFailedJob = useCallback(async () => {
     setIsRetrying(true);
     setError(null);
@@ -241,7 +243,7 @@ export default function JobPage() {
           />
         ) : null}
 
-        {isComplete && video?.videoUrl ? (
+        {hasVideo && video ? (
           <section className="space-y-4 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5">
             <h2 className="text-lg font-semibold">Cinematic Video</h2>
             <VideoPlayer
@@ -269,7 +271,7 @@ export default function JobPage() {
           </section>
         ) : null}
 
-        {isComplete && report ? (
+        {hasReport && report ? (
           <ReportCard report={report} reportUrl={`/api/report/${jobId}`} />
         ) : null}
 

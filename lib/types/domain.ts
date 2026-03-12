@@ -164,6 +164,20 @@ export interface VideoDocument {
   renderStatus: "queued" | "processing" | "ready" | "failed";
 }
 
+export interface InternalVideoRenderDocument {
+  id: string;
+  jobId: string;
+  status: "queued" | "processing" | "ready" | "failed";
+  renderStatus: "queued" | "processing" | "ready" | "failed";
+  videoUrl: string | null;
+  thumbnailUrl: string | null;
+  error: string | null;
+  createdAt: string;
+  updatedAt: string;
+  startedAt: string | null;
+  completedAt: string | null;
+}
+
 export interface PumpMetadataCacheDocument {
   mint: string;
   name: string;

@@ -93,4 +93,39 @@ describe("beginJobProcessing", () => {
     expect(second.acquired).toBe(false);
     expect(second.job?.status).toBe("processing");
   });
+
+  it("reacquires stale processing jobs", async () => {
+    seedPaymentConfirmedJob("job-stale");
+    store.set(`jobs/job-stale`, {
+      ...store.get("jobs/job-stale"),
+      status: "processing",
+      progress: "generating_video",
+      updatedAt: new Date(Date.now() - 5 * 60_000).toISOString(),
+    });
+
+    const result = await beginJobProcessing("job-stale", {
+      staleAfterMs: 60_000,
+    });
+
+    expect(result.acquired).toBe(true);
+    expect(result.job?.status).toBe("processing");
+    expect(result.job?.progress).toBe("generating_video");
+  });
+
+  it("does not reacquire fresh processing jobs", async () => {
+    seedPaymentConfirmedJob("job-fresh");
+    store.set(`jobs/job-fresh`, {
+      ...store.get("jobs/job-fresh"),
+      status: "processing",
+      progress: "generating_video",
+      updatedAt: new Date().toISOString(),
+    });
+
+    const result = await beginJobProcessing("job-fresh", {
+      staleAfterMs: 60_000,
+    });
+
+    expect(result.acquired).toBe(false);
+    expect(result.job?.status).toBe("processing");
+  });
 });

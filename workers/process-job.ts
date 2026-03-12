@@ -26,6 +26,7 @@ import {
 import { ReportDocument, WalletStory } from "../lib/types/domain";
 import { buildAndRenderVideo } from "../lib/video/pipeline";
 import { computeAnalyticsFromTrades } from "../lib/analytics/compute";
+import { recoverJobIfNeeded } from "../lib/jobs/recovery";
 
 type AnalyticsEngineMode = ReturnType<typeof getEnv>["ANALYTICS_ENGINE_MODE"];
 const ANALYTICS_STAGE_TIMEOUT_MS = 4 * 60_000;
@@ -193,12 +194,19 @@ export async function processJob(jobId: string): Promise<void> {
     return;
   }
 
-  const begin = await beginJobProcessing(jobId);
+  if (await recoverJobIfNeeded(jobId)) {
+    return;
+  }
+
+  const begin = await beginJobProcessing(jobId, {
+    staleAfterMs: env.JOB_PROCESSING_STALE_MS,
+  });
   if (!begin.job) {
     throw new Error(`Job ${jobId} not found`);
   }
 
   if (!begin.acquired) {
+    await recoverJobIfNeeded(jobId);
     return;
   }
 

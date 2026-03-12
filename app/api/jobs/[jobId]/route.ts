@@ -1,4 +1,5 @@
 import { getJobArtifacts } from "@/lib/jobs/repository";
+import { recoverJobIfNeeded } from "@/lib/jobs/recovery";
 import { buildPaymentInstructions } from "@/lib/payments/instructions";
 import { NextResponse } from "next/server";
 
@@ -12,6 +13,7 @@ export async function GET(_: Request, context: Context) {
   const { jobId } = await context.params;
 
   try {
+    await recoverJobIfNeeded(jobId);
     const { job, report, video } = await getJobArtifacts(jobId);
     if (!job) {
       return NextResponse.json({ error: "Job not found" }, { status: 404 });

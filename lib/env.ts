@@ -49,6 +49,7 @@ const envSchema = z.object({
   WORKER_TOKEN: z.string().optional(),
   ALLOW_IN_PROCESS_WORKER: z.coerce.boolean().optional(),
   JOB_DISPATCH_BATCH_LIMIT: z.coerce.number().int().positive().default(25),
+  JOB_PROCESSING_STALE_MS: z.coerce.number().int().min(30_000).default(120_000),
   VIDEO_RENDER_POLL_INTERVAL_MS: z.coerce
     .number()
     .int()

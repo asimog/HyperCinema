@@ -5,6 +5,7 @@ import { derivePaymentAddress } from "@/lib/payments/dedicated-address";
 import { applyPaymentSettlement } from "@/lib/payments/settlement";
 import { solToLamports } from "@/lib/payments/solana-pay";
 import {
+  InternalVideoRenderDocument,
   JobDocument,
   JobProgress,
   JobStatus,
@@ -121,6 +122,10 @@ function metadataCollection() {
 
 function dispatchOutboxCollection() {
   return getDb().collection("job_dispatch_outbox");
+}
+
+function videoRendersCollection() {
+  return getDb().collection("video_renders");
 }
 
 async function upsertDispatchOutboxPending(jobId: string): Promise<void> {
@@ -348,6 +353,40 @@ export async function getVideo(jobId: string): Promise<VideoDocument | null> {
     return null;
   }
   return doc.data() as VideoDocument;
+}
+
+export async function getInternalVideoRender(
+  jobId: string,
+): Promise<InternalVideoRenderDocument | null> {
+  const doc = await videoRendersCollection().doc(jobId).get();
+  if (!doc.exists) {
+    return null;
+  }
+
+  const raw = doc.data() as Partial<InternalVideoRenderDocument>;
+  return {
+    id: raw.id ?? jobId,
+    jobId: raw.jobId ?? jobId,
+    status:
+      raw.status === "processing" ||
+      raw.status === "ready" ||
+      raw.status === "failed"
+        ? raw.status
+        : "queued",
+    renderStatus:
+      raw.renderStatus === "processing" ||
+      raw.renderStatus === "ready" ||
+      raw.renderStatus === "failed"
+        ? raw.renderStatus
+        : "queued",
+    videoUrl: raw.videoUrl ?? null,
+    thumbnailUrl: raw.thumbnailUrl ?? null,
+    error: raw.error ?? null,
+    createdAt: raw.createdAt ?? nowIso(),
+    updatedAt: raw.updatedAt ?? nowIso(),
+    startedAt: raw.startedAt ?? null,
+    completedAt: raw.completedAt ?? null,
+  };
 }
 
 export async function getJobArtifacts(jobId: string): Promise<{
@@ -696,7 +735,10 @@ export async function markJobFailed(
   });
 }
 
-export async function beginJobProcessing(jobId: string): Promise<{
+export async function beginJobProcessing(
+  jobId: string,
+  options?: { staleAfterMs?: number },
+): Promise<{
   acquired: boolean;
   job: JobDocument | null;
 }> {
@@ -718,22 +760,35 @@ export async function beginJobProcessing(jobId: string): Promise<{
       };
     }
 
-    if (current.status === "processing") {
+    const staleAfterMs = Math.max(30_000, options?.staleAfterMs ?? 120_000);
+    const currentUpdatedAtMs = isoToMs(current.updatedAt);
+    const processingLeaseIsFresh =
+      current.status === "processing" &&
+      currentUpdatedAtMs > 0 &&
+      Date.now() - currentUpdatedAtMs < staleAfterMs;
+
+    if (processingLeaseIsFresh) {
       return {
         acquired: false,
         job: current,
       };
     }
 
-    if (current.status !== "payment_confirmed") {
+    if (current.status !== "payment_confirmed" && current.status !== "processing") {
       throw new Error(`Job ${jobId} cannot enter processing from ${current.status}`);
     }
 
-    assertTransition(current.status, "processing");
+    if (current.status === "payment_confirmed") {
+      assertTransition(current.status, "processing");
+    }
+
     const updated: JobDocument = {
       ...current,
       status: "processing",
-      progress: "fetching_transactions",
+      progress:
+        current.progress === "complete" || current.progress === "failed"
+          ? "fetching_transactions"
+          : current.progress,
       updatedAt: nowIso(),
       errorCode: null,
       errorMessage: null,

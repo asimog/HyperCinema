@@ -5,8 +5,7 @@ import {
   RetryableError,
   withRetry,
 } from "@/lib/network/retry";
-
-const LONG_LIVED_EXPIRY = "03-01-2500";
+import { randomUUID } from "crypto";
 
 export async function uploadBufferToStorage(params: {
   storagePath: string;
@@ -15,21 +14,22 @@ export async function uploadBufferToStorage(params: {
 }): Promise<string> {
   const bucket = getBucket();
   const file = bucket.file(params.storagePath);
+  const downloadToken = randomUUID();
 
   await file.save(params.data, {
     metadata: {
       contentType: params.contentType,
       cacheControl: "public,max-age=31536000,immutable",
+      metadata: {
+        firebaseStorageDownloadTokens: downloadToken,
+      },
     },
     resumable: false,
   });
 
-  const [signedUrl] = await file.getSignedUrl({
-    action: "read",
-    expires: LONG_LIVED_EXPIRY,
-  });
-
-  return signedUrl;
+  return `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(
+    params.storagePath,
+  )}?alt=media&token=${downloadToken}`;
 }
 
 export async function uploadRemoteFileToStorage(params: {

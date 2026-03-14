@@ -22,7 +22,7 @@ describe("analytics scoring boundaries", () => {
     expect(personality.primary.displayName.length).toBeGreaterThan(0);
     expect(modifiers.length).toBeGreaterThanOrEqual(2);
     expect(modifiers.length).toBeLessThanOrEqual(4);
-    expect(Object.keys(moments).length).toBeLessThanOrEqual(12);
+    expect(Object.keys(moments).length).toBeLessThanOrEqual(13);
   });
 
   it("returns empty moment set for no trades", () => {
@@ -37,4 +37,3 @@ describe("analytics scoring boundaries", () => {
     expect(moments).toEqual({});
   });
 });
-

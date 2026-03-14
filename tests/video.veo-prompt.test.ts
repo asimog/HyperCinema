@@ -26,6 +26,46 @@ function buildStory(): WalletStory {
       "Late entries after first candle extensions",
       "Re-entry behavior after losses",
     ],
+    videoPromptSequence: [
+      {
+        sceneNumber: 1,
+        phase: "opening",
+        narrativePurpose: "Introduce the wallet and pace.",
+        shotType: "wide shot",
+        cameraMovement: "slow push-in",
+        environment: "dark room with chart screens",
+        characterAction: "trader locks in on the first setup",
+        visualStyle: "hyperreal meme cinema",
+        lighting: "cold blue and green screen glow",
+        soundDesign: "low synth and keyboard clicks",
+        symbolicVisuals: ["neon trading screens", "glowing chart lines"],
+        narrationHook: "The session opened with immediate high-tempo entries.",
+        providerPrompts: {
+          veo: "Wide shot in a dark room with chart screens. Camera movement: slow push-in.",
+          runway: "Stylized opening in a dark room with chart screens.",
+          kling: "Cinematic opening in a dark room with chart screens.",
+        },
+      },
+      {
+        sceneNumber: 2,
+        phase: "climax",
+        narrativePurpose: "Land the most watchable moment.",
+        shotType: "hero shot",
+        cameraMovement: "hard snap zoom",
+        environment: "market arena exploding in particles",
+        characterAction: "PnL collides with token symbols in the final set piece",
+        visualStyle: "epic trailer payoff",
+        lighting: "green-white burst",
+        soundDesign: "orchestral rise and electronic impact",
+        symbolicVisuals: ["rocket launches", "green particles exploding into red static"],
+        narrationHook: "Credits rolled with meme energy and a hard lesson.",
+        providerPrompts: {
+          veo: "Hero shot in a market arena exploding in particles. Camera movement: hard snap zoom.",
+          runway: "Stylized climax in a market arena exploding in particles.",
+          kling: "Cinematic climax in a market arena exploding in particles.",
+        },
+      },
+    ],
     narrativeSummary:
       "The wallet sprinted into momentum names, took fast cuts, and kept reloading for a comeback arc.",
     keyEvents: [
@@ -128,6 +168,8 @@ describe("google veo prompt engine", () => {
     expect(payload.prompt.includes("Wallet woke up and chose velocity.")).toBe(true);
     expect(payload.prompt.includes("AAA")).toBe(true);
     expect(payload.prompt.includes("Wallet personality profile: The Chaos Gambler + The Momentum Chaser.")).toBe(true);
+    expect(payload.prompt.includes("Directorial prompt sequence:")).toBe(true);
+    expect(payload.prompt.includes("Directorial Scene 1")).toBe(true);
     expect(payload.prompt.includes("Scene image rule:")).toBe(true);
     expect(payload.prompt.includes("Hard constraints:")).toBe(true);
   });

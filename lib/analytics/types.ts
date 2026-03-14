@@ -20,39 +20,11 @@ export interface PumpTradeLike {
   solAmount: number;
 }
 
-export type MetricPath =
-  | "activity.tradeCount"
-  | "activity.distinctTokenCount"
-  | "activity.buyCount"
-  | "activity.sellCount"
-  | "activity.tradesPerHour"
-  | "timing.earlyEntryBias"
-  | "timing.lateEntryBias"
-  | "timing.rapidReentryScore"
-  | "timing.nightActivityScore"
-  | "holding.avgHoldMinutes"
-  | "holding.shortHoldBias"
-  | "holding.bagholdBias"
-  | "sizing.avgSolPerTrade"
-  | "sizing.sizeVariance"
-  | "sizing.concentrationScore"
-  | "pnl.estimatedPnlSol"
-  | "pnl.realizedWinRate"
-  | "pnl.biggestWin"
-  | "pnl.biggestLoss"
-  | "attention.chaseScore"
-  | "attention.momentumAlignment"
-  | "attention.attentionSensitivity"
-  | "risk.drawdownTolerance"
-  | "risk.panicExitBias"
-  | "risk.averagingDownBias"
-  | "behavior.revengeBias"
-  | "behavior.chaosScore"
-  | "behavior.patienceScore"
-  | "behavior.convictionScore"
-  | "virality.memeabilityScore"
-  | "virality.shareabilityScore"
-  | "virality.cinemaScore";
+export type MetricPath = string;
+
+export interface MetricBucket {
+  [key: string]: number;
+}
 
 export interface NormalizedTrade {
   signature: string;
@@ -71,7 +43,7 @@ export interface NormalizedTrade {
   isPumpToken: boolean;
 }
 
-export interface ActivityMetrics {
+export interface ActivityMetrics extends MetricBucket {
   tradeCount: number;
   distinctTokenCount: number;
   buyCount: number;
@@ -80,55 +52,144 @@ export interface ActivityMetrics {
   rapidRotationScore: number;
 }
 
-export interface TimingMetrics {
+export interface TimingMetrics extends MetricBucket {
   earlyEntryBias: number;
   lateEntryBias: number;
   rapidReentryScore: number;
   nightActivityScore: number;
 }
 
-export interface HoldingMetrics {
+export interface HoldingMetrics extends MetricBucket {
   avgHoldMinutes: number;
   shortHoldBias: number;
   bagholdBias: number;
 }
 
-export interface SizingMetrics {
+export interface SizingMetrics extends MetricBucket {
   avgSolPerTrade: number;
   sizeVariance: number;
   concentrationScore: number;
 }
 
-export interface PnlMetrics {
+export interface PositionMetrics extends MetricBucket {
+  averagePositionSizeSOL: number;
+  maxPositionSizeSOL: number;
+  minPositionSizeSOL: number;
+  positionVariance: number;
+  sizeEscalationRate: number;
+  sizeReductionRate: number;
+  allInBehaviorScore: number;
+  microTradeRate: number;
+  confidencePositionScore: number;
+  lossPositionExpansion: number;
+  profitPositionExpansion: number;
+  positionConcentration: number;
+  tokenAllocationVariance: number;
+  exposureIntensity: number;
+}
+
+export interface PnlMetrics extends MetricBucket {
   estimatedPnlSol: number;
   realizedWinRate: number;
   biggestWin: number;
   biggestLoss: number;
 }
 
-export interface AttentionMetrics {
+export interface ProfitMetrics extends MetricBucket {
+  realizedPnlSOL: number;
+  unrealizedPnlSOL: number;
+  averageWinSOL: number;
+  averageLossSOL: number;
+  largestWinSOL: number;
+  largestLossSOL: number;
+  winRate: number;
+  lossRate: number;
+  profitFactor: number;
+  maxDrawdownSOL: number;
+  profitTakingSpeed: number;
+  profitHoldScore: number;
+  profitVariance: number;
+  profitStreak: number;
+  lossStreak: number;
+}
+
+export interface AttentionMetrics extends MetricBucket {
   chaseScore: number;
   momentumAlignment: number;
   attentionSensitivity: number;
 }
 
-export interface RiskMetrics {
+export interface RiskMetrics extends MetricBucket {
   drawdownTolerance: number;
   panicExitBias: number;
   averagingDownBias: number;
 }
 
-export interface BehaviorMetrics {
+export interface RecoveryMetrics extends MetricBucket {
+  revengeTradeIntensity: number;
+  recoveryAttempts: number;
+  comebackTrades: number;
+  drawdownPersistence: number;
+  riskAfterLossScore: number;
+  psychologicalResilience: number;
+  recoverySuccessRate: number;
+}
+
+export interface ChaosMetrics extends MetricBucket {
+  chaosIndex: number;
+  decisionVolatility: number;
+  behaviorVariance: number;
+  tradeTimingVariance: number;
+  coinSwitchFrequency: number;
+  strategyInstability: number;
+  impulseTradeRate: number;
+  emotionalVolatility: number;
+}
+
+export interface ViralityMetrics extends MetricBucket {
+  memeabilityScore: number;
+  shareabilityScore: number;
+  cinemaScore: number;
+}
+
+export interface BehaviorMetrics extends MetricBucket {
   revengeBias: number;
   chaosScore: number;
   patienceScore: number;
   convictionScore: number;
 }
 
-export interface ViralityMetrics {
-  memeabilityScore: number;
-  shareabilityScore: number;
-  cinemaScore: number;
+export interface SessionMetrics extends MetricBucket {
+  tradeClusterCount: number;
+  tradeSessions: number;
+  sessionDuration: number;
+  openingRushScore: number;
+  closingRushScore: number;
+}
+
+export interface ExecutionMetrics extends MetricBucket {
+  entryPrecisionScore: number;
+  exitPrecisionScore: number;
+  invalidationRespectScore: number;
+  followThroughScore: number;
+  hesitationScore: number;
+  slippageRiskScore: number;
+  reriskingSpeedScore: number;
+  cooldownDisciplineScore: number;
+  tradeSelectionQuality: number;
+  timingEdgeBalance: number;
+}
+
+export interface CompositionMetrics extends MetricBucket {
+  repeatTokenBias: number;
+  oneTickerObsessionScore: number;
+  longTailParticipation: number;
+  rotationBreadthScore: number;
+  concentrationEntropy: number;
+  tokenRevisitRate: number;
+  churnRate: number;
+  pumpStickiness: number;
+  focusDriftScore: number;
 }
 
 export interface WalletMetrics {
@@ -136,11 +197,18 @@ export interface WalletMetrics {
   timing: TimingMetrics;
   holding: HoldingMetrics;
   sizing: SizingMetrics;
+  position: PositionMetrics;
   pnl: PnlMetrics;
+  profit: ProfitMetrics;
   attention: AttentionMetrics;
   risk: RiskMetrics;
+  recovery: RecoveryMetrics;
+  chaos: ChaosMetrics;
   behavior: BehaviorMetrics;
   virality: ViralityMetrics;
+  session: SessionMetrics;
+  execution: ExecutionMetrics;
+  composition: CompositionMetrics;
 }
 
 export type BehaviorSignalKey =
@@ -221,6 +289,7 @@ export interface WalletMoment {
 
 export interface WalletMoments {
   absoluteCinemaMoment?: WalletMoment;
+  mostUnwellMoment?: WalletMoment;
   mainCharacterMoment?: WalletMoment;
   trenchLoreMoment?: WalletMoment;
   paperHandsMoment?: WalletMoment;
@@ -247,6 +316,24 @@ export interface StoryBeat {
   text: string;
   emotionalTone: string;
   symbolicVisualHint: string;
+}
+
+export type VideoPromptProvider = "veo" | "runway" | "kling";
+
+export interface VideoPromptScene {
+  sceneNumber: number;
+  phase: StoryBeatPhase;
+  narrativePurpose: string;
+  shotType: string;
+  cameraMovement: string;
+  environment: string;
+  characterAction: string;
+  visualStyle: string;
+  lighting: string;
+  soundDesign: string;
+  symbolicVisuals: string[];
+  narrationHook: string;
+  providerPrompts: Record<VideoPromptProvider, string>;
 }
 
 export interface SuitabilityRule {
@@ -338,12 +425,15 @@ export interface WalletAnalysisResult {
   metrics: WalletMetrics;
   personality: PersonalityProfileResult;
   modifiers: ModifierResult[];
+  behaviorPatterns: string[];
+  funObservations: string[];
   interpretationLines: string[];
   moments: WalletMoments;
   walletVibeCheck: string;
   cinematicSummary: CinematicSummary;
   xReadyLines: string[];
   storyBeats: StoryBeat[];
+  videoPromptSequence: VideoPromptScene[];
   writersRoomSelections: WritersRoomSelections;
 }
 
@@ -354,6 +444,8 @@ export interface InterpretationSelectionResult {
 }
 
 export interface NarrativeSelectionResult {
+  behaviorPatterns: string[];
+  funObservations: string[];
   walletVibeCheck: string;
   cinematicSummary: CinematicSummary;
   xReadyLines: string[];

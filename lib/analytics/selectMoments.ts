@@ -267,6 +267,74 @@ function computeComebackCandidate(sells: NormalizedTrade[]): MomentCandidate | n
   };
 }
 
+function computeMostUnwellCandidate(trades: NormalizedTrade[]): MomentCandidate | null {
+  let best:
+    | {
+        previousSell: NormalizedTrade;
+        nextBuy: NormalizedTrade;
+        score: number;
+      }
+    | null = null;
+
+  for (let index = 1; index < trades.length; index += 1) {
+    const previous = trades[index - 1]!;
+    const current = trades[index]!;
+
+    if (previous.side !== "SELL" || current.side !== "BUY") continue;
+    if ((previous.pnlSol ?? 0) >= 0) continue;
+
+    const delayMinutes = (current.timestamp - previous.timestamp) / 60;
+    if (delayMinutes > 30) continue;
+
+    const sameTokenReentry = previous.mint === current.mint ? 1 : 0;
+    const oversizedReentry = current.solAmount > previous.solAmount * 1.1 ? 1 : 0;
+    const nightScore = isNight(current.timestamp) ? 1 : 0;
+    const lossSeverity = clamp(
+      Math.abs(previous.pnlSol ?? 0) / Math.max(0.15, previous.solAmount),
+    );
+    const speedScore = clamp(1 - delayMinutes / 30);
+
+    const score = clamp(
+      lossSeverity * 0.3 +
+        speedScore * 0.25 +
+        sameTokenReentry * 0.2 +
+        oversizedReentry * 0.15 +
+        nightScore * 0.1,
+    );
+
+    if (!best || score > best.score) {
+      best = { previousSell: previous, nextBuy: current, score };
+    }
+  }
+
+  if (!best) return null;
+
+  const delayMinutes = round(
+    (best.nextBuy.timestamp - best.previousSell.timestamp) / 60,
+    1,
+  );
+  const timestampLabel = `${tradeHour(best.nextBuy.timestamp)}:00 UTC`;
+  const sameToken =
+    best.previousSell.mint === best.nextBuy.mint
+      ? best.nextBuy.symbol ?? "the same token"
+      : `${best.previousSell.symbol ?? "one token"} into ${best.nextBuy.symbol ?? "another token"}`;
+
+  return {
+    key: "mostUnwellMoment",
+    score: best.score,
+    moment: createMoment({
+      title: "Most Unwell Moment",
+      description: `After eating ${round(best.previousSell.pnlSol ?? 0, 4)} SOL, the wallet re-entered ${sameToken} ${delayMinutes} minutes later at ${timestampLabel} with ${round(best.nextBuy.solAmount, 4)} SOL.`,
+      explanation:
+        "This sequence combines a realized loss, fast redeployment, and elevated emotional context into the clearest concern-comedy moment.",
+      humorLine:
+        "From a wellness perspective, this was not a cooldown. This was a sequel.",
+      tradeSignatures: [best.previousSell.signature, best.nextBuy.signature],
+      confidence: best.score,
+    }),
+  };
+}
+
 function computeGoblinHourCandidate(trades: NormalizedTrade[]): MomentCandidate | null {
   const nightTrades = trades.filter((trade) => isNight(trade.timestamp));
   if (!nightTrades.length) return null;
@@ -467,6 +535,7 @@ export function selectMoments(input: {
   const sells = getSells(trades);
 
   const candidates: Array<MomentCandidate | null> = [
+    computeMostUnwellCandidate(trades),
     computeMainCharacterCandidate(sells),
     computeTrenchLoreCandidate(trades),
     computePaperHandsCandidate(trades, sells),

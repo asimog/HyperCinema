@@ -1,4 +1,4 @@
-import type { WalletAnalysisResult } from "@/lib/analytics/types";
+import type { VideoPromptScene, WalletAnalysisResult } from "@/lib/analytics/types";
 
 export type PackageType = "1d" | "2d" | "3d";
 
@@ -241,6 +241,7 @@ export interface WalletStory {
   storyBeats?: string[];
   keyEvents?: WalletKeyEvent[];
   walletProfile?: WalletProfile;
+  videoPromptSequence?: VideoPromptScene[];
   tokenMetadata?: WalletStoryTokenMetadata[];
 }
 

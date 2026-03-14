@@ -8,6 +8,7 @@ import {
   markRenderFailed,
   markRenderReady,
   touchRenderJob,
+  updateRenderJob,
 } from "./repository";
 import { getVideoServiceEnv } from "./env";
 import { NormalizedRenderRequest, RenderJobRecord } from "./types";
@@ -37,7 +38,11 @@ export interface RenderServiceResultAsync {
 export type RenderServiceStartResult = RenderServiceResultSync | RenderServiceResultAsync;
 
 export interface ClipGenerator {
-  generateClip(input: GenerateClipInput): Promise<{ operationName: string; videoUris: string[] }>;
+  generateClip(input: GenerateClipInput): Promise<{
+    operationName: string;
+    videoUris: string[];
+    videoBytesBase64: string[];
+  }>;
 }
 
 const ALLOWED_VEO_MODEL = "veo-3.1-fast-generate-001" as const;
@@ -95,6 +100,20 @@ export class RenderService {
           videoUrl: existing.videoUrl,
           thumbnailUrl: existing.thumbnailUrl,
         };
+      }
+
+      if (existing.status === "failed") {
+        // Failed renders must be re-queued on retries instead of staying permanently terminal.
+        await updateRenderJob(existing.id, {
+          status: "queued",
+          renderStatus: "queued",
+          videoUrl: null,
+          thumbnailUrl: null,
+          error: null,
+          startedAt: null,
+          completedAt: null,
+          request: normalizedRequest,
+        });
       }
 
       this.kickRender(existing.id);
@@ -201,8 +220,18 @@ export class RenderService {
         imageUrl: chunk.imageUrl,
         styleHints,
         generateAudio: true,
+        storageUri: `gs://${env.FIREBASE_STORAGE_BUCKET}/video-renders/${record.jobId}/clips/${chunk.chunkId}`,
+        onProgress: () => touchRenderJob(record.id),
       });
-      clipUris.push(clip.videoUris[0]!);
+      const uri = clip.videoUris[0];
+      const inlineVideo = clip.videoBytesBase64[0];
+      if (uri) {
+        clipUris.push(uri);
+      } else if (inlineVideo) {
+        clipUris.push(`data:video/mp4;base64,${inlineVideo}`);
+      } else {
+        throw new Error(`Clip render for job ${record.jobId} completed without a video asset.`);
+      }
       await touchRenderJob(record.id);
     }
 

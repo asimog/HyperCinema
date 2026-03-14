@@ -3,6 +3,7 @@ import {
   MAX_INTERPRETATION_LINES,
   MIN_INTERPRETATION_LINES,
 } from "./constants";
+import { GENERATED_INTERPRETATION_LINES } from "./contentBank";
 import {
   InterpretationLineTemplate,
   InterpretationSelectionResult,
@@ -29,7 +30,14 @@ function metricValue(metrics: WalletMetrics, path: MetricPath): number {
   const bucket = (metrics as unknown as Record<string, Record<string, number>>)[
     group
   ];
-  return bucket?.[key] ?? 0;
+  if (!bucket || !(key in bucket)) {
+    const error = new Error(`Unknown metric path: ${path}`);
+    if (process.env.NODE_ENV === "test") {
+      throw error;
+    }
+    return 0;
+  }
+  return bucket[key] ?? 0;
 }
 
 function evaluateLine(
@@ -58,6 +66,10 @@ function evaluateLine(
   }
 
   return score;
+}
+
+function primaryTag(tags: string[]): string {
+  return tags.find((tag) => !["universal", "general", "culture"].includes(tag)) ?? tags[0] ?? "general";
 }
 
 function buildActiveTags(input: {
@@ -139,6 +151,7 @@ export function selectInterpretationLines(input: {
   const writersCandidates = input.writersRoom.interpretationLines.filter(
     (line) => line.id && line.text,
   );
+  const generatedCandidates = GENERATED_INTERPRETATION_LINES;
 
   const fallbackCandidates = FALLBACK_INTERPRETATION_LINES;
 
@@ -153,40 +166,62 @@ export function selectInterpretationLines(input: {
       });
 
   const rankedWriters = rank(writersCandidates);
+  const rankedGenerated = rank(generatedCandidates);
   const rankedFallback = rank(fallbackCandidates);
 
   const selected = new Map<string, string>();
   const selectedIds: string[] = [];
+  const tagUsage = new Map<string, number>();
 
-  for (const entry of rankedWriters) {
-    if (selected.size >= desiredCount) break;
-    if (!selected.has(entry.line.id)) {
+  const takeFromRanked = (
+    entries: Array<{ line: InterpretationLineTemplate; score: number }>,
+  ) => {
+    for (const entry of entries) {
+      if (selected.size >= desiredCount) break;
+      if (selected.has(entry.line.id)) continue;
+
+      const tag = primaryTag(entry.line.tags);
+      const alreadyUsed = tagUsage.get(tag) ?? 0;
+      if (alreadyUsed >= 2 && entry.score < 2.2) {
+        continue;
+      }
+
       selected.set(entry.line.id, entry.line.text);
       selectedIds.push(entry.line.id);
+      tagUsage.set(tag, alreadyUsed + 1);
     }
-  }
+  };
 
-  for (const entry of rankedFallback) {
-    if (selected.size >= desiredCount) break;
-    if (!selected.has(entry.line.id)) {
-      selected.set(entry.line.id, entry.line.text);
-      selectedIds.push(entry.line.id);
-    }
-  }
+  takeFromRanked(rankedWriters);
+  takeFromRanked(rankedGenerated);
+  takeFromRanked(rankedFallback);
 
   if (selected.size < MIN_INTERPRETATION_LINES) {
-    for (const line of fallbackCandidates) {
+    for (const line of [...generatedCandidates, ...fallbackCandidates, ...writersCandidates]) {
       if (selected.size >= MIN_INTERPRETATION_LINES) break;
-      if (!selected.has(line.id)) {
-        selected.set(line.id, line.text);
-        selectedIds.push(line.id);
-      }
+      if (selected.has(line.id)) continue;
+
+      selected.set(line.id, line.text);
+      selectedIds.push(line.id);
+      const tag = primaryTag(line.tags);
+      tagUsage.set(tag, (tagUsage.get(tag) ?? 0) + 1);
     }
   }
 
-  const source = rankedWriters.length > 0 && selectedIds.some((id) =>
+  const hasWriterSelection = selectedIds.some((id) =>
     writersCandidates.some((line) => line.id === id),
-  )
+  );
+
+  if (selected.size < desiredCount) {
+    for (const line of [...generatedCandidates, ...fallbackCandidates]) {
+      if (selected.size >= desiredCount) break;
+      if (selected.has(line.id)) continue;
+      selected.set(line.id, line.text);
+      selectedIds.push(line.id);
+    }
+  }
+
+  const source = rankedWriters.length > 0 && hasWriterSelection
     ? "writers-room"
     : "fallback";
 

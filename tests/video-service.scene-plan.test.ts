@@ -53,7 +53,7 @@ function buildRequest(): NormalizedRenderRequest {
 }
 
 describe("video-service scene chunk planner", () => {
-  it("splits long scenes into max-size chunks", () => {
+  it("splits long scenes into Veo-supported chunks", () => {
     const chunks = buildSceneChunks({
       request: buildRequest(),
       maxClipSeconds: 8,
@@ -61,9 +61,32 @@ describe("video-service scene chunk planner", () => {
 
     expect(chunks).toHaveLength(3);
     expect(chunks[0]?.durationSeconds).toBe(8);
-    expect(chunks[1]?.durationSeconds).toBe(8);
-    expect(chunks[2]?.durationSeconds).toBe(1);
+    expect(chunks[1]?.durationSeconds).toBe(6);
+    expect(chunks[2]?.durationSeconds).toBe(4);
+    expect(chunks.every((chunk) => [4, 6, 8].includes(chunk.durationSeconds))).toBe(true);
     expect(chunks[0]?.prompt.includes("Scene 1, chunk 1/3")).toBe(true);
+  });
+
+  it("rounds unsupported odd durations to the nearest supported duration plan", () => {
+    const request = buildRequest();
+    request.scenes = [
+      {
+        sceneNumber: 1,
+        visualPrompt: "visual",
+        narration: "narration",
+        durationSeconds: 7,
+        imageUrl: "https://cdn.example.com/image.png",
+        includeAudio: true,
+      },
+    ];
+
+    const chunks = buildSceneChunks({
+      request,
+      maxClipSeconds: 8,
+    });
+
+    expect(chunks).toHaveLength(1);
+    expect(chunks[0]?.durationSeconds).toBe(8);
   });
 
   it("builds deterministic ffmpeg concat manifest", () => {

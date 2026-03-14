@@ -1,4 +1,5 @@
 import { round } from "@/lib/utils";
+import { generateVideoPromptSequence } from "@/lib/analytics/generateVideoPromptSequence";
 import {
   ReportDocument,
   ReportTimelineItem,
@@ -32,6 +33,23 @@ interface LegacyAdapterInput {
 interface LegacyArtifacts {
   report: Omit<ReportDocument, "summary" | "downloadUrl">;
   story: WalletStory;
+}
+
+function parseTradePnlFromLabel(label: string | undefined | null): number {
+  if (!label) return 0;
+  const match = label.match(/\(([+-]?\d+(?:\.\d+)?)\s+SOL\)$/i);
+  return match ? Number(match[1] ?? 0) : 0;
+}
+
+function hasRichAnalysisPayload(
+  payload: WalletAnalysisResult | undefined,
+): payload is WalletAnalysisResult {
+  return Boolean(
+    payload &&
+      payload.behaviorPatterns?.length >= 3 &&
+      payload.funObservations?.length >= 3 &&
+      payload.videoPromptSequence?.length >= 5,
+  );
 }
 
 function median(values: number[]): number {
@@ -100,7 +118,7 @@ function buildKeyEvents(moments: WalletMoments): WalletKeyEvent[] {
     momentToLegacyEvent("panic_exit", moments.paperHandsMoment),
     momentToLegacyEvent(
       "revenge_trade",
-      moments.overcookedMoment ?? moments.goblinHourMoment,
+      moments.mostUnwellMoment ?? moments.overcookedMoment ?? moments.goblinHourMoment,
     ),
   ];
 
@@ -207,7 +225,7 @@ function mapLegacyProfile(
     secondaryPersonality: analysis.personality.secondaryCandidates[0]?.displayName ?? null,
     modifiers: analysis.modifiers.map((modifier) => modifier.displayName),
     behavioralSummary: ensureArrayRange(
-      analysis.interpretationLines,
+      analysis.behaviorPatterns,
       3,
       6,
       [
@@ -266,7 +284,7 @@ export function adaptWalletAnalysisToLegacyArtifacts(
   const memorableMoments = buildMemorableMoments(analysis.moments);
   const storyBeats = mapStoryBeats(analysis.storyBeats);
   const funObservations = ensureArrayRange(
-    [...analysis.interpretationLines.slice(0, 3), ...analysis.xReadyLines.slice(0, 3)],
+    [...analysis.funObservations, ...analysis.xReadyLines.slice(0, 2)],
     3,
     5,
     [
@@ -294,7 +312,7 @@ export function adaptWalletAnalysisToLegacyArtifacts(
     walletSecondaryPersonality: analysis.personality.secondaryCandidates[0]?.displayName ?? null,
     walletModifiers: analysis.modifiers.map((modifier) => modifier.displayName),
     behaviorPatterns: ensureArrayRange(
-      analysis.interpretationLines,
+      analysis.behaviorPatterns,
       3,
       6,
       ["Behavior clustered around momentum and reactive execution."],
@@ -340,6 +358,7 @@ export function adaptWalletAnalysisToLegacyArtifacts(
     storyBeats: report.storyBeats,
     keyEvents: report.keyEvents,
     walletProfile: report.walletProfile,
+    videoPromptSequence: analysis.videoPromptSequence,
     tokenMetadata: buildTokenMetadataFromTrades(
       analysis.normalizedTrades.map((trade) => ({
         mint: trade.mint,
@@ -397,6 +416,19 @@ function mapLegacyMetricsToV2(report: ReportDocument, rangeHours: number): Walle
   const concentration = report.walletProfile?.metrics.tokenConcentration ?? 0;
   const chaos = report.walletProfile?.metrics.rapidRotationRatio ?? 0;
   const patience = Math.max(0, 1 - (report.walletProfile?.metrics.prematureExitRatio ?? 0));
+  const biggestWin = Math.max(0, parseTradePnlFromLabel(report.bestTrade));
+  const biggestLoss = Math.min(0, parseTradePnlFromLabel(report.worstTrade));
+  const inferredWinCount = biggestWin > 0 ? 1 : 0;
+  const inferredLossCount = biggestLoss < 0 ? 1 : 0;
+  const inferredOutcomeCount = inferredWinCount + inferredLossCount;
+  const inferredWinRate =
+    inferredOutcomeCount > 0 ? round(inferredWinCount / inferredOutcomeCount, 4) : 0;
+  const inferredLossRate =
+    inferredOutcomeCount > 0 ? round(inferredLossCount / inferredOutcomeCount, 4) : 0;
+  const inferredProfitFactor =
+    biggestWin > 0 && biggestLoss < 0
+      ? round(Math.abs(biggestWin / biggestLoss), 4)
+      : 0;
 
   return {
     activity: {
@@ -426,22 +458,47 @@ function mapLegacyMetricsToV2(report: ReportDocument, rangeHours: number): Walle
       sizeVariance: report.walletProfile?.metrics.positionSizeConsistency ?? 0,
       concentrationScore: concentration,
     },
+    position: {
+      averagePositionSizeSOL: report.buyCount > 0 ? round(report.solSpent / Math.max(1, report.buyCount), 6) : 0,
+      maxPositionSizeSOL: report.buyCount > 0 ? round(report.solSpent / Math.max(1, report.buyCount), 6) : 0,
+      minPositionSizeSOL: report.buyCount > 0 ? round(report.solSpent / Math.max(1, report.buyCount), 6) : 0,
+      positionVariance: report.walletProfile?.metrics.positionSizeConsistency ?? 0,
+      sizeEscalationRate: 0,
+      sizeReductionRate: 0,
+      allInBehaviorScore: concentration,
+      microTradeRate: 0,
+      confidencePositionScore: concentration,
+      lossPositionExpansion: Math.min(
+        1,
+        (report.walletProfile?.metrics.postLossReentryCount ?? 0) / Math.max(1, report.buyCount),
+      ),
+      profitPositionExpansion: 0,
+      positionConcentration: concentration,
+      tokenAllocationVariance: report.walletProfile?.metrics.positionSizeConsistency ?? 0,
+      exposureIntensity: concentration,
+    },
     pnl: {
       estimatedPnlSol: report.estimatedPnlSol,
-      realizedWinRate:
-        report.sellCount > 0
-          ? round(
-              report.timeline.filter((item) => item.side === "sell" && item.solAmount > 0).length /
-                report.sellCount,
-              4,
-            )
-          : 0,
-      biggestWin: report.bestTrade.includes("SOL")
-        ? Number(report.bestTrade.match(/[-+]?\d+(\.\d+)?/)?.[0] ?? 0)
-        : 0,
-      biggestLoss: report.worstTrade.includes("SOL")
-        ? Number(report.worstTrade.match(/[-+]?\d+(\.\d+)?/)?.[0] ?? 0)
-        : 0,
+      realizedWinRate: inferredWinRate,
+      biggestWin,
+      biggestLoss,
+    },
+    profit: {
+      realizedPnlSOL: report.estimatedPnlSol,
+      unrealizedPnlSOL: 0,
+      averageWinSOL: 0,
+      averageLossSOL: 0,
+      largestWinSOL: biggestWin,
+      largestLossSOL: biggestLoss,
+      winRate: inferredWinRate,
+      lossRate: inferredLossRate,
+      profitFactor: inferredProfitFactor,
+      maxDrawdownSOL: Math.max(Math.abs(biggestLoss), Math.abs(report.estimatedPnlSol)),
+      profitTakingSpeed: Math.max(0, 1 - (report.walletProfile?.metrics.averageWinnerHoldMinutes ?? 0) / 180),
+      profitHoldScore: Math.min(1, (report.walletProfile?.metrics.averageWinnerHoldMinutes ?? 0) / 180),
+      profitVariance: Math.abs(report.estimatedPnlSol),
+      profitStreak: 0,
+      lossStreak: 0,
     },
     attention: {
       chaseScore: report.walletProfile?.metrics.lateMomentumEntryRatio ?? 0,
@@ -450,6 +507,15 @@ function mapLegacyMetricsToV2(report: ReportDocument, rangeHours: number): Walle
         1,
         ((report.walletProfile?.metrics.nightTradeRatio ?? 0) + chaos) / 2,
       ),
+      timelineInfluenceScore: report.walletProfile?.metrics.lateMomentumEntryRatio ?? 0,
+      narrativeChasingScore: report.walletProfile?.metrics.lateMomentumEntryRatio ?? 0,
+      trendFollowingScore: Math.max(0, 1 - (report.walletProfile?.metrics.prematureExitRatio ?? 0)),
+      hotTokenParticipation: concentration,
+      viralCoinParticipation: Math.min(1, (concentration + chaos) / 2),
+      attentionRotationRate: chaos,
+      metaCoinParticipation: report.walletProfile?.metrics.lateMomentumEntryRatio ?? 0,
+      socialSignalResponse: Math.min(1, ((report.walletProfile?.metrics.nightTradeRatio ?? 0) + concentration) / 2),
+      pumpParticipationRate: report.timeline.length > 0 ? 1 : 0,
     },
     risk: {
       drawdownTolerance: Math.min(
@@ -462,6 +528,62 @@ function mapLegacyMetricsToV2(report: ReportDocument, rangeHours: number): Walle
         1,
         (report.walletProfile?.metrics.postLossReentryCount ?? 0) / Math.max(1, report.buyCount),
       ),
+      lossToleranceScore: Math.min(
+        1,
+        (report.walletProfile?.metrics.averageLoserHoldMinutes ?? 0) / 180,
+      ),
+      riskEscalationRate: Math.min(
+        1,
+        (report.walletProfile?.metrics.postLossReentryCount ?? 0) / Math.max(1, report.sellCount),
+      ),
+      overtradeScore: Math.min(1, tradesPerHour / 0.6),
+      martingaleScore: Math.min(
+        1,
+        (report.walletProfile?.metrics.postLossReentryCount ?? 0) / Math.max(1, report.sellCount),
+      ),
+      panicSellRate: report.walletProfile?.metrics.prematureExitRatio ?? 0,
+      panicBuyRate: report.walletProfile?.metrics.lateMomentumEntryRatio ?? 0,
+      lossPersistence: Math.min(1, (report.walletProfile?.metrics.averageLoserHoldMinutes ?? 0) / 240),
+      lossRecoveryRate: Math.min(
+        1,
+        (report.walletProfile?.metrics.postLossReentryCount ?? 0) / Math.max(1, report.sellCount),
+      ),
+      riskConfidence: concentration,
+      riskVolatility: chaos,
+      convictionAfterLoss: concentration,
+      emotionalTradingScore: Math.min(
+        1,
+        ((report.walletProfile?.metrics.nightTradeRatio ?? 0) + chaos) / 2,
+      ),
+      riskAfterLossScore: Math.min(
+        1,
+        (report.walletProfile?.metrics.postLossReentryCount ?? 0) / Math.max(1, report.sellCount),
+      ),
+    },
+    recovery: {
+      revengeTradeIntensity: Math.min(
+        1,
+        (report.walletProfile?.metrics.postLossReentryCount ?? 0) / Math.max(1, report.sellCount),
+      ),
+      recoveryAttempts: report.walletProfile?.metrics.postLossReentryCount ?? 0,
+      comebackTrades: Math.min(1, report.walletProfile?.metrics.postLossReentryCount ?? 0),
+      drawdownPersistence: Math.min(1, Math.abs(report.estimatedPnlSol) / Math.max(0.5, report.solSpent || 0.5)),
+      riskAfterLossScore: Math.min(
+        1,
+        (report.walletProfile?.metrics.postLossReentryCount ?? 0) / Math.max(1, report.sellCount),
+      ),
+      psychologicalResilience: Math.max(0, 1 - chaos),
+      recoverySuccessRate: report.estimatedPnlSol >= 0 ? 1 : 0,
+    },
+    chaos: {
+      chaosIndex: chaos,
+      decisionVolatility: chaos,
+      behaviorVariance: chaos,
+      tradeTimingVariance: chaos,
+      coinSwitchFrequency: report.walletProfile?.metrics.rapidRotationRatio ?? 0,
+      strategyInstability: chaos,
+      impulseTradeRate: report.walletProfile?.metrics.lateMomentumEntryRatio ?? 0,
+      emotionalVolatility: Math.min(1, ((report.walletProfile?.metrics.nightTradeRatio ?? 0) + chaos) / 2),
     },
     behavior: {
       revengeBias: Math.min(
@@ -471,6 +593,12 @@ function mapLegacyMetricsToV2(report: ReportDocument, rangeHours: number): Walle
       chaosScore: chaos,
       patienceScore: patience,
       convictionScore: concentration,
+      disciplineScore: patience,
+      thesisLoyaltyScore: concentration,
+      casinoModeScore: chaos,
+      attentionAddictionScore: report.walletProfile?.metrics.lateMomentumEntryRatio ?? 0,
+      survivalScore: Math.max(0, 1 - Math.min(1, Math.abs(report.estimatedPnlSol) / Math.max(0.5, report.solSpent || 0.5))),
+      delusionScore: concentration,
     },
     virality: {
       memeabilityScore: Math.min(1, (chaos + (report.walletProfile?.metrics.nightTradeRatio ?? 0)) / 2),
@@ -482,6 +610,54 @@ function mapLegacyMetricsToV2(report: ReportDocument, rangeHours: number): Walle
         1,
         (Math.abs(report.estimatedPnlSol) / Math.max(0.5, report.solSpent || 0.5)) * 0.5 + chaos * 0.5,
       ),
+      storyDensityScore: Math.min(1, tradesPerHour / 0.4),
+      dramaScore: Math.min(1, (Math.abs(report.estimatedPnlSol) / Math.max(0.5, report.solSpent || 0.5)) * 0.7 + chaos * 0.3),
+      quotePotentialScore: Math.min(1, (chaos + concentration) / 2),
+      embarrassmentScore: Math.min(1, ((report.walletProfile?.metrics.lateMomentumEntryRatio ?? 0) + chaos) / 2),
+      heroMomentScore: Math.max(0, report.estimatedPnlSol > 0 ? 0.6 : 0.2),
+      chaosEntertainmentScore: chaos,
+      trailerNarrativeScore: Math.min(1, (chaos + concentration) / 2),
+      loreDensityScore: Math.min(1, ((report.walletProfile?.metrics.nightTradeRatio ?? 0) + chaos + concentration) / 3),
+    },
+    session: {
+      tradeClusterCount: Math.max(1, Math.round(tradesPerHour)),
+      tradeSessions: Math.max(1, Math.round(rangeHours / 12)),
+      sessionDuration: rangeHours * 60,
+      activeWindowMinutes: rangeHours * 60,
+      idleGapMean: 0,
+      idleGapMedian: 0,
+      longestInactiveGapMinutes: 0,
+      openingRushScore: Math.min(1, tradesPerHour / 0.5),
+      closingRushScore: Math.min(1, tradesPerHour / 0.5),
+      averageSessionLengthMinutes: rangeHours * 60,
+      sessionVariance: 0,
+      sessionCompressionScore: Math.min(1, tradesPerHour / 0.5),
+    },
+    execution: {
+      entryPrecisionScore: Math.max(0, 1 - (report.walletProfile?.metrics.lateMomentumEntryRatio ?? 0)),
+      exitPrecisionScore: Math.max(0, 1 - (report.walletProfile?.metrics.prematureExitRatio ?? 0)),
+      invalidationRespectScore: Math.max(0, 1 - chaos),
+      followThroughScore: concentration,
+      hesitationScore: Math.max(0, 1 - tradesPerHour / 0.6),
+      slippageRiskScore: report.walletProfile?.metrics.lateMomentumEntryRatio ?? 0,
+      reriskingSpeedScore: Math.min(
+        1,
+        (report.walletProfile?.metrics.postLossReentryCount ?? 0) / Math.max(1, report.sellCount),
+      ),
+      cooldownDisciplineScore: patience,
+      tradeSelectionQuality: Math.max(0, 1 - chaos),
+      timingEdgeBalance: Math.max(0, 1 - (report.walletProfile?.metrics.lateMomentumEntryRatio ?? 0)),
+    },
+    composition: {
+      repeatTokenBias: concentration,
+      oneTickerObsessionScore: concentration,
+      longTailParticipation: Math.max(0, 1 - concentration),
+      rotationBreadthScore: Math.max(0, 1 - concentration),
+      concentrationEntropy: Math.max(0, 1 - concentration),
+      tokenRevisitRate: concentration,
+      churnRate: report.walletProfile?.metrics.rapidRotationRatio ?? 0,
+      pumpStickiness: concentration,
+      focusDriftScore: chaos,
     },
   };
 }
@@ -494,6 +670,10 @@ export function buildFallbackAnalysisFromLegacyArtifacts(input: {
 }): WalletAnalysisResult {
   const report = input.report;
   const summary = input.summary;
+
+  if (hasRichAnalysisPayload(report.analysisV2?.payload)) {
+    return report.analysisV2.payload;
+  }
 
   const normalizedTrades: NormalizedTrade[] = report.timeline.map((item) => ({
     signature: item.signature,
@@ -576,6 +756,9 @@ export function buildFallbackAnalysisFromLegacyArtifacts(input: {
 
   const keyEvents = report.keyEvents ?? [];
   const moments: WalletMoments = {
+    mostUnwellMoment: fallbackMomentFromEvent(
+      keyEvents.find((event) => event.type === "revenge_trade"),
+    ),
     mainCharacterMoment: fallbackMomentFromEvent(
       keyEvents.find((event) => event.type === "largest_gain"),
     ),
@@ -588,9 +771,6 @@ export function buildFallbackAnalysisFromLegacyArtifacts(input: {
     paperHandsMoment: fallbackMomentFromEvent(
       keyEvents.find((event) => event.type === "panic_exit"),
     ),
-    overcookedMoment: fallbackMomentFromEvent(
-      keyEvents.find((event) => event.type === "revenge_trade"),
-    ),
   };
   if (moments.mainCharacterMoment) {
     moments.absoluteCinemaMoment = {
@@ -600,11 +780,43 @@ export function buildFallbackAnalysisFromLegacyArtifacts(input: {
     };
   }
 
+  const behaviorPatterns = ensureArrayRange(
+    report.behaviorPatterns ?? report.walletProfile?.behavioralSummary ?? [],
+    3,
+    6,
+    [
+      "Behavior clustered around momentum, reactive sizing, and visible emotional follow-through.",
+      "Facts first: this wallet traded like the chart kept issuing dares.",
+      "The tape showed conviction, but exits and cooldowns were less consistent.",
+    ],
+  );
+
+  const funObservations = ensureArrayRange(
+    report.funObservations ?? report.memorableMoments ?? [],
+    3,
+    6,
+    [
+      "This wallet did not trade quietly.",
+      "The comeback narrative had measurable emotional funding.",
+      "Brother this was cinema.",
+    ],
+  );
+
+  const metrics = mapLegacyMetricsToV2(report as ReportDocument, input.rangeHours);
+  const videoPromptSequence = generateVideoPromptSequence({
+    wallet: report.wallet,
+    metrics,
+    personality: report.walletPersonality ?? "The Casino Tourist",
+    modifiers: report.walletModifiers ?? [],
+    storyBeats,
+    moments,
+  });
+
   return {
     wallet: report.wallet,
     rangeHours: input.rangeHours,
     normalizedTrades,
-    metrics: mapLegacyMetricsToV2(report as ReportDocument, input.rangeHours),
+    metrics,
     personality: {
       primary: {
         id: (report.walletPersonality ?? "casino-tourist").toLowerCase().replace(/[^a-z0-9]+/g, "-"),
@@ -628,12 +840,15 @@ export function buildFallbackAnalysisFromLegacyArtifacts(input: {
       score: 70 - index * 7,
       explanation: "Mapped from legacy modifier output during fallback.",
     })),
+    behaviorPatterns,
+    funObservations,
     interpretationLines,
     moments,
     walletVibeCheck: report.narrativeSummary ?? summary,
     cinematicSummary: fallbackCinematicSummary({ ...report, summary } as ReportDocument),
     xReadyLines,
     storyBeats,
+    videoPromptSequence,
     writersRoomSelections: {
       contentSource: "fallback-only",
       interpretationLineIds: interpretationLines.map((_, index) => `legacy-fallback-line-${index + 1}`),

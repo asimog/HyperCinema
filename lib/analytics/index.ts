@@ -15,6 +15,7 @@ import { SEED_WALLET_PROFILES } from "./constants";
 import { fetchWalletActivity } from "./fetchWalletActivity";
 import { filterPumpActivity } from "./filterPumpActivity";
 import { generateStoryBeats } from "./generateStoryBeats";
+import { generateVideoPromptSequence } from "./generateVideoPromptSequence";
 import { loadWritersRoomContent } from "./loadWritersRoomContent";
 import { normalizeTrades } from "./normalizeTrades";
 import {
@@ -90,6 +91,15 @@ async function analyzeFromNormalizedTrades(input: {
     moments,
   });
 
+  const videoPromptSequence = generateVideoPromptSequence({
+    wallet: input.wallet,
+    metrics,
+    personality: personality.primary.displayName,
+    modifiers: modifiers.map((modifier) => modifier.displayName),
+    storyBeats,
+    moments,
+  });
+
   const result: WalletAnalysisResult = {
     wallet: input.wallet,
     rangeHours: input.rangeHours,
@@ -97,12 +107,15 @@ async function analyzeFromNormalizedTrades(input: {
     metrics,
     personality,
     modifiers,
+    behaviorPatterns: narratives.behaviorPatterns,
+    funObservations: narratives.funObservations,
     interpretationLines: interpretationSelection.lines,
     moments,
     walletVibeCheck: narratives.walletVibeCheck,
     cinematicSummary: narratives.cinematicSummary,
     xReadyLines: narratives.xReadyLines,
     storyBeats,
+    videoPromptSequence,
     writersRoomSelections: narratives.writersRoomSelections,
   };
 

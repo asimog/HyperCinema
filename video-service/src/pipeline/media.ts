@@ -1,12 +1,11 @@
 import { promises as fs } from "fs";
 import os from "os";
 import path from "path";
+import { randomUUID } from "crypto";
 import { spawn } from "child_process";
 import { Storage } from "@google-cloud/storage";
 import { getVideoServiceBucket } from "../firebase";
 import { getVideoServiceEnv } from "../env";
-
-const LONG_LIVED_EXPIRY = "03-01-2500";
 
 export function buildConcatManifest(paths: string[]): string {
   return paths
@@ -35,7 +34,7 @@ function runCommand(command: string, args: string[], cwd: string): Promise<void>
 }
 
 function parseGcsUri(uri: string): { bucket: string; objectPath: string } {
-  const match = uri.match(/^gcs:\/\/([^/]+)\/(.+)$/);
+  const match = uri.match(/^g(?:cs|s):\/\/([^/]+)\/(.+)$/);
   if (!match) {
     throw new Error(`Invalid gcs uri: ${uri}`);
   }
@@ -46,10 +45,19 @@ function parseGcsUri(uri: string): { bucket: string; objectPath: string } {
 }
 
 async function downloadFromUri(uri: string, destination: string): Promise<void> {
-  if (uri.startsWith("gcs://")) {
+  if (uri.startsWith("gcs://") || uri.startsWith("gs://")) {
     const storage = new Storage();
     const { bucket, objectPath } = parseGcsUri(uri);
     await storage.bucket(bucket).file(objectPath).download({ destination });
+    return;
+  }
+
+  if (uri.startsWith("data:")) {
+    const match = uri.match(/^data:.*?;base64,(.+)$/);
+    if (!match) {
+      throw new Error("Unsupported data URI for clip download.");
+    }
+    await fs.writeFile(destination, Buffer.from(match[1]!, "base64"));
     return;
   }
 
@@ -143,19 +151,20 @@ export async function uploadLocalFile(input: {
   const bucket = getVideoServiceBucket();
   const file = bucket.file(input.storagePath);
   const data = await fs.readFile(input.localPath);
+  const downloadToken = randomUUID();
 
   await file.save(data, {
     metadata: {
       contentType: input.contentType,
       cacheControl: "public,max-age=31536000,immutable",
+      metadata: {
+        firebaseStorageDownloadTokens: downloadToken,
+      },
     },
     resumable: false,
   });
 
-  const [signedUrl] = await file.getSignedUrl({
-    action: "read",
-    expires: LONG_LIVED_EXPIRY,
-  });
-
-  return signedUrl;
+  return `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(
+    input.storagePath,
+  )}?alt=media&token=${downloadToken}`;
 }

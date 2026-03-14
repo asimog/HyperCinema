@@ -107,6 +107,13 @@ function buildPrompt(input: {
         `Key Event ${index + 1}: token=${event.token}, type=${event.type}, interpretation="${event.interpretation}"`,
     )
     .join("\n");
+  const directorialPromptLines = (input.story.videoPromptSequence ?? [])
+    .slice(0, MAX_SCENES_IN_PROMPT)
+    .map(
+      (scene) =>
+        `Directorial Scene ${scene.sceneNumber} | phase=${scene.phase} | veo="${truncateText(scene.providerPrompts.veo, MAX_SCENE_TEXT_CHARS)}"`,
+    )
+    .join("\n");
   const profileMetricsLine = input.story.walletProfile?.metrics
     ? `Behavior metrics: rapidFlipRatio=${input.story.walletProfile.metrics.rapidFlipRatio.toFixed(2)}, lateMomentumEntryRatio=${input.story.walletProfile.metrics.lateMomentumEntryRatio.toFixed(2)}, tokenConcentration=${input.story.walletProfile.metrics.tokenConcentration.toFixed(2)}, averageHoldingMinutes=${input.story.walletProfile.metrics.averageHoldingMinutes.toFixed(1)}.`
     : "Behavior metrics: unavailable.";
@@ -130,6 +137,8 @@ function buildPrompt(input: {
     "Hard constraints: do not fabricate trades, balances, token symbols, or PnL values beyond the provided facts.",
     "Use captions and kinetic motion graphics that match narration timing without fabricating extra trades.",
     "Keep the tone satirical and internet-native, but avoid defamation and unsafe content.",
+    directorialPromptLines ? "Directorial prompt sequence:" : "",
+    directorialPromptLines,
     "Scene plan:",
     sceneLines,
   ].join("\n");

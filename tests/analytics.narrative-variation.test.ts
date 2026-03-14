@@ -19,6 +19,9 @@ describe("analytics narrative generation", () => {
     expect(overlapCount(analysis.behaviorPatterns, analysis.xReadyLines)).toBeLessThanOrEqual(2);
     expect(analysis.videoPromptSequence[0]?.providerPrompts.veo.length).toBeGreaterThan(0);
     expect(analysis.videoPromptSequence[0]?.narrationHook.length).toBeGreaterThan(0);
+    expect(analysis.videoPromptSequence[0]?.providerPrompts.veo.includes("This is memecoin cinema, not analytics.")).toBe(true);
+    expect(/\b\d+(?:\.\d+)?\s*SOL\b/i.test(analysis.videoPromptSequence[0]?.providerPrompts.veo ?? "")).toBe(false);
+    expect(/\b\d+(?:\.\d+)?\s*SOL\b/i.test(analysis.videoPromptSequence[0]?.narrationHook ?? "")).toBe(false);
   });
 
   it("produces meaningfully different narrative outputs for different wallet profiles", async () => {

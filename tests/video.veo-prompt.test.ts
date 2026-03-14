@@ -164,13 +164,19 @@ describe("google veo prompt engine", () => {
       "mint-b",
     ]);
     expect(payload.sceneMetadata).toHaveLength(3);
-    expect(payload.prompt.includes("Hook line")).toBe(true);
+    expect(payload.prompt.includes("Trailer hook:")).toBe(true);
     expect(payload.prompt.includes("Wallet woke up and chose velocity.")).toBe(true);
     expect(payload.prompt.includes("AAA")).toBe(true);
-    expect(payload.prompt.includes("Wallet personality profile: The Chaos Gambler + The Momentum Chaser.")).toBe(true);
-    expect(payload.prompt.includes("Directorial prompt sequence:")).toBe(true);
-    expect(payload.prompt.includes("Directorial Scene 1")).toBe(true);
-    expect(payload.prompt.includes("Scene image rule:")).toBe(true);
+    expect(payload.prompt.includes("Personality flavor: The Chaos Gambler + The Momentum Chaser.")).toBe(true);
+    expect(payload.prompt.includes("Archetype: The Gambler.")).toBe(true);
+    expect(payload.prompt.includes("Directorial sequence:")).toBe(true);
+    expect(payload.prompt.includes("Entry Into The Trenches")).toBe(true);
+    expect(payload.prompt.includes("Token image anchors:")).toBe(true);
     expect(payload.prompt.includes("Hard constraints:")).toBe(true);
+    expect(payload.prompt.includes("This is cinema, not analytics.")).toBe(true);
+    expect(payload.prompt.includes("Facts to preserve:")).toBe(false);
+    expect(payload.prompt.includes("Behavior metrics:")).toBe(false);
+    expect(payload.prompt.includes("4.8 SOL")).toBe(false);
+    expect(payload.prompt.includes("0.21 SOL")).toBe(false);
   });
 });

@@ -65,83 +65,250 @@ function truncateText(value: string, maxChars: number): string {
   return `${trimmed.slice(0, Math.max(0, maxChars - 3))}...`;
 }
 
+function compactSentence(value: string): string {
+  const trimmed = value
+    .replace(/\s+/g, " ")
+    .replace(/\s+([,.;!?])/g, "$1")
+    .trim();
+
+  if (!trimmed) {
+    return "";
+  }
+
+  return /[.!?]$/.test(trimmed) ? trimmed : `${trimmed}.`;
+}
+
+function sanitizePromptText(value: string): string {
+  return compactSentence(
+    value
+      .replace(/\b\d+(?:\.\d+)?\s*SOL\b/gi, "the bag")
+      .replace(/\b\d+\s+(?:buys?|sells?|trades?|tokens?|hours?|minutes?|days?)\b/gi, "a blur of clicks")
+      .replace(/\bestimated\s+pnl\b/gi, "fortune")
+      .replace(/\bfinal tape\b/gi, "final mood")
+      .replace(/\bspent\b/gi, "risked")
+      .replace(/\breceived\b/gi, "got back")
+      .replace(/\b\d+(?:\.\d+)?\b/g, "")
+      .replace(/\s{2,}/g, " "),
+  );
+}
+
+function phaseLabel(phase: string): string {
+  switch (phase) {
+    case "opening":
+      return "Entry Into The Trenches";
+    case "rise":
+      return "Heat Check";
+    case "damage":
+      return "Market Chaos";
+    case "pivot":
+      return "No-Cooldown Decision";
+    case "climax":
+      return "Main Character Spiral";
+    case "aftermath":
+      return "Sunrise Aftermath";
+    default:
+      return "Trailer Beat";
+  }
+}
+
+function inferArchetype(story: WalletStory): string {
+  const source = [
+    story.walletPersonality ?? "",
+    story.walletSecondaryPersonality ?? "",
+    ...(story.walletModifiers ?? []),
+  ]
+    .join(" ")
+    .toLowerCase();
+
+  if (
+    source.includes("gambler") ||
+    source.includes("casino") ||
+    source.includes("degen")
+  ) {
+    return "The Gambler";
+  }
+
+  if (
+    source.includes("oracle") ||
+    source.includes("visionary") ||
+    source.includes("early") ||
+    source.includes("sniper")
+  ) {
+    return "The Prophet";
+  }
+
+  if (
+    source.includes("comeback") ||
+    source.includes("survivor") ||
+    source.includes("rug hardened")
+  ) {
+    return "The Survivor";
+  }
+
+  if (
+    source.includes("diamond") ||
+    source.includes("martyr") ||
+    source.includes("bagholder") ||
+    source.includes("conviction")
+  ) {
+    return "The Martyr";
+  }
+
+  if (
+    source.includes("chaos") ||
+    source.includes("trickster") ||
+    source.includes("timeline") ||
+    source.includes("luck")
+  ) {
+    return "The Trickster";
+  }
+
+  return "The Gambler";
+}
+
+function inferProtagonist(archetype: string): string {
+  switch (archetype) {
+    case "The Prophet":
+      return "a sleepless chart oracle under neon monitor glow";
+    case "The Survivor":
+      return "a battle-worn night trader still refusing to leave the desk";
+    case "The Martyr":
+      return "a conviction cultist guarding one last glowing thesis";
+    case "The Trickster":
+      return "a meme-native trench operator with suspicious plot armor";
+    default:
+      return "a hooded memecoin gambler in a room full of dangerous optimism";
+  }
+}
+
+function buildFlavorLine(story: WalletStory): string {
+  const personalityLine = [
+    story.walletPersonality,
+    story.walletSecondaryPersonality,
+  ]
+    .filter((value): value is string => Boolean(value && value.trim().length))
+    .join(" + ");
+  const modifiersLine = (story.walletModifiers ?? []).slice(0, 4).join(", ");
+  const behaviorLine = (story.behaviorPatterns ?? [])
+    .slice(0, 3)
+    .map((value) => sanitizePromptText(value))
+    .join(" | ");
+
+  const parts = [
+    personalityLine ? `Personality flavor: ${personalityLine}.` : "",
+    modifiersLine ? `Modifier flavor: ${modifiersLine}.` : "",
+    behaviorLine ? `Behavior flavor: ${behaviorLine}` : "",
+  ].filter(Boolean);
+
+  return parts.join(" ");
+}
+
+function buildVisualWorldLine(story: WalletStory): string {
+  const source = [
+    story.walletPersonality ?? "",
+    ...(story.walletModifiers ?? []),
+    ...(story.behaviorPatterns ?? []),
+  ]
+    .join(" ")
+    .toLowerCase();
+
+  if (source.includes("revenge")) {
+    return "Visual world: neon boxing-ring energy, storm-lit screens, frantic camera swings, and a trader treating every candle like a rematch clause.";
+  }
+
+  if (source.includes("diamond") || source.includes("bagholder")) {
+    return "Visual world: glowing chart altars, stubborn red haze, dust-in-sunrise aftermath, and conviction staged like a tragic religion.";
+  }
+
+  if (source.includes("oracle") || source.includes("visionary") || source.includes("early")) {
+    return "Visual world: cathedral-scale chart walls, omen-like green light, quiet focus, and prophecy dressed as market timing.";
+  }
+
+  if (source.includes("chaos") || source.includes("casino")) {
+    return "Visual world: casino-cathedral lighting, chart storms on the ceiling, meme captions like trailer cards, and screens that feel one bad decision away from folklore.";
+  }
+
+  return "Visual world: dark trading room noir, neon chart glow, group-chat ghosts, storm-blue tension, and meme captions that feel like a trailer instead of a spreadsheet.";
+}
+
+function buildTokenReferenceLine(tokenMetadata: VeoTokenMetadata[]): string {
+  const tokenRefs = tokenMetadata
+    .slice(0, MAX_TOKEN_REFS_IN_PROMPT)
+    .map((token) => {
+      const name = token.name?.trim() ? `${token.symbol} (${token.name})` : token.symbol;
+      return `${name} image=${token.imageUrl}`;
+    })
+    .join("; ");
+
+  return tokenRefs
+    ? `Token image anchors: ${tokenRefs}.`
+    : "Token image anchors: none supplied.";
+}
+
+function buildDirectorialLines(input: {
+  story: WalletStory;
+  script: GeneratedCinematicScript;
+}): string[] {
+  const directorialSequence = (input.story.videoPromptSequence ?? []).slice(
+    0,
+    MAX_SCENES_IN_PROMPT,
+  );
+
+  if (directorialSequence.length > 0) {
+    return directorialSequence.map(
+      (scene) =>
+        `${phaseLabel(scene.phase)} | ${truncateText(scene.providerPrompts.veo, MAX_SCENE_TEXT_CHARS)}`,
+    );
+  }
+
+  return input.script.scenes.slice(0, MAX_SCENES_IN_PROMPT).map((scene) => {
+    const visual = sanitizePromptText(scene.visualPrompt);
+    return `Trailer Beat | ${truncateText(visual, MAX_SCENE_TEXT_CHARS)}`;
+  });
+}
+
+function buildSceneReelLines(script: GeneratedCinematicScript): string[] {
+  return script.scenes.slice(0, MAX_SCENES_IN_PROMPT).map((scene) => {
+    const visual = sanitizePromptText(scene.visualPrompt);
+    const imageAnchor = scene.imageUrl ? ` image=${scene.imageUrl}` : " image=none";
+    return `Visual cue | ${truncateText(visual, MAX_SCENE_TEXT_CHARS)} |${imageAnchor}`;
+  });
+}
+
 function buildPrompt(input: {
   story: WalletStory;
   script: GeneratedCinematicScript;
   tokenMetadata: VeoTokenMetadata[];
 }): string {
-  const walletShort = `${input.story.wallet.slice(0, 4)}...${input.story.wallet.slice(-4)}`;
-  const limitedTokenMetadata = input.tokenMetadata.slice(0, MAX_TOKEN_REFS_IN_PROMPT);
-  const omittedTokenCount = Math.max(
-    0,
-    input.tokenMetadata.length - limitedTokenMetadata.length,
-  );
-  const tokenRefs = input.tokenMetadata
-    .slice(0, MAX_TOKEN_REFS_IN_PROMPT)
-    .map(
-      (token) =>
-        `${token.symbol}(${token.tradeCount} trades, ${token.solVolume} SOL volume, image=${token.imageUrl})`,
-    )
-    .join("; ");
-
-  const sceneLines = input.script.scenes
-    .slice(0, MAX_SCENES_IN_PROMPT)
-    .map(
-      (scene) =>
-        `Scene ${scene.sceneNumber} (${scene.durationSeconds}s) | visual="${truncateText(scene.visualPrompt, MAX_SCENE_TEXT_CHARS)}" | narration="${truncateText(scene.narration, MAX_SCENE_TEXT_CHARS)}" | image=${scene.imageUrl ?? "none"}`,
-    )
-    .join("\n");
-  const personalityLine = [
-    input.story.walletPersonality,
-    input.story.walletSecondaryPersonality,
-  ]
-    .filter((value): value is string => Boolean(value && value.trim().length))
-    .join(" + ");
-  const modifiersLine = (input.story.walletModifiers ?? []).slice(0, 4).join(", ");
-  const behaviorLine = (input.story.behaviorPatterns ?? []).slice(0, 3).join(" | ");
-  const narrativeSummary = input.story.narrativeSummary?.trim() ?? "";
-  const keyEventLines = (input.story.keyEvents ?? [])
-    .slice(0, 3)
-    .map(
-      (event, index) =>
-        `Key Event ${index + 1}: token=${event.token}, type=${event.type}, interpretation="${event.interpretation}"`,
-    )
-    .join("\n");
-  const directorialPromptLines = (input.story.videoPromptSequence ?? [])
-    .slice(0, MAX_SCENES_IN_PROMPT)
-    .map(
-      (scene) =>
-        `Directorial Scene ${scene.sceneNumber} | phase=${scene.phase} | veo="${truncateText(scene.providerPrompts.veo, MAX_SCENE_TEXT_CHARS)}"`,
-    )
-    .join("\n");
-  const profileMetricsLine = input.story.walletProfile?.metrics
-    ? `Behavior metrics: rapidFlipRatio=${input.story.walletProfile.metrics.rapidFlipRatio.toFixed(2)}, lateMomentumEntryRatio=${input.story.walletProfile.metrics.lateMomentumEntryRatio.toFixed(2)}, tokenConcentration=${input.story.walletProfile.metrics.tokenConcentration.toFixed(2)}, averageHoldingMinutes=${input.story.walletProfile.metrics.averageHoldingMinutes.toFixed(1)}.`
-    : "Behavior metrics: unavailable.";
+  const archetype = inferArchetype(input.story);
+  const protagonist = inferProtagonist(archetype);
+  const flavorLine = buildFlavorLine(input.story);
+  const narrativeSummary = input.story.narrativeSummary?.trim()
+    ? sanitizePromptText(input.story.narrativeSummary)
+    : "";
+  const directorialPromptLines = buildDirectorialLines(input);
+  const sceneReelLines = buildSceneReelLines(input.script);
+  const trailerHook = sanitizePromptText(input.script.hookLine);
 
   const prompt = [
-    "Create a fast-paced, funny-memetic cinematic wallet recap with coherent scene transitions.",
-    `Wallet: ${walletShort}, package=${input.story.packageType}, duration=${input.story.durationSeconds}s.`,
-    `Facts to preserve: buys=${input.story.analytics.buyCount}, sells=${input.story.analytics.sellCount}, spent=${input.story.analytics.solSpent} SOL, received=${input.story.analytics.solReceived} SOL, pnl=${input.story.analytics.estimatedPnlSol} SOL.`,
-    personalityLine ? `Wallet personality profile: ${personalityLine}.` : "Wallet personality profile: unknown.",
-    modifiersLine ? `Behavior modifiers: ${modifiersLine}.` : "Behavior modifiers: unavailable.",
-    behaviorLine ? `Behavior pattern highlights: ${behaviorLine}.` : "Behavior pattern highlights: unavailable.",
-    profileMetricsLine,
-    narrativeSummary ? `Narrative summary: ${narrativeSummary}` : "Narrative summary: unavailable.",
-    keyEventLines ? keyEventLines : "Key events: unavailable.",
-    `Hook line: ${input.script.hookLine}`,
-    `Token media references (prioritize these image assets): ${tokenRefs || "none provided"}.`,
-    omittedTokenCount > 0
-      ? `Additional token references omitted from prompt body: ${omittedTokenCount}.`
-      : "All selected token references are included in this prompt.",
-    "Scene image rule: when a scene has image=<url>, use that URL as the primary visual anchor for that scene.",
-    "Hard constraints: do not fabricate trades, balances, token symbols, or PnL values beyond the provided facts.",
-    "Use captions and kinetic motion graphics that match narration timing without fabricating extra trades.",
-    "Keep the tone satirical and internet-native, but avoid defamation and unsafe content.",
-    directorialPromptLines ? "Directorial prompt sequence:" : "",
-    directorialPromptLines,
-    "Scene plan:",
-    sceneLines,
-  ].join("\n");
+    "Create a funny, memetic cinematic trailer about a trader's last stretch in the Pump.fun trenches.",
+    "This is cinema, not analytics. Never mention balances, PnL, trade counts, percentages, package tiers, or scoreboard numbers in dialogue, captions, or commentary.",
+    `Archetype: ${archetype}.`,
+    `Protagonist: ${protagonist}.`,
+    flavorLine,
+    buildVisualWorldLine(input.story),
+    narrativeSummary ? `Narrative summary: ${narrativeSummary}` : "",
+    `Trailer hook: ${trailerHook}`,
+    buildTokenReferenceLine(input.tokenMetadata),
+    "When an image URL is supplied, treat it as the featured token's poster, shrine, sticker, hologram, or apparition inside the world of the scene.",
+    "Hard constraints: stay faithful to the supplied wallet story, token anchors, and scene metadata. Do not invent extra coins, fake stat overlays, or abstract chart-only scenes without a human presence.",
+    "Directorial sequence:",
+    ...directorialPromptLines,
+    "Visual reel:",
+    ...sceneReelLines,
+  ]
+    .filter(Boolean)
+    .join("\n");
 
   if (prompt.length <= MAX_PROMPT_CHARS) {
     return prompt;

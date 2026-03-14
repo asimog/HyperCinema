@@ -9,20 +9,23 @@ interface ReportCardProps {
 
 export function ReportCard({ report, reportUrl }: ReportCardProps) {
   return (
-    <section className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5">
+    <section className="cinema-panel rounded-[2rem] p-5 md:p-6">
       <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-zinc-100">Combined Report</h2>
+        <div>
+          <p className="cinema-kicker text-[0.68rem] font-semibold">Combined Report</p>
+          <h2 className="font-display mt-2 text-3xl text-[#fff0da]">The Dossier</h2>
+        </div>
         <a
           href={reportUrl}
           target="_blank"
           rel="noreferrer"
-          className="rounded-lg border border-cyan-500 px-3 py-1.5 text-xs font-medium text-cyan-200 hover:bg-cyan-500/10"
+          className="cinema-secondary-button rounded-2xl px-4 py-3 text-xs font-medium transition"
         >
           Download PDF
         </a>
       </div>
 
-      <div className="grid gap-3 text-sm text-zinc-200 md:grid-cols-2">
+      <div className="grid gap-3 text-sm text-[#f4e1c5] md:grid-cols-2">
         <p>Pump Tokens Traded: {report.pumpTokensTraded}</p>
         <p>Style: {report.styleClassification}</p>
         <p>Buys: {report.buyCount}</p>
@@ -33,30 +36,30 @@ export function ReportCard({ report, reportUrl }: ReportCardProps) {
         <p>Best Trade: {report.bestTrade}</p>
       </div>
 
-      <p className="mt-4 rounded-xl border border-zinc-800 bg-zinc-950/70 p-3 text-sm leading-relaxed text-zinc-200">
+      <p className="mt-4 rounded-[1.4rem] border border-white/10 bg-[#0d0a0c]/78 p-4 text-sm leading-relaxed text-[#f3e0c5]">
         {report.summary}
       </p>
 
       {report.walletPersonality ? (
-        <div className="mt-4 rounded-xl border border-zinc-800 bg-zinc-950/70 p-3">
-          <p className="text-xs uppercase tracking-[0.18em] text-zinc-400">
+        <div className="mt-4 rounded-[1.4rem] border border-white/10 bg-[#0d0a0c]/78 p-4">
+          <p className="cinema-kicker text-[0.62rem] font-semibold">
             Wallet Personality
           </p>
-          <p className="mt-1 text-base font-semibold text-cyan-200">
+          <p className="mt-2 text-base font-semibold text-[var(--accent-cool)]">
             {report.walletPersonality}
           </p>
           {report.walletSecondaryPersonality ? (
-            <p className="mt-1 text-sm text-zinc-300">
+            <p className="mt-2 text-sm text-[var(--muted)]">
               Secondary influence: {report.walletSecondaryPersonality}
             </p>
           ) : null}
           {report.walletModifiers?.length ? (
-            <p className="mt-2 text-sm text-zinc-300">
+            <p className="mt-2 text-sm text-[var(--muted)]">
               Modifiers: {report.walletModifiers.join(", ")}
             </p>
           ) : null}
           {report.narrativeSummary ? (
-            <p className="mt-2 text-sm leading-relaxed text-zinc-200">
+            <p className="mt-3 text-sm leading-relaxed text-[#f3e0c5]">
               {report.narrativeSummary}
             </p>
           ) : null}
@@ -65,10 +68,10 @@ export function ReportCard({ report, reportUrl }: ReportCardProps) {
 
       {report.behaviorPatterns?.length ? (
         <div className="mt-4">
-          <p className="mb-2 text-xs uppercase tracking-[0.18em] text-zinc-400">
+          <p className="mb-2 cinema-kicker text-[0.62rem] font-semibold">
             Behavior Patterns
           </p>
-          <ul className="space-y-1 text-sm text-zinc-200">
+          <ul className="space-y-1 text-sm text-[#f4e1c5]">
             {report.behaviorPatterns.map((pattern) => (
               <li key={pattern}>- {pattern}</li>
             ))}
@@ -78,10 +81,10 @@ export function ReportCard({ report, reportUrl }: ReportCardProps) {
 
       {report.funObservations?.length ? (
         <div className="mt-4">
-          <p className="mb-2 text-xs uppercase tracking-[0.18em] text-zinc-400">
+          <p className="mb-2 cinema-kicker text-[0.62rem] font-semibold">
             Fun Observations
           </p>
-          <ul className="space-y-1 text-sm text-zinc-200">
+          <ul className="space-y-1 text-sm text-[#f4e1c5]">
             {report.funObservations.map((observation) => (
               <li key={observation}>- {observation}</li>
             ))}
@@ -91,10 +94,10 @@ export function ReportCard({ report, reportUrl }: ReportCardProps) {
 
       {report.memorableMoments?.length ? (
         <div className="mt-4">
-          <p className="mb-2 text-xs uppercase tracking-[0.18em] text-zinc-400">
+          <p className="mb-2 cinema-kicker text-[0.62rem] font-semibold">
             Memorable Moments
           </p>
-          <ul className="space-y-1 text-sm text-zinc-200">
+          <ul className="space-y-1 text-sm text-[#f4e1c5]">
             {report.memorableMoments.map((moment) => (
               <li key={moment}>- {moment}</li>
             ))}
@@ -104,20 +107,20 @@ export function ReportCard({ report, reportUrl }: ReportCardProps) {
 
       {report.keyEvents?.length ? (
         <div className="mt-4">
-          <p className="mb-2 text-xs uppercase tracking-[0.18em] text-zinc-400">
+          <p className="mb-2 cinema-kicker text-[0.62rem] font-semibold">
             Key Events
           </p>
-          <ul className="space-y-2 text-sm text-zinc-200">
+          <ul className="space-y-2 text-sm text-[#f4e1c5]">
             {report.keyEvents.map((event, index) => (
               <li
                 key={`${event.type}-${event.signature}-${index}`}
-                className="rounded-lg border border-zinc-800 bg-zinc-950/70 p-2"
+                className="rounded-[1rem] border border-white/10 bg-[#0d0a0c]/78 p-3"
               >
-                <p className="text-xs uppercase tracking-[0.12em] text-zinc-400">
+                <p className="text-xs uppercase tracking-[0.16em] text-[#b7a899]">
                   {event.type.replace(/_/g, " ")}
                 </p>
-                <p className="mt-1 text-zinc-200">{event.tradeContext}</p>
-                <p className="mt-1 text-zinc-400">{event.interpretation}</p>
+                <p className="mt-2 text-[#f4e1c5]">{event.tradeContext}</p>
+                <p className="mt-1 text-[var(--muted)]">{event.interpretation}</p>
               </li>
             ))}
           </ul>
@@ -126,10 +129,10 @@ export function ReportCard({ report, reportUrl }: ReportCardProps) {
 
       {report.storyBeats?.length ? (
         <div className="mt-4">
-          <p className="mb-2 text-xs uppercase tracking-[0.18em] text-zinc-400">
+          <p className="mb-2 cinema-kicker text-[0.62rem] font-semibold">
             Video Story Beats
           </p>
-          <ul className="space-y-1 text-sm text-zinc-200">
+          <ul className="space-y-1 text-sm text-[#f4e1c5]">
             {report.storyBeats.map((beat) => (
               <li key={beat}>- {beat}</li>
             ))}
@@ -138,9 +141,9 @@ export function ReportCard({ report, reportUrl }: ReportCardProps) {
       ) : null}
 
       <div className="mt-4 overflow-x-auto">
-        <table className="w-full min-w-[520px] text-left text-xs text-zinc-300">
+        <table className="w-full min-w-[520px] text-left text-xs text-[#d9c7ad]">
           <thead>
-            <tr className="border-b border-zinc-800 text-zinc-400">
+            <tr className="border-b border-white/10 text-[#a9998d]">
               <th className="py-2">Time (UTC)</th>
               <th className="py-2">Symbol</th>
               <th className="py-2">Side</th>
@@ -150,7 +153,10 @@ export function ReportCard({ report, reportUrl }: ReportCardProps) {
           </thead>
           <tbody>
             {report.timeline.slice(-15).map((item) => (
-              <tr key={`${item.signature}-${item.timestamp}`} className="border-b border-zinc-900">
+              <tr
+                key={`${item.signature}-${item.timestamp}`}
+                className="border-b border-white/5"
+              >
                 <td className="py-2">
                   {new Date(item.timestamp * 1000).toISOString().slice(0, 19)}
                 </td>

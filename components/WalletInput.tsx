@@ -8,10 +8,10 @@ interface WalletInputProps {
 
 export function WalletInput({ value, onChange, disabled }: WalletInputProps) {
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       <label
         htmlFor="wallet-address"
-        className="text-sm font-medium tracking-wide text-zinc-200"
+        className="cinema-kicker block text-[0.68rem] font-semibold"
       >
         Solana Wallet Address
       </label>
@@ -25,10 +25,11 @@ export function WalletInput({ value, onChange, disabled }: WalletInputProps) {
         value={value}
         disabled={disabled}
         onChange={(event) => onChange(event.target.value.trim())}
-        className="w-full rounded-xl border border-zinc-700 bg-zinc-950/80 px-4 py-3 text-sm text-zinc-100 outline-none ring-cyan-500 transition focus:border-cyan-500 focus:ring-2 disabled:cursor-not-allowed disabled:opacity-60"
+        className="w-full rounded-2xl border border-white/10 bg-[#110d0d]/90 px-4 py-4 text-sm text-[#fff3dd] outline-none transition placeholder:text-[#8e7f74] focus:border-[var(--accent-cool)] focus:ring-2 focus:ring-[rgba(135,219,255,0.25)] disabled:cursor-not-allowed disabled:opacity-60"
       />
-      <p className="text-xs text-zinc-400">
-        No wallet connect required. We only analyze Pump memecoin activity.
+      <p className="text-xs leading-relaxed text-[var(--muted)]">
+        No wallet connect required. We only analyze Pump memecoin activity and
+        keep the submission flow manual and simple.
       </p>
     </div>
   );

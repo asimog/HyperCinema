@@ -21,14 +21,14 @@ interface JobApiPayload {
 }
 
 function statusLabel(status: JobDocument["status"], progress: JobDocument["progress"]) {
-  if (status === "awaiting_payment") return "Awaiting payment";
-  if (status === "payment_detected") return "Payment detected";
-  if (status === "payment_confirmed") return "Payment confirmed";
-  if (progress === "generating_report") return "Generating report";
-  if (progress === "generating_video") return "Generating video";
-  if (status === "processing") return "Processing";
-  if (status === "complete") return "Complete";
-  return "Failed";
+  if (status === "awaiting_payment") return "Waiting on the send";
+  if (status === "payment_detected") return "Payment seen on-chain";
+  if (status === "payment_confirmed") return "Payment locked";
+  if (progress === "generating_report") return "Writing the dossier";
+  if (progress === "generating_video") return "Cutting the trailer";
+  if (status === "processing") return "In the edit suite";
+  if (status === "complete") return "Premiere ready";
+  return "Production halted";
 }
 
 function nextPollDelay(job: JobDocument | null, elapsedMs: number): number {
@@ -143,6 +143,7 @@ export default function JobPage() {
   const isComplete = job?.status === "complete";
   const hasVideo = Boolean(video?.videoUrl);
   const hasReport = Boolean(report);
+
   const retryFailedJob = useCallback(async () => {
     setIsRetrying(true);
     setError(null);
@@ -173,63 +174,98 @@ export default function JobPage() {
   const shareUrl = useMemo(() => {
     if (typeof window === "undefined") return "";
     const publicUrl = `${window.location.origin}/job/${jobId}`;
-    const text = "My Pump memecoin recap from HASHCINEMA";
+    const text = "My memecoin trading history got turned into absolute cinema.";
     return `https://x.com/intent/tweet?text=${encodeURIComponent(
       text,
     )}&url=${encodeURIComponent(publicUrl)}`;
   }, [jobId]);
 
   return (
-    <div className="min-h-screen bg-[#090a10] px-4 py-8 text-zinc-100">
-      <main className="mx-auto w-full max-w-5xl space-y-6">
-        <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5">
-          <p className="text-xs uppercase tracking-[0.25em] text-cyan-300">
-            HASHCINEMA JOB
-          </p>
-          <h1 className="mt-2 break-all text-2xl font-semibold">Job {jobId}</h1>
-          {job ? (
-            <div className="mt-4 grid gap-2 text-sm text-zinc-300 md:grid-cols-2">
-              <p>Status: {statusLabel(job.status, job.progress)}</p>
-              <p>Package: {job.packageType}</p>
-              <p>Price: {job.priceSol} SOL</p>
-              <p className="break-all">Wallet: {job.wallet}</p>
-              <p>Progress: {job.progress}</p>
-              <p className="break-all md:col-span-2">
-                Tx: {job.txSignature ?? "Not detected yet"}
+    <div className="cinema-shell cinema-noise min-h-screen overflow-hidden px-4 py-6 text-[#fff1dc] md:px-8 md:py-8">
+      <main className="mx-auto flex w-full max-w-6xl flex-col gap-6">
+        <section className="cinema-panel rounded-[2rem] p-6 md:p-8">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div className="max-w-3xl">
+              <p className="cinema-kicker text-[0.68rem] font-semibold">Trench Cinema Job</p>
+              <h1 className="font-display mt-3 text-4xl leading-none text-[#fff0da] md:text-5xl">
+                Production File
+              </h1>
+              <p className="mt-3 break-all text-sm leading-relaxed text-[var(--muted)]">
+                {jobId}
+              </p>
+              <p className="mt-5 max-w-2xl text-sm leading-relaxed text-[var(--muted)]">
+                This page updates automatically while the report is being assembled and the
+                trailer is being cut.
               </p>
             </div>
+
+            <div className="grid gap-3 sm:grid-cols-2 lg:w-[32rem]">
+              <div className="cinema-panel-soft rounded-[1.4rem] p-4">
+                <p className="cinema-kicker text-[0.62rem] font-semibold">Status</p>
+                <p className="mt-2 text-lg font-semibold text-[var(--accent-cool)]">
+                  {job ? statusLabel(job.status, job.progress) : "Loading scene"}
+                </p>
+              </div>
+              <div className="cinema-panel-soft rounded-[1.4rem] p-4">
+                <p className="cinema-kicker text-[0.62rem] font-semibold">Package</p>
+                <p className="mt-2 text-lg font-semibold text-[#fff2df]">
+                  {job?.packageType ?? "Pending"}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {job ? (
+            <div className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              <div className="cinema-panel-soft rounded-[1.3rem] p-4">
+                <p className="cinema-kicker text-[0.62rem] font-semibold">Wallet</p>
+                <p className="mt-2 break-all text-sm text-[#fff1dc]">{job.wallet}</p>
+              </div>
+              <div className="cinema-panel-soft rounded-[1.3rem] p-4">
+                <p className="cinema-kicker text-[0.62rem] font-semibold">Price</p>
+                <p className="mt-2 font-display text-3xl text-[#fff1dc]">{job.priceSol} SOL</p>
+              </div>
+              <div className="cinema-panel-soft rounded-[1.3rem] p-4">
+                <p className="cinema-kicker text-[0.62rem] font-semibold">Pipeline</p>
+                <p className="mt-2 text-sm text-[#f4dfc4]">{job.progress}</p>
+                <p className="mt-1 break-all text-xs text-[var(--muted)]">
+                  {job.txSignature ?? "Waiting on transaction signature"}
+                </p>
+              </div>
+            </div>
           ) : (
-            <p className="mt-3 text-sm text-zinc-400">Loading job...</p>
+            <p className="mt-5 text-sm text-[var(--muted)]">Loading job...</p>
           )}
 
           {error ? (
-            <p className="mt-4 whitespace-pre-wrap break-words rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+            <p className="mt-5 whitespace-pre-wrap break-words rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm text-red-100">
               {error}
             </p>
           ) : null}
 
           {!isComplete && !error ? (
-            <p className="mt-4 text-sm text-zinc-400">
-              Pipeline updates automatically. Keep this page open.
+            <p className="mt-5 text-sm text-[var(--muted)]">
+              Keep this page open. The page will continue polling while the production run is
+              active.
             </p>
           ) : null}
 
           {job?.status === "failed" ? (
-            <div className="mt-4 space-y-3">
-              <p className="whitespace-pre-wrap break-words rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+            <div className="mt-5 space-y-3">
+              <p className="whitespace-pre-wrap break-words rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm text-red-100">
                 {job.errorMessage ?? "The job failed during generation."}
               </p>
               <button
                 type="button"
                 onClick={retryFailedJob}
                 disabled={isRetrying}
-                className="inline-flex items-center justify-center rounded-lg border border-cyan-500 px-4 py-2 text-sm font-medium text-cyan-200 transition hover:bg-cyan-500/10 disabled:cursor-not-allowed disabled:opacity-60"
+                className="cinema-secondary-button inline-flex items-center justify-center rounded-2xl px-4 py-3 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {isRetrying ? "Retrying..." : "Retry Failed Job"}
+                {isRetrying ? "Rebuilding production..." : "Retry failed job"}
               </button>
             </div>
           ) : null}
-        </div>
+        </section>
 
         {job &&
         payment &&
@@ -246,29 +282,39 @@ export default function JobPage() {
         ) : null}
 
         {hasVideo && video ? (
-          <section className="space-y-4 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5">
-            <h2 className="text-lg font-semibold">Cinematic Video</h2>
-            <VideoPlayer
-              src={`/api/video/${jobId}`}
-              poster={video.thumbnailUrl ?? undefined}
-            />
-            <div className="flex flex-wrap gap-3">
-              <a
-                href={`/api/video/${jobId}`}
-                target="_blank"
-                rel="noreferrer"
-                className="rounded-lg border border-cyan-500 px-4 py-2 text-sm font-medium text-cyan-200 hover:bg-cyan-500/10"
-              >
-                Download Video
-              </a>
-              <a
-                href={shareUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="rounded-lg border border-zinc-600 px-4 py-2 text-sm font-medium text-zinc-200 hover:bg-zinc-800"
-              >
-                Post to X
-              </a>
+          <section className="cinema-panel rounded-[2rem] p-5 md:p-6">
+            <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+              <div>
+                <p className="cinema-kicker text-[0.68rem] font-semibold">Now Screening</p>
+                <h2 className="font-display mt-2 text-4xl leading-none text-[#fff1dc]">
+                  Cinematic Video
+                </h2>
+              </div>
+              <div className="flex flex-wrap gap-3">
+                <a
+                  href={`/api/video/${jobId}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="cinema-primary-button inline-flex rounded-2xl px-4 py-3 text-sm font-semibold transition"
+                >
+                  Download video
+                </a>
+                <a
+                  href={shareUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="cinema-secondary-button inline-flex rounded-2xl px-4 py-3 text-sm font-medium transition"
+                >
+                  Post to X
+                </a>
+              </div>
+            </div>
+
+            <div className="mt-5">
+              <VideoPlayer
+                src={`/api/video/${jobId}`}
+                poster={video.thumbnailUrl ?? undefined}
+              />
             </div>
           </section>
         ) : null}
@@ -277,12 +323,14 @@ export default function JobPage() {
           <ReportCard report={report} reportUrl={`/api/report/${jobId}`} />
         ) : null}
 
-        <Link
-          href="/"
-          className="inline-flex rounded-lg border border-zinc-700 px-4 py-2 text-sm text-zinc-300 hover:bg-zinc-800"
-        >
-          Create Another Job
-        </Link>
+        <div className="flex flex-wrap gap-3">
+          <Link
+            href="/"
+            className="cinema-secondary-button inline-flex rounded-2xl px-4 py-3 text-sm font-medium transition"
+          >
+            Create another job
+          </Link>
+        </div>
       </main>
     </div>
   );

@@ -116,50 +116,60 @@ export function PaymentInstructionsCard(props: PaymentInstructionsCardProps) {
   }
 
   return (
-    <section className="grid gap-6 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6 md:grid-cols-[1fr,280px]">
+    <section className="cinema-panel grid gap-6 rounded-[2rem] p-6 md:grid-cols-[1fr,300px] md:p-7">
       <div className="space-y-4">
-        <h2 className="text-xl font-semibold text-zinc-100">Payment Instructions</h2>
+        <div>
+          <p className="cinema-kicker text-[0.68rem] font-semibold">Payment Lock-In</p>
+          <h2 className="font-display mt-2 text-3xl text-[#fff0da]">Manual send. Exact amount.</h2>
+        </div>
 
-        <p className="text-sm text-zinc-300">
-          Manual send only: copy the address and amount exactly, then send from your wallet app.
+        <p className="text-sm leading-relaxed text-[var(--muted)]">
+          Copy the dedicated address and the exact amount below, then send from your
+          wallet app. Once the chain confirms it, the job continues on its own.
         </p>
 
-        <p className="text-sm text-zinc-300">
+        <p className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-[#f4dfc2]">
           Required amount:{" "}
-          <span className="font-semibold text-cyan-200">{formatSol(props.amountSol)} SOL</span>
+          <span className="font-semibold text-[var(--accent-soft)]">
+            {formatSol(props.amountSol)} SOL
+          </span>
           {typeof props.receivedSol === "number" ? (
             <>
               {" | "}Received:{" "}
-              <span className="font-semibold text-zinc-100">{formatSol(props.receivedSol)} SOL</span>
+              <span className="font-semibold text-[#fff5e3]">
+                {formatSol(props.receivedSol)} SOL
+              </span>
             </>
           ) : null}
           {typeof props.remainingSol === "number" && props.remainingSol > 0 ? (
             <>
               {" | "}Remaining:{" "}
-              <span className="font-semibold text-amber-200">{formatSol(props.remainingSol)} SOL</span>
+              <span className="font-semibold text-[#ffd789]">
+                {formatSol(props.remainingSol)} SOL
+              </span>
             </>
           ) : null}
         </p>
 
-        <div className="rounded-xl border border-zinc-800 bg-zinc-950/70 p-3">
-          <p className="text-xs uppercase tracking-[0.16em] text-zinc-400">Payment Address</p>
-          <p className="mt-1 break-all text-sm text-zinc-100">{props.paymentAddress}</p>
+        <div className="rounded-[1.4rem] border border-white/10 bg-[#0d0a0c]/78 p-4">
+          <p className="cinema-kicker text-[0.62rem] font-semibold">Payment Address</p>
+          <p className="mt-2 break-all text-sm text-[#fff3dd]">{props.paymentAddress}</p>
           <button
             type="button"
             onClick={() => void copy("Address", props.paymentAddress)}
-            className="mt-2 rounded-md border border-zinc-700 px-3 py-1 text-xs text-zinc-200 hover:bg-zinc-800"
+            className="cinema-secondary-button mt-3 rounded-xl px-3 py-2 text-xs font-medium transition"
           >
             Copy address
           </button>
         </div>
 
-        <div className="rounded-xl border border-zinc-800 bg-zinc-950/70 p-3">
-          <p className="text-xs uppercase tracking-[0.16em] text-zinc-400">Amount (SOL)</p>
-          <p className="mt-1 break-all text-sm text-zinc-100">{payableAmount}</p>
+        <div className="rounded-[1.4rem] border border-white/10 bg-[#0d0a0c]/78 p-4">
+          <p className="cinema-kicker text-[0.62rem] font-semibold">Amount (SOL)</p>
+          <p className="mt-2 break-all font-display text-3xl text-[#fff1dc]">{payableAmount}</p>
           <button
             type="button"
             onClick={() => void copy("Amount", payableAmount)}
-            className="mt-2 rounded-md border border-zinc-700 px-3 py-1 text-xs text-zinc-200 hover:bg-zinc-800"
+            className="cinema-secondary-button mt-3 rounded-xl px-3 py-2 text-xs font-medium transition"
           >
             Copy amount
           </button>
@@ -169,33 +179,33 @@ export function PaymentInstructionsCard(props: PaymentInstructionsCardProps) {
           <button
             type="button"
             onClick={() => void copy("Payment payload", copyPayload)}
-            className="inline-flex rounded-lg border border-zinc-700 px-4 py-2 text-sm text-zinc-200 hover:bg-zinc-800"
+            className="cinema-secondary-button inline-flex rounded-2xl px-4 py-3 text-sm font-medium transition"
           >
             Copy full payment instructions
           </button>
         </div>
 
         {props.statusText ? (
-          <p className="text-sm text-zinc-300">
-            Status: <span className="font-semibold text-cyan-200">{props.statusText}</span>
+          <p className="text-sm text-[var(--muted)]">
+            Status: <span className="font-semibold text-[var(--accent-cool)]">{props.statusText}</span>
           </p>
         ) : null}
 
         {copySuccess ? (
-          <p className="rounded-lg border border-emerald-400/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200">
+          <p className="rounded-2xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
             {copySuccess}
           </p>
         ) : null}
 
         {copyError ? (
-          <p className="rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+          <p className="rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm text-red-100">
             {copyError}
           </p>
         ) : null}
       </div>
 
-      <div className="rounded-xl border border-zinc-800 bg-zinc-950/70 p-3">
-        <p className="mb-3 text-xs uppercase tracking-[0.16em] text-zinc-400">QR</p>
+      <div className="rounded-[1.6rem] border border-white/10 bg-[#0d0a0c]/78 p-4">
+        <p className="cinema-kicker mb-3 text-[0.62rem] font-semibold">QR</p>
         {qrDataUrl ? (
           <div className="space-y-3">
             <Image
@@ -204,17 +214,17 @@ export function PaymentInstructionsCard(props: PaymentInstructionsCardProps) {
               width={224}
               height={224}
               unoptimized
-              className="mx-auto h-56 w-56 rounded-md border border-zinc-800 bg-white p-2"
+              className="mx-auto h-56 w-56 rounded-2xl border border-white/10 bg-white p-3"
             />
-            <p className="text-xs leading-relaxed text-zinc-300">
+            <p className="text-xs leading-relaxed text-[var(--muted)]">
               Scan in your Solana wallet app and verify both address and amount before
-              sending.
+              sending anything.
             </p>
           </div>
         ) : qrError ? (
-          <p className="text-sm leading-relaxed text-red-200">QR unavailable: {qrError}</p>
+          <p className="text-sm leading-relaxed text-red-100">QR unavailable: {qrError}</p>
         ) : (
-          <p className="text-sm leading-relaxed text-zinc-300">Generating QR code...</p>
+          <p className="text-sm leading-relaxed text-[var(--muted)]">Generating QR code...</p>
         )}
       </div>
     </section>

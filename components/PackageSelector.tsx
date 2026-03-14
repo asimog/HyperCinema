@@ -15,8 +15,13 @@ export function PackageSelector({
   disabled,
 }: PackageSelectorProps) {
   return (
-    <div className="space-y-2">
-      <p className="text-sm font-medium tracking-wide text-zinc-200">Package</p>
+    <div className="space-y-3">
+      <div className="flex items-end justify-between gap-3">
+        <p className="cinema-kicker text-[0.68rem] font-semibold">Choose The Runtime</p>
+        <p className="text-[0.72rem] uppercase tracking-[0.22em] text-[#9e8f83]">
+          24h / 48h / 72h
+        </p>
+      </div>
       <div className="grid gap-3 md:grid-cols-3">
         {Object.values(PACKAGE_CONFIG).map((item) => {
           const selected = item.packageType === value;
@@ -26,19 +31,21 @@ export function PackageSelector({
               type="button"
               disabled={disabled}
               onClick={() => onChange(item.packageType)}
-              className={`rounded-xl border px-4 py-4 text-left transition ${
+              className={`rounded-[1.4rem] border px-4 py-4 text-left transition ${
                 selected
-                  ? "border-cyan-500 bg-cyan-500/15 text-cyan-100"
-                  : "border-zinc-700 bg-zinc-900/70 text-zinc-200 hover:border-zinc-500"
+                  ? "border-[rgba(255,197,97,0.44)] bg-[linear-gradient(180deg,rgba(255,197,97,0.16),rgba(255,116,71,0.08))] text-[#fff5e5] shadow-[0_18px_30px_rgba(255,116,71,0.12)]"
+                  : "border-white/10 bg-[#120f11]/78 text-[#f1e2ca] hover:border-[rgba(255,197,97,0.28)] hover:bg-[#171214]"
               } disabled:cursor-not-allowed disabled:opacity-60`}
             >
-              <p className="text-xs uppercase tracking-[0.15em] text-zinc-400">
-                {item.rangeDays} Day{item.rangeDays > 1 ? "s" : ""}
+              <p className="text-xs uppercase tracking-[0.18em] text-[#a9998d]">
+                {item.rangeDays} day{item.rangeDays > 1 ? "s" : ""}
               </p>
-              <p className="mt-1 text-2xl font-semibold">{item.priceSol} SOL</p>
-              <p className="mt-1 text-xs text-zinc-400">
-                {item.videoSeconds}s cinematic video
-              </p>
+              <p className="font-display mt-2 text-3xl leading-none">{item.priceSol} SOL</p>
+              {selected ? (
+                <p className="mt-3 text-[0.72rem] uppercase tracking-[0.22em] text-[#ffe4b0]">
+                  selected
+                </p>
+              ) : null}
             </button>
           );
         })}

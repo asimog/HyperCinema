@@ -1,21 +1,28 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { IBM_Plex_Mono, Space_Grotesk, Syne } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const bodyFont = Space_Grotesk({
+  variable: "--font-space-grotesk",
   subsets: ["latin"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const monoFont = IBM_Plex_Mono({
+  variable: "--font-ibm-plex-mono",
   subsets: ["latin"],
+  weight: ["400", "500", "600"],
+});
+
+const displayFont = Syne({
+  variable: "--font-syne",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
 });
 
 export const metadata: Metadata = {
-  title: "HASHCINEMA",
+  title: "Trench Cinema | HashCinema",
   description:
-    "Generate cinematic recap videos and combined trading reports for Pump memecoin wallet activity.",
+    "Turn recent Pump.fun memecoin trading into a cinematic AI trailer built from wallet personality, trench lore, and chaotic on-chain behavior.",
 };
 
 export default function RootLayout({
@@ -26,7 +33,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${bodyFont.variable} ${monoFont.variable} ${displayFont.variable} antialiased`}
       >
         {children}
       </body>

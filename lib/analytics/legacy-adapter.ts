@@ -1,6 +1,11 @@
 import { round } from "@/lib/utils";
 import { generateVideoPromptSequence } from "@/lib/analytics/generateVideoPromptSequence";
 import {
+  buildSceneStateSequence,
+  buildStoryBeatSceneInputs,
+  buildVideoIdentitySheet,
+} from "@/lib/analytics/videoCoherence";
+import {
   ReportDocument,
   ReportTimelineItem,
   WalletBehavioralMetrics,
@@ -358,6 +363,8 @@ export function adaptWalletAnalysisToLegacyArtifacts(
     storyBeats: report.storyBeats,
     keyEvents: report.keyEvents,
     walletProfile: report.walletProfile,
+    videoIdentitySheet: analysis.videoIdentitySheet,
+    sceneStateSequence: analysis.sceneStateSequence,
     videoPromptSequence: analysis.videoPromptSequence,
     tokenMetadata: buildTokenMetadataFromTrades(
       analysis.normalizedTrades.map((trade) => ({
@@ -672,7 +679,40 @@ export function buildFallbackAnalysisFromLegacyArtifacts(input: {
   const summary = input.summary;
 
   if (hasRichAnalysisPayload(report.analysisV2?.payload)) {
-    return report.analysisV2.payload;
+    const payload = report.analysisV2.payload;
+    if (payload.videoIdentitySheet && payload.sceneStateSequence?.length) {
+      return payload;
+    }
+
+    const videoIdentitySheet =
+      payload.videoIdentitySheet ??
+      buildVideoIdentitySheet({
+        wallet: payload.wallet,
+        metrics: payload.metrics,
+        personality: payload.personality.primary.displayName,
+        modifiers: payload.modifiers.map((modifier) => modifier.displayName),
+        normalizedTrades: payload.normalizedTrades,
+      });
+    const sceneStateSequence =
+      payload.sceneStateSequence?.length
+        ? payload.sceneStateSequence
+        : buildSceneStateSequence({
+            identity: videoIdentitySheet,
+            storyBeats: payload.storyBeats,
+            moments: payload.moments,
+            metrics: payload.metrics,
+          });
+
+    return {
+      ...payload,
+      videoIdentitySheet,
+      sceneStateSequence,
+      videoPromptSequence: generateVideoPromptSequence({
+        identity: videoIdentitySheet,
+        sceneStates: sceneStateSequence,
+        sceneInputs: buildStoryBeatSceneInputs(payload.storyBeats),
+      }),
+    };
   }
 
   const normalizedTrades: NormalizedTrade[] = report.timeline.map((item) => ({
@@ -803,13 +843,28 @@ export function buildFallbackAnalysisFromLegacyArtifacts(input: {
   );
 
   const metrics = mapLegacyMetricsToV2(report as ReportDocument, input.rangeHours);
+  const videoIdentitySheet =
+    input.story.videoIdentitySheet ??
+    buildVideoIdentitySheet({
+      wallet: report.wallet,
+      metrics,
+      personality: report.walletPersonality ?? "The Casino Tourist",
+      modifiers: report.walletModifiers ?? [],
+      normalizedTrades,
+    });
+  const sceneStateSequence =
+    input.story.sceneStateSequence?.length
+      ? input.story.sceneStateSequence
+      : buildSceneStateSequence({
+          identity: videoIdentitySheet,
+          storyBeats,
+          moments,
+          metrics,
+        });
   const videoPromptSequence = generateVideoPromptSequence({
-    wallet: report.wallet,
-    metrics,
-    personality: report.walletPersonality ?? "The Casino Tourist",
-    modifiers: report.walletModifiers ?? [],
-    storyBeats,
-    moments,
+    identity: videoIdentitySheet,
+    sceneStates: sceneStateSequence,
+    sceneInputs: buildStoryBeatSceneInputs(storyBeats),
   });
 
   return {
@@ -848,6 +903,8 @@ export function buildFallbackAnalysisFromLegacyArtifacts(input: {
     cinematicSummary: fallbackCinematicSummary({ ...report, summary } as ReportDocument),
     xReadyLines,
     storyBeats,
+    videoIdentitySheet,
+    sceneStateSequence,
     videoPromptSequence,
     writersRoomSelections: {
       contentSource: "fallback-only",

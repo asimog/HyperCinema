@@ -1,4 +1,8 @@
 import { openRouterJson } from "@/lib/ai/openrouter";
+import {
+  alignSceneStatesToCount,
+  buildSceneContinuityPrompt,
+} from "@/lib/analytics/videoCoherence";
 import { logger } from "@/lib/logging/logger";
 import {
   isHttpUrl,
@@ -19,6 +23,8 @@ const sceneSchema = z.object({
   narration: z.string().min(10),
   durationSeconds: z.number().int().positive(),
   imageUrl: z.string().url().nullable().optional(),
+  stateRef: z.string().min(1).optional(),
+  continuityNote: z.string().min(1).optional(),
 });
 
 const scriptSchema = z.object({
@@ -97,44 +103,116 @@ function normalizeSceneDurations(
 
 function buildFallbackHookLine(story: WalletStory): string {
   const walletShort = `${story.wallet.slice(0, 4)}...${story.wallet.slice(-4)}`;
-  const personality = story.walletPersonality ?? story.analytics.styleClassification;
-  return `${walletShort} traded like ${personality} and left the chart in cinematic mode.`;
+  const archetype =
+    story.videoIdentitySheet?.archetype ??
+    story.walletPersonality ??
+    story.analytics.styleClassification;
+  return `${walletShort} moved like ${archetype} and left the trench air humming.`;
+}
+
+function scaleIndex(index: number, sourceLength: number, targetLength: number): number {
+  if (sourceLength <= 1 || targetLength <= 1) {
+    return 0;
+  }
+
+  return Math.round((index * (sourceLength - 1)) / (targetLength - 1));
+}
+
+function buildSceneDirectiveRefs(story: WalletStory, targetCount: number) {
+  const identity = story.videoIdentitySheet;
+  const promptScenes = story.videoPromptSequence ?? [];
+
+  if (!identity) {
+    return Array.from({ length: targetCount }, (_, index) => ({
+      stateRef: undefined,
+      continuityNote: promptScenes[index]?.continuityNote,
+      promptScene: promptScenes[index],
+    }));
+  }
+
+  const alignedStates = alignSceneStatesToCount({
+    identity,
+    sceneStates: story.sceneStateSequence ?? [],
+    targetCount,
+  });
+
+  return alignedStates.map((state, index) => {
+    const promptScene =
+      promptScenes[scaleIndex(index, promptScenes.length, targetCount)] ?? undefined;
+
+    return {
+      stateRef: state.stateRef,
+      continuityNote:
+        promptScene?.continuityNote ?? buildSceneContinuityPrompt(identity, state),
+      promptScene,
+    };
+  });
+}
+
+function enrichScenesWithCoherence(
+  story: WalletStory,
+  scenes: CinematicScene[],
+): CinematicScene[] {
+  const directives = buildSceneDirectiveRefs(story, scenes.length);
+
+  return scenes.map((scene, index) => ({
+    ...scene,
+    stateRef: scene.stateRef ?? directives[index]?.stateRef,
+    continuityNote: scene.continuityNote ?? directives[index]?.continuityNote,
+  }));
+}
+
+function buildCinematicPromptInput(story: WalletStory): Record<string, unknown> {
+  return {
+    wallet: story.wallet,
+    rangeDays: story.rangeDays,
+    packageType: story.packageType,
+    durationSeconds: story.durationSeconds,
+    analytics: story.analytics,
+    walletPersonality: story.walletPersonality,
+    walletSecondaryPersonality: story.walletSecondaryPersonality,
+    walletModifiers: story.walletModifiers,
+    narrativeSummary: story.narrativeSummary,
+    storyBeats: story.storyBeats,
+    behaviorPatterns: story.behaviorPatterns,
+    funObservations: story.funObservations,
+    keyEvents: story.keyEvents,
+  };
 }
 
 export function buildFallbackCinematicScript(
   story: WalletStory,
   tokenImageReferences: TokenImageReference[],
 ): GeneratedCinematicScript {
-  const tokenA = tokenImageReferences[0]?.symbol ?? "top token";
-  const tokenB = tokenImageReferences[1]?.symbol ?? tokenA;
-  const walletShort = `${story.wallet.slice(0, 4)}...${story.wallet.slice(-4)}`;
+  const directives = buildSceneDirectiveRefs(story, 3);
+  const promptScenes = story.videoPromptSequence ?? [];
+  const roughScenes: CinematicScene[] = Array.from({ length: 3 }, (_, index) => {
+    const promptScene = directives[index]?.promptScene ?? promptScenes[index];
+    const defaultVisuals = [
+      "Open on the protagonist entering a neon trading room with trailer-grade tension.",
+      "Push into the volatile middle act with continuity-first motion and token anchors still in frame.",
+      "Close on an aftermath tableau that feels earned, bruised, and strangely triumphant.",
+    ];
+    const defaultNarration = [
+      story.narrativeSummary ?? "The room knew this session would not stay calm.",
+      story.behaviorPatterns?.[0] ??
+        "Momentum and emotion kept taking turns holding the wheel.",
+      story.funObservations?.[0] ??
+        "The final beat landed like trench folklore instead of a spreadsheet.",
+    ];
 
-  const roughScenes: CinematicScene[] = [
-    {
-      sceneNumber: 1,
+    return {
+      sceneNumber: index + 1,
       visualPrompt:
-        "Open on a high-energy dashboard montage with on-chain overlays, fast zooms, and meme-style lower thirds.",
-      narration: `${walletShort} entered the session with ${story.analytics.buyCount} buys, ${story.analytics.sellCount} sells, and instant momentum pressure.`,
+        promptScene?.providerPrompts.veo ?? promptScene?.visualStyle ?? defaultVisuals[index]!,
+      narration:
+        promptScene?.narrationHook ?? defaultNarration[index]!,
       durationSeconds: Math.max(2, Math.round(story.durationSeconds / 3)),
-      imageUrl: tokenImageReferences[0]?.imageUrl ?? null,
-    },
-    {
-      sceneNumber: 2,
-      visualPrompt:
-        "Transition into volatile mid-act cuts, emphasizing rapid rotations, reversals, and scoreboard flashes.",
-      narration: `Mid-session drama centered on ${tokenA} and ${tokenB}, with estimated PnL swinging to ${story.analytics.estimatedPnlSol.toFixed(4)} SOL.`,
-      durationSeconds: Math.max(2, Math.round(story.durationSeconds / 3)),
-      imageUrl: tokenImageReferences[1]?.imageUrl ?? null,
-    },
-    {
-      sceneNumber: 3,
-      visualPrompt:
-        "Close with a stylized final recap card, kinetic captions, and a punchline freeze-frame outro.",
-      narration: `Final tape: spent ${story.analytics.solSpent.toFixed(4)} SOL, received ${story.analytics.solReceived.toFixed(4)} SOL. Best: ${story.analytics.bestTrade}. Worst: ${story.analytics.worstTrade}.`,
-      durationSeconds: Math.max(2, story.durationSeconds),
-      imageUrl: tokenImageReferences[2]?.imageUrl ?? null,
-    },
-  ];
+      imageUrl: tokenImageReferences[index]?.imageUrl ?? null,
+      stateRef: directives[index]?.stateRef,
+      continuityNote: directives[index]?.continuityNote,
+    };
+  });
 
   const normalizedScenes = normalizeSceneDurations(roughScenes, story.durationSeconds);
   const scenesWithImages = assignSceneImageUrls(
@@ -144,7 +222,7 @@ export function buildFallbackCinematicScript(
 
   return {
     hookLine: buildFallbackHookLine(story),
-    scenes: scenesWithImages,
+    scenes: enrichScenesWithCoherence(story, scenesWithImages),
   };
 }
 
@@ -180,7 +258,11 @@ export async function generateCinematicScript(
         {
           role: "user",
           content:
-            `Build a cinematic script from this factual wallet story JSON:\n${JSON.stringify(story)}` +
+            `Build a cinematic script from these structured inputs.\n\n` +
+            `Wallet story facts JSON:\n${JSON.stringify(buildCinematicPromptInput(story))}` +
+            `\n\nIdentity bible JSON:\n${JSON.stringify(story.videoIdentitySheet ?? null)}` +
+            `\n\nScene state sequence JSON:\n${JSON.stringify(story.sceneStateSequence ?? [])}` +
+            `\n\nDerived directorial prompts JSON:\n${JSON.stringify(story.videoPromptSequence ?? [])}` +
             `\n\nPump.fun token image metadata to use in scene imageUrl fields when relevant:\n${JSON.stringify(imageReferencePayload)}`,
         },
       ],
@@ -201,7 +283,7 @@ export async function generateCinematicScript(
 
     return {
       hookLine: parsed.hookLine,
-      scenes: scenesWithImages,
+      scenes: enrichScenesWithCoherence(story, scenesWithImages),
     };
   } catch (error) {
     logger.warn("cinematic_script_openrouter_failed_fallback", {

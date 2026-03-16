@@ -36,12 +36,55 @@ const tokenMetadataSchema = z.object({
   lastSeenTimestamp: z.number().optional(),
 });
 
+const sceneEmotionVectorSchema = z.object({
+  confidence: z.number(),
+  chaos: z.number(),
+  desperation: z.number(),
+  discipline: z.number(),
+  luck: z.number(),
+  intensity: z.number(),
+});
+
+const videoTokenAnchorSchema = z.object({
+  mint: z.string().min(1),
+  symbol: z.string().min(1),
+  name: z.string().nullable().optional(),
+  imageUrl: z.string().url().nullable().optional(),
+  role: z.enum(["primary", "secondary", "supporting"]),
+});
+
+const videoIdentitySheetSchema = z.object({
+  identityId: z.string().min(1),
+  archetype: z.string().min(1),
+  protagonist: z.string().min(1),
+  paletteCanon: z.array(z.string().min(1)).min(1),
+  worldCanon: z.array(z.string().min(1)).min(1),
+  lightingCanon: z.array(z.string().min(1)).min(1),
+  symbolCanon: z.array(z.string().min(1)).min(1),
+  tokenAnchors: z.array(videoTokenAnchorSchema).default([]),
+  negativeConstraints: z.array(z.string().min(1)).min(1),
+});
+
+const sceneStateSchema = z.object({
+  sceneNumber: z.number().int().positive(),
+  phase: z.enum(["opening", "rise", "damage", "pivot", "climax", "aftermath"]),
+  stateRef: z.string().min(1),
+  emotionVector: sceneEmotionVectorSchema,
+  subjectFocus: z.string().min(1),
+  continuityAnchors: z.array(z.string().min(1)).min(1),
+  deltaFromPrevious: z.array(z.string().min(1)).min(1),
+  transitionNote: z.string().min(1),
+});
+
 const sceneMetadataSchema = z.object({
   sceneNumber: z.number().int().positive(),
   durationSeconds: z.number().int().positive(),
   narration: z.string().min(1),
   visualPrompt: z.string().min(1),
   imageUrl: z.string().url().nullable().optional(),
+  stateRef: z.string().min(1).optional(),
+  continuityAnchors: z.array(z.string().min(1)).min(1).optional(),
+  continuityPrompt: z.string().min(1).optional(),
 });
 
 const storyMetadataSchema = z.object({
@@ -62,6 +105,19 @@ const googleVeoMetadataSchema = z.object({
   tokenMetadata: z.array(tokenMetadataSchema).default([]),
   sceneMetadata: z.array(sceneMetadataSchema).min(1),
   storyMetadata: storyMetadataSchema,
+  coherence: z
+    .object({
+      identity: videoIdentitySheetSchema,
+      sceneStates: z.array(sceneStateSchema).default([]),
+      renderPolicy: z
+        .object({
+          factorization: z.string().min(1),
+          continuityMode: z.string().min(1).optional(),
+          lintMode: z.string().min(1).optional(),
+        })
+        .optional(),
+    })
+    .optional(),
 });
 
 export const renderRequestSchema = z.object({

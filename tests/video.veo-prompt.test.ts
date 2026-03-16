@@ -40,6 +40,14 @@ function buildStory(): WalletStory {
         soundDesign: "low synth and keyboard clicks",
         symbolicVisuals: ["neon trading screens", "glowing chart lines"],
         narrationHook: "The session opened with immediate high-tempo entries.",
+        stateRef: "identity-1-state-1",
+        continuityAnchors: [
+          "hooded memecoin gambler in a room full of dangerous optimism",
+          "casino-cathedral tension",
+          "AAA remains the recurring token anchor",
+        ],
+        continuityNote:
+          "Preserve the hooded memecoin gambler and keep AAA readable in the same casino-cathedral frame.",
         providerPrompts: {
           veo: "Wide shot in a dark room with chart screens. Camera movement: slow push-in.",
           runway: "Stylized opening in a dark room with chart screens.",
@@ -59,11 +67,87 @@ function buildStory(): WalletStory {
         soundDesign: "orchestral rise and electronic impact",
         symbolicVisuals: ["rocket launches", "green particles exploding into red static"],
         narrationHook: "Credits rolled with meme energy and a hard lesson.",
+        stateRef: "identity-1-state-2",
+        continuityAnchors: [
+          "hooded memecoin gambler in a room full of dangerous optimism",
+          "casino-cathedral tension",
+          "AAA remains the recurring token anchor",
+        ],
+        continuityNote:
+          "Keep the same protagonist and token anchor alive as the scene escalates into the climax.",
         providerPrompts: {
           veo: "Hero shot in a market arena exploding in particles. Camera movement: hard snap zoom.",
           runway: "Stylized climax in a market arena exploding in particles.",
           kling: "Cinematic climax in a market arena exploding in particles.",
         },
+      },
+    ],
+    videoIdentitySheet: {
+      identityId: "identity-1",
+      archetype: "The Gambler",
+      protagonist: "hooded memecoin gambler in a room full of dangerous optimism",
+      paletteCanon: ["neon green", "warning red", "casino gold"],
+      worldCanon: ["casino-cathedral tension", "dark trading room noir", "dashboard skyline"],
+      lightingCanon: ["hard chart glow", "green-red contrast", "smoky backlight"],
+      symbolCanon: ["glowing chart lines", "neon trading screens", "AAA shrine iconography"],
+      tokenAnchors: [
+        {
+          mint: "mint-a",
+          symbol: "AAA",
+          name: "Alpha",
+          imageUrl: "https://cdn.example.com/a.png",
+          role: "primary",
+        },
+      ],
+      negativeConstraints: [
+        "Do not replace the protagonist with abstract charts only.",
+        "Do not invent new tokens, fake dashboards, or stat overlays.",
+      ],
+    },
+    sceneStateSequence: [
+      {
+        sceneNumber: 1,
+        phase: "opening",
+        stateRef: "identity-1-state-1",
+        emotionVector: {
+          confidence: 0.62,
+          chaos: 0.54,
+          desperation: 0.38,
+          discipline: 0.56,
+          luck: 0.51,
+          intensity: 0.54,
+        },
+        subjectFocus: "introduce AAA as the first signal in the room",
+        continuityAnchors: [
+          "hooded memecoin gambler in a room full of dangerous optimism",
+          "casino-cathedral tension",
+          "AAA remains the recurring token anchor",
+        ],
+        deltaFromPrevious: ["establish the identity sheet before any drift is allowed"],
+        transitionNote:
+          "Opening phase pushes focus toward introduce aaa as the first signal in the room while establish the identity sheet before any drift is allowed.",
+      },
+      {
+        sceneNumber: 2,
+        phase: "climax",
+        stateRef: "identity-1-state-2",
+        emotionVector: {
+          confidence: 0.67,
+          chaos: 0.73,
+          desperation: 0.48,
+          discipline: 0.42,
+          luck: 0.57,
+          intensity: 0.61,
+        },
+        subjectFocus: "AAA turns into the poster image of the session",
+        continuityAnchors: [
+          "hooded memecoin gambler in a room full of dangerous optimism",
+          "casino-cathedral tension",
+          "AAA remains the recurring token anchor",
+        ],
+        deltaFromPrevious: ["chaos rises", "discipline cools"],
+        transitionNote:
+          "Climax phase pushes focus toward aaa turns into the poster image of the session while chaos rises, discipline cools.",
       },
     ],
     narrativeSummary:
@@ -164,18 +248,22 @@ describe("google veo prompt engine", () => {
       "mint-b",
     ]);
     expect(payload.sceneMetadata).toHaveLength(3);
+    expect(payload.sceneMetadata[0]?.stateRef).toBe("identity-1-scene-1");
+    expect(payload.sceneMetadata[0]?.continuityAnchors?.length).toBeGreaterThan(0);
+    expect(payload.sceneMetadata[0]?.continuityPrompt).toContain("Preserve");
+    expect(payload.coherence?.identity.identityId).toBe("identity-1");
+    expect(payload.coherence?.sceneStates).toHaveLength(3);
     expect(payload.prompt.includes("Trailer hook:")).toBe(true);
     expect(payload.prompt.includes("Wallet woke up and chose velocity.")).toBe(true);
     expect(payload.prompt.includes("AAA")).toBe(true);
-    expect(payload.prompt.includes("Personality flavor: The Chaos Gambler + The Momentum Chaser.")).toBe(true);
+    expect(payload.prompt.includes("Identity bible:")).toBe(true);
     expect(payload.prompt.includes("Archetype: The Gambler.")).toBe(true);
-    expect(payload.prompt.includes("Directorial sequence:")).toBe(true);
-    expect(payload.prompt.includes("Entry Into The Trenches")).toBe(true);
+    expect(payload.prompt.includes("State transition reel:")).toBe(true);
+    expect(payload.prompt.includes("Scene realization reel:")).toBe(true);
+    expect(payload.prompt.includes("stateRef=identity-1-scene-1")).toBe(true);
     expect(payload.prompt.includes("Token image anchors:")).toBe(true);
     expect(payload.prompt.includes("Hard constraints:")).toBe(true);
     expect(payload.prompt.includes("This is cinema, not analytics.")).toBe(true);
-    expect(payload.prompt.includes("Facts to preserve:")).toBe(false);
-    expect(payload.prompt.includes("Behavior metrics:")).toBe(false);
     expect(payload.prompt.includes("4.8 SOL")).toBe(false);
     expect(payload.prompt.includes("0.21 SOL")).toBe(false);
   });

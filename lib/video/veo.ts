@@ -1,3 +1,8 @@
+import {
+  alignSceneStatesToCount,
+  buildSceneContinuityPrompt,
+} from "@/lib/analytics/videoCoherence";
+import type { SceneState, VideoIdentitySheet } from "@/lib/analytics/types";
 import { round } from "@/lib/utils";
 import { rankTokenMetadataForStory } from "@/lib/tokens/metadata-selection";
 import { GeneratedCinematicScript, WalletStory } from "@/lib/types/domain";
@@ -19,6 +24,27 @@ export interface VeoTokenMetadata {
   lastSeenTimestamp: number;
 }
 
+export interface VeoSceneMetadata {
+  sceneNumber: number;
+  durationSeconds: number;
+  narration: string;
+  visualPrompt: string;
+  imageUrl: string | null;
+  stateRef?: string;
+  continuityAnchors?: string[];
+  continuityPrompt?: string;
+}
+
+export interface VeoCoherenceMetadata {
+  identity: VideoIdentitySheet;
+  sceneStates: SceneState[];
+  renderPolicy?: {
+    factorization: "identity->state->render";
+    continuityMode: string;
+    lintMode: string;
+  };
+}
+
 export interface GoogleVeoRenderPayload {
   provider: "google_veo";
   model: "veo-3.1-fast-generate-001";
@@ -27,13 +53,7 @@ export interface GoogleVeoRenderPayload {
   prompt: string;
   styleHints: string[];
   tokenMetadata: VeoTokenMetadata[];
-  sceneMetadata: Array<{
-    sceneNumber: number;
-    durationSeconds: number;
-    narration: string;
-    visualPrompt: string;
-    imageUrl: string | null;
-  }>;
+  sceneMetadata: VeoSceneMetadata[];
   storyMetadata: {
     wallet: string;
     rangeDays: number;
@@ -41,6 +61,11 @@ export interface GoogleVeoRenderPayload {
     durationSeconds: number;
     analytics: WalletStory["analytics"];
   };
+  coherence?: VeoCoherenceMetadata;
+}
+
+function unique<T>(values: T[]): T[] {
+  return values.filter((value, index) => values.indexOf(value) === index);
 }
 
 function buildTokenMetadata(story: WalletStory): VeoTokenMetadata[] {
@@ -82,7 +107,10 @@ function sanitizePromptText(value: string): string {
   return compactSentence(
     value
       .replace(/\b\d+(?:\.\d+)?\s*SOL\b/gi, "the bag")
-      .replace(/\b\d+\s+(?:buys?|sells?|trades?|tokens?|hours?|minutes?|days?)\b/gi, "a blur of clicks")
+      .replace(
+        /\b\d+\s+(?:buys?|sells?|trades?|tokens?|hours?|minutes?|days?)\b/gi,
+        "a blur of clicks",
+      )
       .replace(/\bestimated\s+pnl\b/gi, "fortune")
       .replace(/\bfinal tape\b/gi, "final mood")
       .replace(/\bspent\b/gi, "risked")
@@ -111,124 +139,224 @@ function phaseLabel(phase: string): string {
   }
 }
 
-function inferArchetype(story: WalletStory): string {
-  const source = [
-    story.walletPersonality ?? "",
-    story.walletSecondaryPersonality ?? "",
-    ...(story.walletModifiers ?? []),
-  ]
-    .join(" ")
-    .toLowerCase();
-
-  if (
-    source.includes("gambler") ||
-    source.includes("casino") ||
-    source.includes("degen")
-  ) {
-    return "The Gambler";
+function scaleIndex(index: number, sourceLength: number, targetLength: number): number {
+  if (sourceLength <= 1 || targetLength <= 1) {
+    return 0;
   }
 
-  if (
-    source.includes("oracle") ||
-    source.includes("visionary") ||
-    source.includes("early") ||
-    source.includes("sniper")
-  ) {
-    return "The Prophet";
-  }
-
-  if (
-    source.includes("comeback") ||
-    source.includes("survivor") ||
-    source.includes("rug hardened")
-  ) {
-    return "The Survivor";
-  }
-
-  if (
-    source.includes("diamond") ||
-    source.includes("martyr") ||
-    source.includes("bagholder") ||
-    source.includes("conviction")
-  ) {
-    return "The Martyr";
-  }
-
-  if (
-    source.includes("chaos") ||
-    source.includes("trickster") ||
-    source.includes("timeline") ||
-    source.includes("luck")
-  ) {
-    return "The Trickster";
-  }
-
-  return "The Gambler";
+  return Math.round((index * (sourceLength - 1)) / (targetLength - 1));
 }
 
-function inferProtagonist(archetype: string): string {
-  switch (archetype) {
-    case "The Prophet":
-      return "a sleepless chart oracle under neon monitor glow";
-    case "The Survivor":
-      return "a battle-worn night trader still refusing to leave the desk";
-    case "The Martyr":
-      return "a conviction cultist guarding one last glowing thesis";
-    case "The Trickster":
-      return "a meme-native trench operator with suspicious plot armor";
-    default:
-      return "a hooded memecoin gambler in a room full of dangerous optimism";
-  }
+function synthesizeIdentity(
+  story: WalletStory,
+  tokenMetadata: VeoTokenMetadata[],
+): VideoIdentitySheet {
+  const walletShort = `${story.wallet.slice(0, 4)}...${story.wallet.slice(-4)}`;
+  const archetype =
+    story.videoIdentitySheet?.archetype ??
+    story.walletPersonality ??
+    story.analytics.styleClassification;
+  const protagonist =
+    story.videoIdentitySheet?.protagonist ??
+    `${walletShort} as a trench protagonist under chart glow`;
+
+  return {
+    identityId: `story-${story.wallet.slice(0, 8)}-${story.rangeDays}`,
+    archetype,
+    protagonist,
+    paletteCanon:
+      story.videoIdentitySheet?.paletteCanon ?? [
+        "neon chart green",
+        "storm blue",
+        "warning red",
+      ],
+    worldCanon:
+      story.videoIdentitySheet?.worldCanon ?? [
+        "dark trading room noir",
+        "meme-trench skyline",
+      ],
+    lightingCanon:
+      story.videoIdentitySheet?.lightingCanon ?? [
+        "hard chart glow",
+        "screen-lit haze",
+      ],
+    symbolCanon:
+      story.videoIdentitySheet?.symbolCanon ??
+      unique(
+        [
+          "glowing chart lines",
+          "trading desk relics",
+          ...tokenMetadata
+            .slice(0, 2)
+            .map((token) => `${token.symbol} poster fragments`),
+        ],
+      ),
+    tokenAnchors:
+      story.videoIdentitySheet?.tokenAnchors ??
+      tokenMetadata.slice(0, 4).map((token, index) => ({
+        mint: token.mint,
+        symbol: token.symbol,
+        name: token.name,
+        imageUrl: token.imageUrl,
+        role:
+          index === 0 ? "primary" : index === 1 ? "secondary" : "supporting",
+      })),
+    negativeConstraints:
+      story.videoIdentitySheet?.negativeConstraints ?? [
+        "Do not replace the protagonist with chart-only abstraction.",
+        "Do not invent new tokens or fake stat overlays.",
+        "Do not break palette or world continuity mid-video.",
+      ],
+  };
 }
 
-function buildFlavorLine(story: WalletStory): string {
-  const personalityLine = [
-    story.walletPersonality,
-    story.walletSecondaryPersonality,
-  ]
-    .filter((value): value is string => Boolean(value && value.trim().length))
-    .join(" + ");
-  const modifiersLine = (story.walletModifiers ?? []).slice(0, 4).join(", ");
-  const behaviorLine = (story.behaviorPatterns ?? [])
-    .slice(0, 3)
-    .map((value) => sanitizePromptText(value))
-    .join(" | ");
+function synthesizeSceneStates(
+  story: WalletStory,
+  script: GeneratedCinematicScript,
+  identity: VideoIdentitySheet,
+): SceneState[] {
+  const promptScenes = story.videoPromptSequence ?? [];
 
-  const parts = [
-    personalityLine ? `Personality flavor: ${personalityLine}.` : "",
-    modifiersLine ? `Modifier flavor: ${modifiersLine}.` : "",
-    behaviorLine ? `Behavior flavor: ${behaviorLine}` : "",
-  ].filter(Boolean);
+  return script.scenes.map((scene, index) => {
+    const promptScene =
+      promptScenes[scaleIndex(index, promptScenes.length, script.scenes.length)];
+    const continuityAnchors = unique(
+      [
+        identity.protagonist,
+        identity.worldCanon[0],
+        identity.paletteCanon[0],
+        identity.tokenAnchors[0]?.symbol
+          ? `${identity.tokenAnchors[0].symbol} remains visible`
+          : undefined,
+        ...(promptScene?.continuityAnchors ?? []),
+      ].filter((value): value is string => Boolean(value)),
+    ).slice(0, 5);
 
-  return parts.join(" ");
+    return {
+      sceneNumber: scene.sceneNumber,
+      phase: promptScene?.phase ?? "opening",
+      stateRef:
+        promptScene?.stateRef ?? `${identity.identityId}-scene-${scene.sceneNumber}`,
+      emotionVector: {
+        confidence: 0.55,
+        chaos: 0.45,
+        desperation: 0.35,
+        discipline: 0.55,
+        luck: 0.5,
+        intensity: 0.5,
+      },
+      subjectFocus:
+        promptScene?.narrativePurpose ??
+        sanitizePromptText(scene.narration) ??
+        "keep the protagonist and token anchor readable",
+      continuityAnchors,
+      deltaFromPrevious:
+        index === 0
+          ? ["establish the identity sheet before any drift is allowed"]
+          : ["advance the scene without replacing the protagonist or world canon"],
+      transitionNote:
+        promptScene?.continuityNote ??
+        "Carry the same protagonist, palette, and token logic into the next cut.",
+    };
+  });
 }
 
-function buildVisualWorldLine(story: WalletStory): string {
-  const source = [
-    story.walletPersonality ?? "",
-    ...(story.walletModifiers ?? []),
-    ...(story.behaviorPatterns ?? []),
-  ]
-    .join(" ")
-    .toLowerCase();
+function resolveCoherence(input: {
+  story: WalletStory;
+  script: GeneratedCinematicScript;
+  tokenMetadata: VeoTokenMetadata[];
+}): VeoCoherenceMetadata {
+  const identity = input.story.videoIdentitySheet
+    ? input.story.videoIdentitySheet
+    : synthesizeIdentity(input.story, input.tokenMetadata);
 
-  if (source.includes("revenge")) {
-    return "Visual world: neon boxing-ring energy, storm-lit screens, frantic camera swings, and a trader treating every candle like a rematch clause.";
-  }
+  const sceneStates =
+    input.story.sceneStateSequence?.length
+      ? alignSceneStatesToCount({
+          identity,
+          sceneStates: input.story.sceneStateSequence,
+          targetCount: input.script.scenes.length,
+        })
+      : synthesizeSceneStates(input.story, input.script, identity);
 
-  if (source.includes("diamond") || source.includes("bagholder")) {
-    return "Visual world: glowing chart altars, stubborn red haze, dust-in-sunrise aftermath, and conviction staged like a tragic religion.";
-  }
+  return {
+    identity,
+    sceneStates,
+    renderPolicy: {
+      factorization: "identity->state->render",
+      continuityMode:
+        "Reuse identity + state continuity prompts for every scene and chunk.",
+      lintMode:
+        "Strengthen scene continuity prompts before dispatch if anchors are underspecified.",
+    },
+  };
+}
 
-  if (source.includes("oracle") || source.includes("visionary") || source.includes("early")) {
-    return "Visual world: cathedral-scale chart walls, omen-like green light, quiet focus, and prophecy dressed as market timing.";
-  }
+function strengthenContinuityPrompt(
+  identity: VideoIdentitySheet,
+  state: SceneState,
+  prompt: string,
+): string {
+  return compactSentence(
+    `${prompt} Preserve ${identity.protagonist}. Keep ${state.continuityAnchors
+      .slice(0, 3)
+      .join(", ")} stable in the frame.`,
+  );
+}
 
-  if (source.includes("chaos") || source.includes("casino")) {
-    return "Visual world: casino-cathedral lighting, chart storms on the ceiling, meme captions like trailer cards, and screens that feel one bad decision away from folklore.";
-  }
+function lintSceneCoherence(input: {
+  story: WalletStory;
+  script: GeneratedCinematicScript;
+  coherence: VeoCoherenceMetadata;
+}): VeoSceneMetadata[] {
+  const promptScenes = input.story.videoPromptSequence ?? [];
 
-  return "Visual world: dark trading room noir, neon chart glow, group-chat ghosts, storm-blue tension, and meme captions that feel like a trailer instead of a spreadsheet.";
+  return input.script.scenes.map((scene, index) => {
+    const state = input.coherence.sceneStates[index];
+    const promptScene =
+      promptScenes[scaleIndex(index, promptScenes.length, input.script.scenes.length)];
+
+    if (!state) {
+      return {
+        sceneNumber: scene.sceneNumber,
+        durationSeconds: scene.durationSeconds,
+        narration: scene.narration,
+        visualPrompt: scene.visualPrompt,
+        imageUrl: scene.imageUrl,
+      };
+    }
+
+    const continuityAnchors = unique(
+      [
+        ...state.continuityAnchors,
+        input.coherence.identity.protagonist,
+        input.coherence.identity.worldCanon[0],
+        input.coherence.identity.paletteCanon[0],
+      ].filter((value): value is string => Boolean(value)),
+    ).slice(0, 6);
+
+    const continuityPrompt = strengthenContinuityPrompt(
+      input.coherence.identity,
+      { ...state, continuityAnchors },
+      scene.continuityNote ??
+        promptScene?.continuityNote ??
+        buildSceneContinuityPrompt(input.coherence.identity, {
+          ...state,
+          continuityAnchors,
+        }),
+    );
+
+    return {
+      sceneNumber: scene.sceneNumber,
+      durationSeconds: scene.durationSeconds,
+      narration: scene.narration,
+      visualPrompt: scene.visualPrompt,
+      imageUrl: scene.imageUrl,
+      stateRef: scene.stateRef ?? state.stateRef,
+      continuityAnchors,
+      continuityPrompt,
+    };
+  });
 }
 
 function buildTokenReferenceLine(tokenMetadata: VeoTokenMetadata[]): string {
@@ -245,33 +373,61 @@ function buildTokenReferenceLine(tokenMetadata: VeoTokenMetadata[]): string {
     : "Token image anchors: none supplied.";
 }
 
-function buildDirectorialLines(input: {
-  story: WalletStory;
-  script: GeneratedCinematicScript;
+function buildIdentityBibleLines(identity: VideoIdentitySheet): string[] {
+  return [
+    `Archetype: ${identity.archetype}.`,
+    `Protagonist: ${identity.protagonist}.`,
+    `Palette canon: ${identity.paletteCanon.join(", ")}.`,
+    `World canon: ${identity.worldCanon.join(", ")}.`,
+    `Lighting canon: ${identity.lightingCanon.join(", ")}.`,
+    `Symbol canon: ${identity.symbolCanon.join(", ")}.`,
+    identity.tokenAnchors.length
+      ? `Token anchors: ${identity.tokenAnchors
+          .map((anchor) => `${anchor.role}:${anchor.symbol}`)
+          .join(", ")}.`
+      : "Token anchors: none supplied.",
+    `Negative constraints: ${identity.negativeConstraints.join(" ")}`,
+  ];
+}
+
+function buildStateTransitionLines(input: {
+  sceneMetadata: VeoSceneMetadata[];
+  sceneStates: SceneState[];
 }): string[] {
-  const directorialSequence = (input.story.videoPromptSequence ?? []).slice(
-    0,
-    MAX_SCENES_IN_PROMPT,
-  );
+  return input.sceneMetadata.slice(0, MAX_SCENES_IN_PROMPT).map((scene) => {
+    const state =
+      input.sceneStates.find((candidate) => candidate.sceneNumber === scene.sceneNumber) ??
+      input.sceneStates[scene.sceneNumber - 1];
+    const phase = state ? phaseLabel(state.phase) : "Trailer Beat";
 
-  if (directorialSequence.length > 0) {
-    return directorialSequence.map(
-      (scene) =>
-        `${phaseLabel(scene.phase)} | ${truncateText(scene.providerPrompts.veo, MAX_SCENE_TEXT_CHARS)}`,
-    );
-  }
-
-  return input.script.scenes.slice(0, MAX_SCENES_IN_PROMPT).map((scene) => {
-    const visual = sanitizePromptText(scene.visualPrompt);
-    return `Trailer Beat | ${truncateText(visual, MAX_SCENE_TEXT_CHARS)}`;
+    return [
+      `Scene ${scene.sceneNumber}`,
+      phase,
+      state?.stateRef ? `stateRef=${state.stateRef}` : "",
+      state ? `focus=${truncateText(state.subjectFocus, 110)}` : "",
+      state?.deltaFromPrevious?.length
+        ? `delta=${truncateText(state.deltaFromPrevious.join(", "), 90)}`
+        : "",
+      scene.continuityPrompt
+        ? `continuity=${truncateText(scene.continuityPrompt, 120)}`
+        : "",
+    ]
+      .filter(Boolean)
+      .join(" | ");
   });
 }
 
-function buildSceneReelLines(script: GeneratedCinematicScript): string[] {
-  return script.scenes.slice(0, MAX_SCENES_IN_PROMPT).map((scene) => {
+function buildSceneRealizationLines(sceneMetadata: VeoSceneMetadata[]): string[] {
+  return sceneMetadata.slice(0, MAX_SCENES_IN_PROMPT).map((scene) => {
     const visual = sanitizePromptText(scene.visualPrompt);
-    const imageAnchor = scene.imageUrl ? ` image=${scene.imageUrl}` : " image=none";
-    return `Visual cue | ${truncateText(visual, MAX_SCENE_TEXT_CHARS)} |${imageAnchor}`;
+    const narration = sanitizePromptText(scene.narration);
+    const imageAnchor = scene.imageUrl ? `image=${scene.imageUrl}` : "image=none";
+    return [
+      `Scene ${scene.sceneNumber} realization`,
+      `visual=${truncateText(visual, MAX_SCENE_TEXT_CHARS)}`,
+      `narration=${truncateText(narration, 120)}`,
+      imageAnchor,
+    ].join(" | ");
   });
 }
 
@@ -279,33 +435,32 @@ function buildPrompt(input: {
   story: WalletStory;
   script: GeneratedCinematicScript;
   tokenMetadata: VeoTokenMetadata[];
+  coherence: VeoCoherenceMetadata;
+  sceneMetadata: VeoSceneMetadata[];
 }): string {
-  const archetype = inferArchetype(input.story);
-  const protagonist = inferProtagonist(archetype);
-  const flavorLine = buildFlavorLine(input.story);
+  const trailerHook = sanitizePromptText(input.script.hookLine);
   const narrativeSummary = input.story.narrativeSummary?.trim()
     ? sanitizePromptText(input.story.narrativeSummary)
     : "";
-  const directorialPromptLines = buildDirectorialLines(input);
-  const sceneReelLines = buildSceneReelLines(input.script);
-  const trailerHook = sanitizePromptText(input.script.hookLine);
 
   const prompt = [
     "Create a funny, memetic cinematic trailer about a trader's last stretch in the Pump.fun trenches.",
     "This is cinema, not analytics. Never mention balances, PnL, trade counts, percentages, package tiers, or scoreboard numbers in dialogue, captions, or commentary.",
-    `Archetype: ${archetype}.`,
-    `Protagonist: ${protagonist}.`,
-    flavorLine,
-    buildVisualWorldLine(input.story),
+    "Render rule: every shot must be derived from identity bible + state transition reel + scene realization. Never re-invent the protagonist mid-video.",
     narrativeSummary ? `Narrative summary: ${narrativeSummary}` : "",
     `Trailer hook: ${trailerHook}`,
     buildTokenReferenceLine(input.tokenMetadata),
     "When an image URL is supplied, treat it as the featured token's poster, shrine, sticker, hologram, or apparition inside the world of the scene.",
-    "Hard constraints: stay faithful to the supplied wallet story, token anchors, and scene metadata. Do not invent extra coins, fake stat overlays, or abstract chart-only scenes without a human presence.",
-    "Directorial sequence:",
-    ...directorialPromptLines,
-    "Visual reel:",
-    ...sceneReelLines,
+    "Hard constraints: stay faithful to the supplied identity, state continuity, token anchors, and scene metadata. Do not invent extra coins, fake stat overlays, or chart-only scenes without a human presence.",
+    "Identity bible:",
+    ...buildIdentityBibleLines(input.coherence.identity),
+    "State transition reel:",
+    ...buildStateTransitionLines({
+      sceneMetadata: input.sceneMetadata,
+      sceneStates: input.coherence.sceneStates,
+    }),
+    "Scene realization reel:",
+    ...buildSceneRealizationLines(input.sceneMetadata),
   ]
     .filter(Boolean)
     .join("\n");
@@ -324,6 +479,16 @@ export function buildGoogleVeoRenderPayload(input: {
   resolution?: "720p" | "1080p";
 }): GoogleVeoRenderPayload {
   const tokenMetadata = buildTokenMetadata(input.walletStory);
+  const coherence = resolveCoherence({
+    story: input.walletStory,
+    script: input.script,
+    tokenMetadata,
+  });
+  const sceneMetadata = lintSceneCoherence({
+    story: input.walletStory,
+    script: input.script,
+    coherence,
+  });
 
   return {
     provider: "google_veo",
@@ -334,6 +499,8 @@ export function buildGoogleVeoRenderPayload(input: {
       story: input.walletStory,
       script: input.script,
       tokenMetadata,
+      coherence,
+      sceneMetadata,
     }),
     styleHints: [
       "memetic",
@@ -341,15 +508,10 @@ export function buildGoogleVeoRenderPayload(input: {
       "high-energy-edit",
       "captioned",
       "satirical",
+      "coherence-first",
     ],
     tokenMetadata,
-    sceneMetadata: input.script.scenes.map((scene) => ({
-      sceneNumber: scene.sceneNumber,
-      durationSeconds: scene.durationSeconds,
-      narration: scene.narration,
-      visualPrompt: scene.visualPrompt,
-      imageUrl: scene.imageUrl,
-    })),
+    sceneMetadata,
     storyMetadata: {
       wallet: input.walletStory.wallet,
       rangeDays: input.walletStory.rangeDays,
@@ -357,5 +519,6 @@ export function buildGoogleVeoRenderPayload(input: {
       durationSeconds: input.walletStory.durationSeconds,
       analytics: input.walletStory.analytics,
     },
+    coherence,
   };
 }

@@ -29,6 +29,11 @@ import { scoreMetrics } from "./scoreMetrics";
 import { scoreModifiers } from "./scoreModifiers";
 import { scorePersonality } from "./scorePersonality";
 import {
+  buildSceneStateSequence,
+  buildStoryBeatSceneInputs,
+  buildVideoIdentitySheet,
+} from "./videoCoherence";
+import {
   AnalyzeWalletProfileInput,
   AnalysisRangeHours,
   NormalizedTrade,
@@ -91,13 +96,25 @@ async function analyzeFromNormalizedTrades(input: {
     moments,
   });
 
-  const videoPromptSequence = generateVideoPromptSequence({
+  const videoIdentitySheet = buildVideoIdentitySheet({
     wallet: input.wallet,
     metrics,
     personality: personality.primary.displayName,
     modifiers: modifiers.map((modifier) => modifier.displayName),
+    normalizedTrades: input.normalizedTrades,
+  });
+
+  const sceneStateSequence = buildSceneStateSequence({
+    identity: videoIdentitySheet,
     storyBeats,
     moments,
+    metrics,
+  });
+
+  const videoPromptSequence = generateVideoPromptSequence({
+    identity: videoIdentitySheet,
+    sceneStates: sceneStateSequence,
+    sceneInputs: buildStoryBeatSceneInputs(storyBeats),
   });
 
   const result: WalletAnalysisResult = {
@@ -115,6 +132,8 @@ async function analyzeFromNormalizedTrades(input: {
     cinematicSummary: narratives.cinematicSummary,
     xReadyLines: narratives.xReadyLines,
     storyBeats,
+    videoIdentitySheet,
+    sceneStateSequence,
     videoPromptSequence,
     writersRoomSelections: narratives.writersRoomSelections,
   };

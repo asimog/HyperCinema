@@ -265,6 +265,57 @@ export const storyBeatSchema = z.object({
   symbolicVisualHint: z.string().min(1),
 });
 
+const sceneEmotionVectorSchema = z.object({
+  confidence: z.number(),
+  chaos: z.number(),
+  desperation: z.number(),
+  discipline: z.number(),
+  luck: z.number(),
+  intensity: z.number(),
+});
+
+const videoTokenAnchorSchema = z.object({
+  mint: z.string().min(1),
+  symbol: z.string().min(1),
+  name: z.string().nullable().optional(),
+  imageUrl: z.string().url().nullable().optional(),
+  role: z.union([
+    z.literal("primary"),
+    z.literal("secondary"),
+    z.literal("supporting"),
+  ]),
+});
+
+const videoIdentitySheetSchema = z.object({
+  identityId: z.string().min(1),
+  archetype: z.string().min(1),
+  protagonist: z.string().min(1),
+  paletteCanon: z.array(z.string().min(1)).min(1),
+  worldCanon: z.array(z.string().min(1)).min(1),
+  lightingCanon: z.array(z.string().min(1)).min(1),
+  symbolCanon: z.array(z.string().min(1)).min(1),
+  tokenAnchors: z.array(videoTokenAnchorSchema),
+  negativeConstraints: z.array(z.string().min(1)).min(1),
+});
+
+const sceneStateSchema = z.object({
+  sceneNumber: z.number().int().positive(),
+  phase: z.union([
+    z.literal("opening"),
+    z.literal("rise"),
+    z.literal("damage"),
+    z.literal("pivot"),
+    z.literal("climax"),
+    z.literal("aftermath"),
+  ]),
+  stateRef: z.string().min(1),
+  emotionVector: sceneEmotionVectorSchema,
+  subjectFocus: z.string().min(1),
+  continuityAnchors: z.array(z.string().min(1)).min(1),
+  deltaFromPrevious: z.array(z.string().min(1)).min(1),
+  transitionNote: z.string().min(1),
+});
+
 const videoPromptSceneSchema = z.object({
   sceneNumber: z.number().int().positive(),
   phase: z.union([
@@ -285,6 +336,9 @@ const videoPromptSceneSchema = z.object({
   soundDesign: z.string().min(1),
   symbolicVisuals: z.array(z.string().min(1)).min(1),
   narrationHook: z.string().min(1),
+  stateRef: z.string().min(1).optional(),
+  continuityAnchors: z.array(z.string().min(1)).min(1).optional(),
+  continuityNote: z.string().min(1).optional(),
   providerPrompts: z.object({
     veo: z.string().min(1),
     runway: z.string().min(1),
@@ -320,6 +374,8 @@ export const walletAnalysisResultSchema = z.object({
   cinematicSummary: cinematicSummarySchema,
   xReadyLines: z.array(z.string().min(1)).min(5).max(10),
   storyBeats: z.array(storyBeatSchema).min(5).max(8),
+  videoIdentitySheet: videoIdentitySheetSchema.optional(),
+  sceneStateSequence: z.array(sceneStateSchema).min(1).optional(),
   videoPromptSequence: z.array(videoPromptSceneSchema).min(5).max(8),
   writersRoomSelections: writersRoomSelectionsSchema,
 });

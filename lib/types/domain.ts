@@ -1,4 +1,9 @@
-import type { VideoPromptScene, WalletAnalysisResult } from "@/lib/analytics/types";
+import type {
+  SceneState,
+  VideoIdentitySheet,
+  VideoPromptScene,
+  WalletAnalysisResult,
+} from "@/lib/analytics/types";
 
 export type PackageType = "1d" | "2d" | "3d";
 
@@ -241,6 +246,8 @@ export interface WalletStory {
   storyBeats?: string[];
   keyEvents?: WalletKeyEvent[];
   walletProfile?: WalletProfile;
+  videoIdentitySheet?: VideoIdentitySheet;
+  sceneStateSequence?: SceneState[];
   videoPromptSequence?: VideoPromptScene[];
   tokenMetadata?: WalletStoryTokenMetadata[];
 }
@@ -260,6 +267,8 @@ export interface CinematicScene {
   narration: string;
   durationSeconds: number;
   imageUrl: string | null;
+  stateRef?: string;
+  continuityNote?: string;
 }
 
 export interface GeneratedCinematicScript {

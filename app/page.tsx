@@ -230,6 +230,32 @@ export default function HomePage() {
           </div>
         </section>
 
+        <section className="grid gap-4 md:grid-cols-3">
+          <div className="cinema-panel-soft rounded-[1.7rem] p-5">
+            <p className="cinema-kicker text-[0.65rem] font-semibold">Window</p>
+            <p className="mt-3 font-display text-3xl text-[#fff1dc]">24-72h</p>
+            <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
+              Focused on the latest stretch of Pump.fun behavior rather than a full wallet
+              biography.
+            </p>
+          </div>
+          <div className="cinema-panel-soft rounded-[1.7rem] p-5">
+            <p className="cinema-kicker text-[0.65rem] font-semibold">Readout</p>
+            <p className="mt-3 font-display text-3xl text-[#fff1dc]">Lore</p>
+            <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
+              Main character trades, most unwell turns, and the line your group chat would keep
+              quoting.
+            </p>
+          </div>
+          <div className="cinema-panel-soft rounded-[1.7rem] p-5">
+            <p className="cinema-kicker text-[0.65rem] font-semibold">Output</p>
+            <p className="mt-3 font-display text-3xl text-[#fff1dc]">Video + PDF</p>
+            <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
+              A playable AI trailer and a combined report you can open, download, and share.
+            </p>
+          </div>
+        </section>
+
         <section className="cinema-panel rounded-[2rem] p-5 md:p-6">
           <div className="rounded-[1.6rem] border border-white/10 bg-black/25 p-5 md:p-6">
             <div className="max-w-3xl">
@@ -258,32 +284,6 @@ export default function HomePage() {
               >
                 {isSubmitting ? "Opening the production file..." : "Generate Trench Cinema"}
               </button>
-              <div className="grid gap-4 md:grid-cols-3">
-                <div className="cinema-panel-soft rounded-[1.5rem] p-4">
-                  <p className="cinema-kicker text-[0.65rem] font-semibold">Window</p>
-                  <p className="mt-3 font-display text-3xl text-[#fff1dc]">24-72h</p>
-                  <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
-                    Focused on the latest stretch of Pump.fun behavior rather than a full
-                    wallet biography.
-                  </p>
-                </div>
-                <div className="cinema-panel-soft rounded-[1.5rem] p-4">
-                  <p className="cinema-kicker text-[0.65rem] font-semibold">Readout</p>
-                  <p className="mt-3 font-display text-3xl text-[#fff1dc]">Lore</p>
-                  <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
-                    Main character trades, most unwell turns, and the line your group chat
-                    would keep quoting.
-                  </p>
-                </div>
-                <div className="cinema-panel-soft rounded-[1.5rem] p-4">
-                  <p className="cinema-kicker text-[0.65rem] font-semibold">Output</p>
-                  <p className="mt-3 font-display text-3xl text-[#fff1dc]">Video + PDF</p>
-                  <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
-                    A playable AI trailer and a combined report you can open, download, and
-                    share.
-                  </p>
-                </div>
-              </div>
 
               {error ? (
                 <p className="rounded-2xl border border-red-400/35 bg-red-500/10 px-4 py-3 text-sm text-red-100">

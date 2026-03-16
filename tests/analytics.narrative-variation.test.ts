@@ -12,6 +12,8 @@ describe("analytics narrative generation", () => {
     expect(analysis.behaviorPatterns.length).toBeGreaterThanOrEqual(3);
     expect(analysis.funObservations.length).toBeGreaterThanOrEqual(3);
     expect(analysis.xReadyLines.length).toBeGreaterThanOrEqual(5);
+    expect(analysis.videoIdentitySheet?.identityId).toBeTruthy();
+    expect(analysis.sceneStateSequence?.length).toBe(analysis.storyBeats.length);
     expect(analysis.videoPromptSequence.length).toBeGreaterThanOrEqual(5);
     expect(analysis.videoPromptSequence.length).toBeLessThanOrEqual(8);
 
@@ -19,6 +21,11 @@ describe("analytics narrative generation", () => {
     expect(overlapCount(analysis.behaviorPatterns, analysis.xReadyLines)).toBeLessThanOrEqual(2);
     expect(analysis.videoPromptSequence[0]?.providerPrompts.veo.length).toBeGreaterThan(0);
     expect(analysis.videoPromptSequence[0]?.narrationHook.length).toBeGreaterThan(0);
+    expect(analysis.videoPromptSequence[0]?.stateRef).toBe(
+      analysis.sceneStateSequence?.[0]?.stateRef,
+    );
+    expect(analysis.videoPromptSequence[0]?.continuityAnchors?.length).toBeGreaterThan(0);
+    expect(analysis.videoPromptSequence[0]?.continuityNote?.length).toBeGreaterThan(0);
     expect(analysis.videoPromptSequence[0]?.providerPrompts.veo.includes("This is memecoin cinema, not analytics.")).toBe(true);
     expect(/\b\d+(?:\.\d+)?\s*SOL\b/i.test(analysis.videoPromptSequence[0]?.providerPrompts.veo ?? "")).toBe(false);
     expect(/\b\d+(?:\.\d+)?\s*SOL\b/i.test(analysis.videoPromptSequence[0]?.narrationHook ?? "")).toBe(false);
@@ -35,6 +42,10 @@ describe("analytics narrative generation", () => {
     );
     expect(chaotic.behaviorPatterns.join(" ")).not.toBe(early.behaviorPatterns.join(" "));
     expect(chaotic.funObservations.join(" ")).not.toBe(early.funObservations.join(" "));
+    expect(chaotic.videoIdentitySheet?.identityId).not.toBe(early.videoIdentitySheet?.identityId);
+    expect(chaotic.sceneStateSequence?.[0]?.stateRef).not.toBe(
+      early.sceneStateSequence?.[0]?.stateRef,
+    );
     expect(chaotic.videoPromptSequence[0]?.providerPrompts.veo).not.toBe(
       early.videoPromptSequence[0]?.providerPrompts.veo,
     );

@@ -32,6 +32,12 @@ describe("legacy adapter bridge", () => {
     expect(mapped.report.behaviorPatterns?.length).toBeGreaterThanOrEqual(3);
     expect(mapped.report.funObservations?.length).toBeGreaterThanOrEqual(3);
     expect(mapped.story.videoPromptSequence?.length).toBeGreaterThanOrEqual(5);
+    expect(mapped.story.videoIdentitySheet?.identityId).toBe(
+      analysis.videoIdentitySheet?.identityId,
+    );
+    expect(mapped.story.sceneStateSequence?.[0]?.stateRef).toBe(
+      analysis.sceneStateSequence?.[0]?.stateRef,
+    );
     if (analysis.moments.mostUnwellMoment) {
       expect(
         mapped.report.keyEvents?.find((event) => event.type === "revenge_trade")?.tradeContext,
@@ -63,6 +69,8 @@ describe("legacy adapter bridge", () => {
     expect(fallback.normalizedTrades[0]?.image).toBe(mapped.report.timeline[0]?.image ?? undefined);
     expect(fallback.behaviorPatterns.length).toBeGreaterThanOrEqual(3);
     expect(fallback.funObservations.length).toBeGreaterThanOrEqual(3);
+    expect(fallback.videoIdentitySheet?.identityId).toBeTruthy();
+    expect(fallback.sceneStateSequence?.length).toBe(fallback.storyBeats.length);
     expect(fallback.videoPromptSequence.length).toBeGreaterThanOrEqual(5);
   });
 

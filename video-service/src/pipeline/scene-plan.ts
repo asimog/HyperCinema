@@ -9,6 +9,9 @@ export interface SceneChunk {
   visualPrompt: string;
   narration: string;
   imageUrl: string | null;
+  stateRef?: string;
+  continuityAnchors?: string[];
+  continuityPrompt?: string;
 }
 
 function splitDuration(totalSeconds: number, maxSeconds: number): number[] {
@@ -112,14 +115,45 @@ function splitDuration(totalSeconds: number, maxSeconds: number): number[] {
 }
 
 function chunkPrompt(basePrompt: string, chunk: SceneChunk): string {
-  return [
+  const lines = [
     basePrompt,
     `Scene ${chunk.sceneNumber}, chunk ${chunk.chunkIndex + 1}/${chunk.chunkCount}.`,
     `Visual direction: ${chunk.visualPrompt}`,
     `Narration timing anchor: ${chunk.narration}`,
     `Target duration: ${chunk.durationSeconds}s`,
-    "Maintain continuity with previous chunks and avoid introducing fabricated trade facts.",
-  ].join("\n");
+  ];
+
+  if (chunk.chunkIndex === 0) {
+    if (chunk.stateRef) {
+      lines.push(`Primary continuity stateRef: ${chunk.stateRef}`);
+    }
+    if (chunk.continuityAnchors?.length) {
+      lines.push(`Continuity anchors: ${chunk.continuityAnchors.join(", ")}`);
+    }
+    if (chunk.continuityPrompt) {
+      lines.push(`Continuity directive: ${chunk.continuityPrompt}`);
+    } else {
+      lines.push(
+        "Maintain continuity with previous chunks and avoid introducing fabricated trade facts.",
+      );
+    }
+  } else if (chunk.stateRef || chunk.continuityPrompt) {
+    if (chunk.stateRef) {
+      lines.push(`Reuse continuity stateRef ${chunk.stateRef}.`);
+    }
+    if (chunk.continuityAnchors?.length) {
+      lines.push(`Keep continuity anchors visible: ${chunk.continuityAnchors.join(", ")}`);
+    }
+    if (chunk.continuityPrompt) {
+      lines.push(`Continue the scene with this continuity prompt: ${chunk.continuityPrompt}`);
+    }
+  } else {
+    lines.push(
+      "Maintain continuity with previous chunks and avoid introducing fabricated trade facts.",
+    );
+  }
+
+  return lines.join("\n");
 }
 
 export function buildSceneChunks(input: {
@@ -135,6 +169,9 @@ export function buildSceneChunks(input: {
   const chunks: Array<SceneChunk & { prompt: string }> = [];
 
   for (const scene of input.request.scenes) {
+    const sceneMetadata = input.request.metadata?.sceneMetadata.find(
+      (item) => item.sceneNumber === scene.sceneNumber,
+    );
     const durations = splitDuration(scene.durationSeconds, input.maxClipSeconds);
     const chunkCount = durations.length;
 
@@ -148,6 +185,9 @@ export function buildSceneChunks(input: {
         visualPrompt: scene.visualPrompt,
         narration: scene.narration,
         imageUrl: scene.imageUrl ?? null,
+        stateRef: sceneMetadata?.stateRef,
+        continuityAnchors: sceneMetadata?.continuityAnchors,
+        continuityPrompt: sceneMetadata?.continuityPrompt,
       };
 
       chunks.push({

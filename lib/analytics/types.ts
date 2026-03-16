@@ -318,6 +318,46 @@ export interface StoryBeat {
   symbolicVisualHint: string;
 }
 
+export interface SceneEmotionVector {
+  confidence: number;
+  chaos: number;
+  desperation: number;
+  discipline: number;
+  luck: number;
+  intensity: number;
+}
+
+export interface VideoTokenAnchor {
+  mint: string;
+  symbol: string;
+  name?: string | null;
+  imageUrl?: string | null;
+  role: "primary" | "secondary" | "supporting";
+}
+
+export interface VideoIdentitySheet {
+  identityId: string;
+  archetype: string;
+  protagonist: string;
+  paletteCanon: string[];
+  worldCanon: string[];
+  lightingCanon: string[];
+  symbolCanon: string[];
+  tokenAnchors: VideoTokenAnchor[];
+  negativeConstraints: string[];
+}
+
+export interface SceneState {
+  sceneNumber: number;
+  phase: StoryBeatPhase;
+  stateRef: string;
+  emotionVector: SceneEmotionVector;
+  subjectFocus: string;
+  continuityAnchors: string[];
+  deltaFromPrevious: string[];
+  transitionNote: string;
+}
+
 export type VideoPromptProvider = "veo" | "runway" | "kling";
 
 export interface VideoPromptScene {
@@ -333,6 +373,9 @@ export interface VideoPromptScene {
   soundDesign: string;
   symbolicVisuals: string[];
   narrationHook: string;
+  stateRef?: string;
+  continuityAnchors?: string[];
+  continuityNote?: string;
   providerPrompts: Record<VideoPromptProvider, string>;
 }
 
@@ -433,6 +476,8 @@ export interface WalletAnalysisResult {
   cinematicSummary: CinematicSummary;
   xReadyLines: string[];
   storyBeats: StoryBeat[];
+  videoIdentitySheet?: VideoIdentitySheet;
+  sceneStateSequence?: SceneState[];
   videoPromptSequence: VideoPromptScene[];
   writersRoomSelections: WritersRoomSelections;
 }

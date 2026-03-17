@@ -1,7 +1,10 @@
 import Image from "next/image";
 import Link from "next/link";
 
-import { listCompletedJobArtifacts } from "@/lib/jobs/repository";
+import {
+  listCompletedJobArtifacts,
+  listCompletedJobArtifactsByWallet,
+} from "@/lib/jobs/repository";
 
 export const dynamic = "force-dynamic";
 
@@ -47,8 +50,15 @@ function dossierLines(report?: { funObservations?: string[]; memorableMoments?: 
   return lines;
 }
 
-export default async function GalleryPage() {
-  const jobs = await listCompletedJobArtifacts(12);
+export default async function GalleryPage({
+  searchParams,
+}: {
+  searchParams?: { wallet?: string };
+}) {
+  const walletQuery = searchParams?.wallet?.trim() ?? "";
+  const jobs = walletQuery
+    ? await listCompletedJobArtifactsByWallet(walletQuery, 12)
+    : await listCompletedJobArtifacts(12);
 
   return (
     <div className="cinema-shell cinema-noise min-h-screen overflow-hidden px-4 py-6 text-[#fff1dc] md:px-8 md:py-8">
@@ -74,6 +84,36 @@ export default async function GalleryPage() {
               </Link>
             </div>
           </div>
+
+          <form method="GET" className="mt-6 flex flex-col gap-3 md:flex-row md:items-center">
+            <div className="flex-1">
+              <label className="cinema-kicker text-[0.62rem] font-semibold">
+                Search by wallet address
+              </label>
+              <input
+                name="wallet"
+                defaultValue={walletQuery}
+                placeholder="Paste wallet address"
+                className="mt-2 w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-[#fff1dc] placeholder:text-[var(--muted)] focus:border-white/20 focus:outline-none"
+              />
+            </div>
+            <div className="flex gap-3">
+              <button
+                type="submit"
+                className="cinema-primary-button inline-flex items-center justify-center rounded-2xl px-5 py-3 text-sm font-semibold transition"
+              >
+                Search
+              </button>
+              {walletQuery ? (
+                <Link
+                  href="/gallery"
+                  className="cinema-secondary-button inline-flex items-center justify-center rounded-2xl px-4 py-3 text-sm font-medium transition"
+                >
+                  Clear
+                </Link>
+              ) : null}
+            </div>
+          </form>
         </section>
 
         {jobs.length ? (
@@ -137,7 +177,9 @@ export default async function GalleryPage() {
           </section>
         ) : (
           <section className="cinema-panel-soft rounded-[1.8rem] p-6 text-sm text-[var(--muted)]">
-            No completed jobs yet. Generate the first one and it will show up here.
+            {walletQuery
+              ? `No completed jobs found for ${walletQuery}.`
+              : "No completed jobs yet. Generate the first one and it will show up here."}
           </section>
         )}
       </main>

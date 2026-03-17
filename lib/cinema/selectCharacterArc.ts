@@ -148,7 +148,7 @@ function scoreArcs(input: {
     (1 - earlyEntry) * 0.02 -
     confidence * 0.08;
 
-  return [
+  const scored: Array<{ arcId: CharacterArcId; score: number }> = [
     { arcId: "hero", score: hero },
     { arcId: "villain", score: villain },
     { arcId: "jester", score: jester },
@@ -159,7 +159,12 @@ function scoreArcs(input: {
     { arcId: "fallen_hero", score: fallenHero },
     { arcId: "pilgrim", score: pilgrim },
     { arcId: "ghost", score: ghost },
-  ].map((entry) => ({ ...entry, score: clamp01(entry.score) }));
+  ];
+
+  return scored.map((entry) => ({
+    arcId: entry.arcId,
+    score: clamp01(entry.score),
+  }));
 }
 
 export function selectCharacterArc(input: {

@@ -258,6 +258,8 @@ describe("google veo prompt engine", () => {
     expect(payload.prompt.includes("AAA")).toBe(true);
     expect(payload.prompt.includes("Identity bible:")).toBe(true);
     expect(payload.prompt.includes("Archetype: The Gambler.")).toBe(true);
+    expect(payload.prompt.includes("Sound bible:")).toBe(true);
+    expect(payload.prompt.includes("Scene sound reel:")).toBe(true);
     expect(payload.prompt.includes("State transition reel:")).toBe(true);
     expect(payload.prompt.includes("Scene realization reel:")).toBe(true);
     expect(payload.prompt.includes("stateRef=identity-1-scene-1")).toBe(true);

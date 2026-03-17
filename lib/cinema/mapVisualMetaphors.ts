@@ -14,7 +14,7 @@ import type {
 } from "@/lib/cinema/types";
 import { VISUAL_METAPHOR_LIBRARY } from "@/lib/cinema/visualMetaphorLibrary";
 
-function uniq(values: string[]): string[] {
+function uniq<T>(values: readonly T[]): T[] {
   return values.filter((value, index) => values.indexOf(value) === index);
 }
 

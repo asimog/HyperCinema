@@ -390,6 +390,110 @@ function buildIdentityBibleLines(identity: VideoIdentitySheet): string[] {
   ];
 }
 
+type AudioCanon = {
+  leitmotifs: string[];
+  act1Bed: string[];
+  act2Bed: string[];
+  act3Bed: string[];
+};
+
+function actForPhase(phase: string | undefined): 1 | 2 | 3 {
+  switch (phase) {
+    case "opening":
+    case "rise":
+      return 1;
+    case "aftermath":
+      return 3;
+    case "damage":
+    case "pivot":
+    case "climax":
+    default:
+      return 2;
+  }
+}
+
+function buildAudioCanon(input: {
+  story: WalletStory;
+  identity: VideoIdentitySheet;
+  tokenMetadata: VeoTokenMetadata[];
+}): AudioCanon {
+  const archetype = (input.identity.archetype || "").toLowerCase();
+
+  const archetypeMotif =
+    archetype.includes("gambler") ? "casino crowd murmur" :
+    archetype.includes("prophet") ? "radar sweep" :
+    archetype.includes("trickster") ? "broken calliope melody" :
+    archetype.includes("martyr") ? "slow ticking" :
+    archetype.includes("ghost") ? "hollow room tone" :
+    archetype.includes("survivor") ? "morning wind" :
+    "electric hum";
+
+  const environmentMotif =
+    input.identity.worldCanon.join(" ").toLowerCase().includes("rain") ||
+    (input.story.analytics.styleClassification ?? "").toLowerCase().includes("chaos")
+      ? "rain on glass"
+      : "quiet ventilation";
+
+  const tokenMotif = input.tokenMetadata[0]?.symbol
+    ? `${input.tokenMetadata[0].symbol} neon sign buzz`
+    : "screen glow hiss";
+
+  const leitmotifs = unique([
+    "keyboard clicks",
+    environmentMotif,
+    archetypeMotif,
+    tokenMotif,
+  ]).slice(0, 3);
+
+  return {
+    leitmotifs,
+    act1Bed: unique(["low synth pad", "electric hum", "room tone"]),
+    act2Bed: unique(["heartbeat bass", "glitch synth tension", "siren-like market tension"]),
+    act3Bed: unique(["morning ambience", "hollow room tone", "soft electrical buzz"]),
+  };
+}
+
+function buildSoundBibleLines(canon: AudioCanon): string[] {
+  return [
+    `Leitmotifs (keep present across scenes): ${canon.leitmotifs.join(", ")}.`,
+    "Act 1 sound is sparse and intimate; Act 2 escalates into pressure and distortion; Act 3 resolves into quiet aftermath air.",
+    "Never hard-cut into a totally different genre mid-film. Maintain one continuous sound world that evolves with the arc.",
+  ];
+}
+
+function buildSceneSoundReel(input: {
+  sceneMetadata: VeoSceneMetadata[];
+  sceneStates: SceneState[];
+  canon: AudioCanon;
+}): string[] {
+  return input.sceneMetadata.slice(0, MAX_SCENES_IN_PROMPT).map((scene) => {
+    const state =
+      input.sceneStates.find((candidate) => candidate.sceneNumber === scene.sceneNumber) ??
+      input.sceneStates[scene.sceneNumber - 1];
+
+    const act = actForPhase(state?.phase);
+    const bed = act === 1 ? input.canon.act1Bed[0] : act === 3 ? input.canon.act3Bed[0] : input.canon.act2Bed[0];
+    const accent =
+      state?.phase === "climax"
+        ? "orchestral hit"
+        : state?.phase === "damage"
+          ? "distant thunder"
+          : state?.phase === "pivot"
+            ? "sub-bass pressure"
+            : state?.phase === "aftermath"
+              ? "room tone widening"
+              : "soft drones";
+
+    return [
+      `Scene ${scene.sceneNumber} sound`,
+      `act=${act}`,
+      `bed=${bed}`,
+      `motifs=${input.canon.leitmotifs.join("+")}`,
+      `accent=${accent}`,
+    ].join(" | ");
+  });
+}
+
 function buildStateTransitionLines(input: {
   sceneMetadata: VeoSceneMetadata[];
   sceneStates: SceneState[];
@@ -443,10 +547,17 @@ function buildPrompt(input: {
     ? sanitizePromptText(input.story.narrativeSummary)
     : "";
 
+  const audioCanon = buildAudioCanon({
+    story: input.story,
+    identity: input.coherence.identity,
+    tokenMetadata: input.tokenMetadata,
+  });
+
   const prompt = [
     "Create a funny, memetic cinematic trailer about a trader's last stretch in the Pump.fun trenches.",
     "This is cinema, not analytics. Never mention balances, PnL, trade counts, percentages, package tiers, or scoreboard numbers in dialogue, captions, or commentary.",
     "Render rule: every shot must be derived from identity bible + state transition reel + scene realization. Never re-invent the protagonist mid-video.",
+    "Sound rule: generate coherent trailer audio that evolves scene-to-scene. Keep leitmotifs, escalate through Act 2, resolve in Act 3. Avoid random soundscape resets.",
     narrativeSummary ? `Narrative summary: ${narrativeSummary}` : "",
     `Trailer hook: ${trailerHook}`,
     buildTokenReferenceLine(input.tokenMetadata),
@@ -454,10 +565,18 @@ function buildPrompt(input: {
     "Hard constraints: stay faithful to the supplied identity, state continuity, token anchors, and scene metadata. Do not invent extra coins, fake stat overlays, or chart-only scenes without a human presence.",
     "Identity bible:",
     ...buildIdentityBibleLines(input.coherence.identity),
+    "Sound bible:",
+    ...buildSoundBibleLines(audioCanon),
     "State transition reel:",
     ...buildStateTransitionLines({
       sceneMetadata: input.sceneMetadata,
       sceneStates: input.coherence.sceneStates,
+    }),
+    "Scene sound reel:",
+    ...buildSceneSoundReel({
+      sceneMetadata: input.sceneMetadata,
+      sceneStates: input.coherence.sceneStates,
+      canon: audioCanon,
     }),
     "Scene realization reel:",
     ...buildSceneRealizationLines(input.sceneMetadata),

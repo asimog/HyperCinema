@@ -33,6 +33,7 @@ yarn-error.log*
 firebase-debug.log*
 tmpsecret*.txt
 tmp-ve.txt
+.tmp_video_logs.json
 
 # env files (can opt-in for committing if needed)
 .env*

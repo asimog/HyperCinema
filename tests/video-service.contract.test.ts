@@ -182,8 +182,7 @@ describe("video-service /render contract", () => {
 
   it("rejects unsupported Veo model IDs", async () => {
     const payload = buildPayload("job-wrong-model");
-    // @ts-expect-error test invalid model value
-    payload.metadata.model = "veo-3";
+    payload.metadata.model = "veo-3" as unknown as typeof payload.metadata.model;
 
     const response = await app.inject({
       method: "POST",

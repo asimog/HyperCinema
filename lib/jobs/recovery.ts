@@ -106,8 +106,9 @@ async function syncFailedRender(
 
 async function syncInFlightRender(
   jobId: string,
-  render: InternalVideoRenderDocument,
+  _render: InternalVideoRenderDocument,
 ): Promise<boolean> {
+  void _render;
   const { job } = await getJobArtifacts(jobId);
   if (!job) {
     return false;

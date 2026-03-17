@@ -1,4 +1,3 @@
-import { createCinemaRng, stablePick } from "@/lib/cinema/constants";
 import type { CharacterArc, EmotionalSignals, NarrativeArchetype, ThreeActArc } from "@/lib/cinema/types";
 
 function tonePhrase(input: { archetype: NarrativeArchetype; arc: CharacterArc }): string {

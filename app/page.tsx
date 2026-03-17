@@ -5,6 +5,7 @@ import { PaymentInstructionsCard } from "@/components/PaymentInstructionsCard";
 import { WalletInput } from "@/components/WalletInput";
 import type { PaymentInstructions } from "@/lib/payments/instructions";
 import { JobDocument, PackageType } from "@/lib/types/domain";
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -219,10 +220,14 @@ export default function HomePage() {
               <div className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.16),rgba(255,255,255,0.03)_45%,rgba(0,0,0,0.18)_100%)] p-4 shadow-[0_28px_80px_rgba(0,0,0,0.34)]">
                 <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.14),transparent_62%)]" />
                 <div className="relative aspect-square overflow-hidden rounded-[1.6rem] border border-white/10 bg-white/5">
-                  <img
+                  <Image
                     src="/logo.gif"
                     alt="Trench Cinema logo"
-                    className="h-full w-full object-cover"
+                    fill
+                    sizes="(max-width: 1024px) 80vw, 26rem"
+                    priority
+                    unoptimized
+                    className="object-cover"
                   />
                 </div>
               </div>

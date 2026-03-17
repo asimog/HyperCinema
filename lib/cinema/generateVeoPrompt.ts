@@ -1,4 +1,4 @@
-import { createCinemaRng, stablePick, stableShuffle } from "@/lib/cinema/constants";
+import { createCinemaRng, stablePick } from "@/lib/cinema/constants";
 import type {
   EntropyLevel,
   SceneDefinition,
@@ -144,35 +144,78 @@ function atmosphere(entropy: EntropyLevel): string {
   }
 }
 
-function soundCues(scene: SceneDefinition, state: StoryState, rng: () => number): string[] {
-  const actBase =
-    scene.actNumber === 1
-      ? ["rain on glass", "keyboard clicks", "electric hum"]
-      : scene.actNumber === 3
-        ? ["morning ambience", "hollow room tone", "soft electrical buzz"]
-        : ["glitch synth tension", "heartbeat bass", "siren-like market tension"];
+function soundCues(scene: SceneDefinition, state: StoryState): string[] {
+  // Coherent audio rule:
+  // - Keep 2-3 leitmotifs consistent across the whole film.
+  // - Add act/entropy accents to escalate in Act 2 and resolve in Act 3.
+  // - Avoid random genre jumps by avoiding full shuffles.
 
-  const entropyBase =
-    scene.entropy === "high"
-      ? ["distant thunder", "impact hits", "crowd murmur rising"]
-      : scene.entropy === "low"
-        ? ["quiet ventilation", "soft room tone"]
-        : ["sub-bass pressure", "shifting drones"];
+  const canonRng = createCinemaRng(`sound_canon:${state.wallet}:${state.rangeHours}`);
 
-  const arcBase =
-    state.characterArc.id === "jester"
-      ? ["broken calliope melody", "laugh-echo reverb"]
-      : state.characterArc.id === "villain"
-        ? ["boxing bell", "distorted crowd roar"]
+  const arcMotif =
+    state.characterArc.id === "villain"
+      ? "boxing bell"
+      : state.characterArc.id === "jester"
+        ? "broken calliope melody"
         : state.characterArc.id === "prophet"
-          ? ["choir pads", "distant bells"]
+          ? "radar sweep"
           : state.characterArc.id === "martyr"
-            ? ["low cello grief", "slow ticking"]
+            ? "slow ticking"
+            : state.characterArc.id === "ghost"
+              ? "hollow room tone"
+              : state.characterArc.id === "survivor" || state.characterArc.id === "hero"
+                ? "orchestral rise under restraint"
+                : "electric hum";
+
+  const environmentMotif =
+    state.emotionalSignals.chaos >= 0.55 ? "rain on glass" : "quiet ventilation";
+
+  const archetypeMotif = stablePick(
+    uniq([
+      ...state.archetype.preferredSoundProfile,
+      "keyboard clicks",
+      "glitch synth tension",
+    ]),
+    canonRng,
+  );
+
+  const leitmotifs = uniq(["keyboard clicks", environmentMotif, arcMotif, archetypeMotif]).slice(0, 3);
+
+  const actAccents =
+    scene.actNumber === 1
+      ? ["soft room tone", "electric hum"]
+      : scene.actNumber === 3
+        ? ["morning ambience", "soft electrical buzz"]
+        : ["heartbeat bass", "siren-like market tension"];
+
+  const entropyAccents =
+    scene.entropy === "high"
+      ? ["distant thunder", "impact hits"]
+      : scene.entropy === "low"
+        ? ["quiet ventilation"]
+        : ["sub-bass pressure"];
+
+  const sceneSignature =
+    scene.sceneType === "absolute_cinema"
+      ? ["orchestral hit", "pressure release"]
+      : scene.sceneType === "aftermath"
+        ? ["hollow room tone"]
+        : scene.sceneType === "villain_turn"
+          ? ["distorted crowd roar"]
+          : scene.sceneType === "jester_turn"
+            ? ["laugh-echo reverb"]
             : [];
 
-  const pool = uniq([...actBase, ...entropyBase, ...arcBase, ...state.archetype.preferredSoundProfile]);
-  const shuffled = stableShuffle(pool, rng);
-  return shuffled.slice(0, scene.entropy === "high" ? 4 : 3);
+  const ordered = uniq([
+    ...leitmotifs,
+    ...actAccents,
+    ...entropyAccents,
+    ...sceneSignature,
+    ...state.archetype.preferredSoundProfile,
+  ]).filter(Boolean);
+
+  const cap = scene.entropy === "high" ? 5 : scene.entropy === "low" ? 3 : 4;
+  return ordered.slice(0, cap);
 }
 
 function tokenMomentsForSceneType(state: StoryState, sceneType: SceneType): TokenImageMoment[] {
@@ -215,7 +258,7 @@ function scenePromptText(input: {
     placementHint: moment.placementHint,
   }));
 
-  const sound = soundCues(input.scene, input.state, rng);
+  const sound = soundCues(input.scene, input.state);
 
   const action = (() => {
     switch (input.scene.sceneType) {
@@ -375,4 +418,3 @@ export function generateVeoPromptPackage(input: {
 
   return { title, tagline, scenePrompts, prompt, promptCompact };
 }
-

@@ -37,14 +37,6 @@ function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
 
-function hashString(value: string): number {
-  let hash = 0;
-  for (let index = 0; index < value.length; index += 1) {
-    hash = (hash * 31 + value.charCodeAt(index)) >>> 0;
-  }
-  return hash;
-}
-
 function slugify(value: string): string {
   return value
     .trim()

@@ -164,7 +164,7 @@ function baseSequenceForArc(state: StoryState, targetCount: number): SceneType[]
   })();
 
   if (targetCount <= 6) {
-    const core = [
+    const core: SceneType[] = [
       "opening",
       arcId === "villain" ? "temptation" : "discovery",
       "damage",

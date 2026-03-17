@@ -350,8 +350,7 @@ export async function processJob(jobId: string): Promise<void> {
         ),
     });
 
-    const { pdfBuffer, storedVideoUrl, reportUrl, thumbnailUrl } =
-      await withProgressHeartbeat({
+    const { storedVideoUrl, reportUrl, thumbnailUrl } = await withProgressHeartbeat({
         jobId,
         progress: "uploading_assets",
         operation: async () => {
@@ -387,7 +386,6 @@ export async function processJob(jobId: string): Promise<void> {
           }
 
           return {
-            pdfBuffer,
             storedVideoUrl,
             reportUrl,
             thumbnailUrl,

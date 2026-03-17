@@ -743,13 +743,15 @@ function buildCameraMovement(
 function buildSoundDesign(phase: StoryBeatPhase, emotionVector: SceneEmotionVector, seed: number): string {
   const motif = VIDEO_MOTIFS[phase];
   const base = pick(motif.sound, seed);
+  const policy =
+    "background music bed + sparse voiceover commentary only; no character dialogue, no SFX, no distortion or clipping";
   if (emotionVector.chaos >= 0.65) {
-    return `${base}, with the mix slightly out of breath but still readable`;
+    return `${base}, with the mix slightly out of breath but still readable; ${policy}`;
   }
   if (emotionVector.discipline >= 0.65) {
-    return `${base}, with cleaner cadence and precise transitions`;
+    return `${base}, with cleaner cadence and precise transitions; ${policy}`;
   }
-  return `${base}, balanced for cinematic momentum and narration clarity`;
+  return `${base}, balanced for cinematic momentum and narration clarity; ${policy}`;
 }
 
 function buildProviderPrompt(input: {

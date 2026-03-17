@@ -26,6 +26,7 @@ Scene writing rules:
 - If `storyBeats` are provided, anchor scene progression to those beats.
 - Keep the same protagonist, palette, world, and token anchors coherent across scenes.
 - Use scene-state transitions to evolve emotion and action instead of restating analytics.
+- Avoid repeating trading-desk or dashboard settings; use symbolic environments (boxing ring, storm bridge, funhouse market, shrine, train platform, battlefield, rooftop) that evolve with the beats.
 - Keep narration concise and voice-over ready.
 - If token images are available in facts, reference them in visualPrompt.
 - Do not force concrete metrics into narration unless they are absolutely necessary to preserve a factual turning point.

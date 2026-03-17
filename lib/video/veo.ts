@@ -2,7 +2,7 @@ import {
   alignSceneStatesToCount,
   buildSceneContinuityPrompt,
 } from "@/lib/analytics/videoCoherence";
-import type { SceneState, VideoIdentitySheet } from "@/lib/analytics/types";
+import type { SceneState, VideoIdentitySheet, VideoPromptScene } from "@/lib/analytics/types";
 import { round } from "@/lib/utils";
 import { rankTokenMetadataForStory } from "@/lib/tokens/metadata-selection";
 import { GeneratedCinematicScript, WalletStory } from "@/lib/types/domain";
@@ -346,11 +346,16 @@ function lintSceneCoherence(input: {
         }),
     );
 
+    const themeOverlay = buildThemeOverlay(promptScene);
+    const visualPrompt = compactSentence(
+      [scene.visualPrompt, themeOverlay].filter(Boolean).join(" "),
+    );
+
     return {
       sceneNumber: scene.sceneNumber,
       durationSeconds: scene.durationSeconds,
       narration: scene.narration,
-      visualPrompt: scene.visualPrompt,
+      visualPrompt,
       imageUrl: scene.imageUrl,
       stateRef: scene.stateRef ?? state.stateRef,
       continuityAnchors,
@@ -420,26 +425,26 @@ function buildAudioCanon(input: {
   const archetype = (input.identity.archetype || "").toLowerCase();
 
   const archetypeMotif =
-    archetype.includes("gambler") ? "casino crowd murmur" :
-    archetype.includes("prophet") ? "radar sweep" :
-    archetype.includes("trickster") ? "broken calliope melody" :
-    archetype.includes("martyr") ? "slow ticking" :
-    archetype.includes("ghost") ? "hollow room tone" :
-    archetype.includes("survivor") ? "morning wind" :
-    "electric hum";
+    archetype.includes("gambler") ? "cinematic synth pulse" :
+    archetype.includes("prophet") ? "choir-like pad" :
+    archetype.includes("trickster") ? "playful synth riff" :
+    archetype.includes("martyr") ? "slow string pad" :
+    archetype.includes("ghost") ? "hollow synth bed" :
+    archetype.includes("survivor") ? "warm synth rise" :
+    "clean ambient pad";
 
   const environmentMotif =
     input.identity.worldCanon.join(" ").toLowerCase().includes("rain") ||
     (input.story.analytics.styleClassification ?? "").toLowerCase().includes("chaos")
-      ? "rain on glass"
-      : "quiet ventilation";
+      ? "soft synth wash"
+      : "clean ambient pad";
 
   const tokenMotif = input.tokenMetadata[0]?.symbol
-    ? `${input.tokenMetadata[0].symbol} neon sign buzz`
-    : "screen glow hiss";
+    ? `${input.tokenMetadata[0].symbol} neon shimmer synth`
+    : "soft synth shimmer";
 
   const leitmotifs = unique([
-    "keyboard clicks",
+    "cinematic synth pulse",
     environmentMotif,
     archetypeMotif,
     tokenMotif,
@@ -447,17 +452,18 @@ function buildAudioCanon(input: {
 
   return {
     leitmotifs,
-    act1Bed: unique(["low synth pad", "electric hum", "room tone"]),
-    act2Bed: unique(["heartbeat bass", "glitch synth tension", "siren-like market tension"]),
-    act3Bed: unique(["morning ambience", "hollow room tone", "soft electrical buzz"]),
+    act1Bed: unique(["soft synth bed", "warm pad", "low pulse"]),
+    act2Bed: unique(["driving synth bed", "tight low-end pulse", "rising arpeggio"]),
+    act3Bed: unique(["resolved synth bed", "gentle pad", "soft piano wash"]),
   };
 }
 
 function buildSoundBibleLines(canon: AudioCanon): string[] {
   return [
     `Leitmotifs (keep present across scenes): ${canon.leitmotifs.join(", ")}.`,
-    "Act 1 sound is sparse and intimate; Act 2 escalates into pressure and distortion; Act 3 resolves into quiet aftermath air.",
-    "Never hard-cut into a totally different genre mid-film. Maintain one continuous sound world that evolves with the arc.",
+    "Audio format: continuous background music bed + sparse voiceover commentary only. No character dialogue.",
+    "Act 1 stays intimate and minimal; Act 2 escalates in intensity without harshness; Act 3 resolves into a gentle, clear mix.",
+    "No sound effects, no crowd noise, no alarms, no glitch/distortion, no clipping. Maintain one continuous sound world.",
   ];
 }
 
@@ -475,14 +481,14 @@ function buildSceneSoundReel(input: {
     const bed = act === 1 ? input.canon.act1Bed[0] : act === 3 ? input.canon.act3Bed[0] : input.canon.act2Bed[0];
     const accent =
       state?.phase === "climax"
-        ? "orchestral hit"
+        ? "brief orchestral swell"
         : state?.phase === "damage"
-          ? "distant thunder"
+          ? "tense low pulse"
           : state?.phase === "pivot"
-            ? "sub-bass pressure"
+            ? "clean synth lift"
             : state?.phase === "aftermath"
-              ? "room tone widening"
-              : "soft drones";
+              ? "warm resolve"
+              : "soft pad drift";
 
     return [
       `Scene ${scene.sceneNumber} sound`,
@@ -535,6 +541,16 @@ function buildSceneRealizationLines(sceneMetadata: VeoSceneMetadata[]): string[]
   });
 }
 
+function buildThemeOverlay(promptScene?: VideoPromptScene): string {
+  if (!promptScene) return "";
+  const symbols = promptScene.symbolicVisuals?.length
+    ? `Symbols: ${promptScene.symbolicVisuals.slice(0, 2).join(", ")}.`
+    : "";
+  return compactSentence(
+    `Set the scene in ${promptScene.environment}. Visual style: ${promptScene.visualStyle}. ${symbols}`,
+  );
+}
+
 function buildPrompt(input: {
   story: WalletStory;
   script: GeneratedCinematicScript;
@@ -557,7 +573,8 @@ function buildPrompt(input: {
     "Create a funny, memetic cinematic trailer about a trader's last stretch in the Pump.fun trenches.",
     "This is cinema, not analytics. Never mention balances, PnL, trade counts, percentages, package tiers, or scoreboard numbers in dialogue, captions, or commentary.",
     "Render rule: every shot must be derived from identity bible + state transition reel + scene realization. Never re-invent the protagonist mid-video.",
-    "Sound rule: generate coherent trailer audio that evolves scene-to-scene. Keep leitmotifs, escalate through Act 2, resolve in Act 3. Avoid random soundscape resets.",
+    "Visual rule: diversify locations beyond trading desks. Use symbolic environments and cinematic settings; at most one desk-style shot.",
+    "Sound rule: generate coherent trailer audio with a continuous background music bed and sparse voiceover commentary only. No character dialogue. No SFX, no crowd noise, no alarms, no distortion, no clipping.",
     narrativeSummary ? `Narrative summary: ${narrativeSummary}` : "",
     `Trailer hook: ${trailerHook}`,
     buildTokenReferenceLine(input.tokenMetadata),

@@ -154,59 +154,66 @@ function soundCues(scene: SceneDefinition, state: StoryState): string[] {
 
   const arcMotif =
     state.characterArc.id === "villain"
-      ? "boxing bell"
+      ? "dark synth pulse"
       : state.characterArc.id === "jester"
-        ? "broken calliope melody"
+        ? "quirky synth riff"
         : state.characterArc.id === "prophet"
-          ? "radar sweep"
+          ? "choir-like pad"
           : state.characterArc.id === "martyr"
-            ? "slow ticking"
+            ? "slow string pad"
             : state.characterArc.id === "ghost"
-              ? "hollow room tone"
+              ? "hollow synth bed"
               : state.characterArc.id === "survivor" || state.characterArc.id === "hero"
-                ? "orchestral rise under restraint"
-                : "electric hum";
+                ? "warm synth rise"
+                : "clean ambient pad";
 
   const environmentMotif =
-    state.emotionalSignals.chaos >= 0.55 ? "rain on glass" : "quiet ventilation";
+    state.emotionalSignals.chaos >= 0.55 ? "soft synth wash" : "clean ambient pad";
 
   const archetypeMotif = stablePick(
     uniq([
       ...state.archetype.preferredSoundProfile,
-      "keyboard clicks",
-      "glitch synth tension",
+      "cinematic synth pulse",
+      "clean rhythmic tick",
     ]),
     canonRng,
   );
 
-  const leitmotifs = uniq(["keyboard clicks", environmentMotif, arcMotif, archetypeMotif]).slice(0, 3);
+  const leitmotifs = uniq([
+    "cinematic synth pulse",
+    environmentMotif,
+    arcMotif,
+    archetypeMotif,
+  ]).slice(0, 3);
 
   const actAccents =
     scene.actNumber === 1
-      ? ["soft room tone", "electric hum"]
+      ? ["soft pad", "low pulse"]
       : scene.actNumber === 3
-        ? ["morning ambience", "soft electrical buzz"]
-        : ["heartbeat bass", "siren-like market tension"];
+        ? ["gentle resolve", "soft piano wash"]
+        : ["driving synth pulse", "rising arpeggio"];
 
   const entropyAccents =
     scene.entropy === "high"
-      ? ["distant thunder", "impact hits"]
+      ? ["tight low-end drive"]
       : scene.entropy === "low"
-        ? ["quiet ventilation"]
-        : ["sub-bass pressure"];
+        ? ["warm pad drift"]
+        : ["clean synth lift"];
 
   const sceneSignature =
     scene.sceneType === "absolute_cinema"
-      ? ["orchestral hit", "pressure release"]
+      ? ["brief orchestral swell"]
       : scene.sceneType === "aftermath"
-        ? ["hollow room tone"]
+        ? ["warm resolve"]
         : scene.sceneType === "villain_turn"
-          ? ["distorted crowd roar"]
+          ? ["dark synth pulse"]
           : scene.sceneType === "jester_turn"
-            ? ["laugh-echo reverb"]
+            ? ["playful synth riff"]
             : [];
 
   const ordered = uniq([
+    "background music bed",
+    "voiceover commentary",
     ...leitmotifs,
     ...actAccents,
     ...entropyAccents,
@@ -214,7 +221,7 @@ function soundCues(scene: SceneDefinition, state: StoryState): string[] {
     ...state.archetype.preferredSoundProfile,
   ]).filter(Boolean);
 
-  const cap = scene.entropy === "high" ? 5 : scene.entropy === "low" ? 3 : 4;
+  const cap = scene.entropy === "high" ? 4 : scene.entropy === "low" ? 3 : 4;
   return ordered.slice(0, cap);
 }
 
@@ -327,6 +334,7 @@ function buildContinuousPrompt(input: {
     "Facts-first rule: do not invent factual trades, tokens, or events. Use token images only when provided as anchors.",
     "Continuity: keep one trader protagonist present (or strongly implied) in every scene; maintain visual motif continuity across scenes.",
     "Token image rule: when an image URL is provided, treat it as an in-world poster, hologram, billboard, shrine, reflection, or mascot apparition, not a UI thumbnail.",
+    "Audio rule: continuous background music bed with sparse voiceover commentary only. No character dialogue. No SFX, no crowd noise, no alarms, no distortion.",
   ].join("\n");
 
   const identity = [

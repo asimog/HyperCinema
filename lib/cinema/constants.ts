@@ -79,7 +79,7 @@ export const NARRATIVE_ARCHETYPES: NarrativeArchetype[] = [
     tone: "high-stakes neon risk, casino-cathedral tension",
     pacing: "frenetic",
     preferredVisualMotifs: ["casino lights", "roulette shadows", "dice in slow motion"],
-    preferredSoundProfile: ["casino crowd murmur", "heartbeat bass", "chip clacks"],
+    preferredSoundProfile: ["cinematic synth pulse", "low bass bed", "soft rhythmic ticks"],
     preferredActEmphasis: {
       act1: "temptation and first wager",
       act2: "double-down chaos",
@@ -92,7 +92,7 @@ export const NARRATIVE_ARCHETYPES: NarrativeArchetype[] = [
     tone: "mystic clarity, omen-heavy trench mythology",
     pacing: "measured",
     preferredVisualMotifs: ["omens", "holographic runes", "moonlit charts as constellations"],
-    preferredSoundProfile: ["choir pads", "distant thunder", "sub-bass prophecy hum"],
+    preferredSoundProfile: ["choir-like pads", "low synth drone", "sub-bass swell"],
     preferredActEmphasis: {
       act1: "signs appear",
       act2: "belief meets conflict",
@@ -105,7 +105,7 @@ export const NARRATIVE_ARCHETYPES: NarrativeArchetype[] = [
     tone: "warzone endurance, battered but moving",
     pacing: "urgent",
     preferredVisualMotifs: ["battlefield dawn", "scarred alleyways", "breathing in fog"],
-    preferredSoundProfile: ["wind through concrete", "boots on wet pavement", "quiet sirens"],
+    preferredSoundProfile: ["warm synth bed", "steady rhythmic pulse", "soft low-end swell"],
     preferredActEmphasis: {
       act1: "enter with hope",
       act2: "take damage and keep moving",
@@ -118,7 +118,7 @@ export const NARRATIVE_ARCHETYPES: NarrativeArchetype[] = [
     tone: "stoic pain, faith under fluorescent ruin",
     pacing: "slow",
     preferredVisualMotifs: ["empty casino at sunrise", "shrines", "cold rain on glass"],
-    preferredSoundProfile: ["hollow room tone", "rain on glass", "low cello grief"],
+    preferredSoundProfile: ["soft string pad", "low cello bed", "gentle synth haze"],
     preferredActEmphasis: {
       act1: "conviction is sworn",
       act2: "suffering deepens",
@@ -131,7 +131,7 @@ export const NARRATIVE_ARCHETYPES: NarrativeArchetype[] = [
     tone: "surreal reversals, glitch comedy, knife-edge irony",
     pacing: "urgent",
     preferredVisualMotifs: ["mirrors", "glitch signage", "doors that lead nowhere"],
-    preferredSoundProfile: ["glitch synth tension", "rubber-band snaps", "laugh-echo reverb"],
+    preferredSoundProfile: ["quirky synth arpeggio", "playful percussive pulse", "warped but clean pad"],
     preferredActEmphasis: {
       act1: "odd discovery",
       act2: "twists and pivots",
@@ -144,7 +144,7 @@ export const NARRATIVE_ARCHETYPES: NarrativeArchetype[] = [
     tone: "searching and tender, trench journey imagery",
     pacing: "measured",
     preferredVisualMotifs: ["train platforms", "long corridors", "maps made of light"],
-    preferredSoundProfile: ["distant trains", "soft footsteps", "morning ambience"],
+    preferredSoundProfile: ["slow synth bed", "subtle rhythmic ticks", "warm airy pad"],
     preferredActEmphasis: {
       act1: "step onto the path",
       act2: "wander through conflict",
@@ -157,7 +157,7 @@ export const NARRATIVE_ARCHETYPES: NarrativeArchetype[] = [
     tone: "religious conviction, shrine-building, hopium hymns",
     pacing: "measured",
     preferredVisualMotifs: ["candles", "banners", "icons glowing in smoke"],
-    preferredSoundProfile: ["hymn-like pads", "chant rhythms", "subtle bells"],
+    preferredSoundProfile: ["hymn-like pads", "soft choral rhythm", "gentle synth shimmer"],
     preferredActEmphasis: {
       act1: "faith is lit",
       act2: "belief is tested",
@@ -170,7 +170,7 @@ export const NARRATIVE_ARCHETYPES: NarrativeArchetype[] = [
     tone: "FOMO propulsion, sprinting toward light",
     pacing: "frenetic",
     preferredVisualMotifs: ["departing trains", "neon alley posters", "sirens and streaks"],
-    preferredSoundProfile: ["siren-like market tension", "fast hi-hats", "breath in mic"],
+    preferredSoundProfile: ["fast rhythmic pulse", "urgent synth arpeggio", "tight low-end drive"],
     preferredActEmphasis: {
       act1: "spot the flare",
       act2: "run until collapse",
@@ -183,7 +183,7 @@ export const NARRATIVE_ARCHETYPES: NarrativeArchetype[] = [
     tone: "labs, transformations, turning chaos into meaning",
     pacing: "measured",
     preferredVisualMotifs: ["alchemy labs", "liquid light", "metals becoming neon"],
-    preferredSoundProfile: ["electric hum", "glass clinks", "orchestral rise"],
+    preferredSoundProfile: ["clean synth hum pad", "soft percussive sparkle", "orchestral swell"],
     preferredActEmphasis: {
       act1: "ingredients gathered",
       act2: "reaction goes unstable",
@@ -196,7 +196,7 @@ export const NARRATIVE_ARCHETYPES: NarrativeArchetype[] = [
     tone: "eerie quiet, blue haze, detached observation",
     pacing: "slow",
     preferredVisualMotifs: ["empty trading floors", "dim monitors", "fogged windows"],
-    preferredSoundProfile: ["hollow room tone", "soft electrical buzz", "distant rain"],
+    preferredSoundProfile: ["hollow synth bed", "soft pad shimmer", "low ambient swell"],
     preferredActEmphasis: {
       act1: "presence without confession",
       act2: "silent conflict",
@@ -259,4 +259,3 @@ export function stableShuffle<T>(values: T[], rng: () => number): T[] {
   }
   return array;
 }
-

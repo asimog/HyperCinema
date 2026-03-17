@@ -42,6 +42,27 @@ function createMoment(input: {
   };
 }
 
+function hashSeed(value: string): number {
+  let hash = 0;
+  for (let i = 0; i < value.length; i += 1) {
+    hash = (hash * 31 + value.charCodeAt(i)) >>> 0;
+  }
+  return hash;
+}
+
+function pickVariant(
+  options: string[],
+  seedParts: Array<string | number | null | undefined>,
+): string {
+  if (!options.length) return "";
+  const seed = seedParts
+    .filter((part) => part !== null && part !== undefined && String(part).length > 0)
+    .map((part) => String(part))
+    .join("|");
+  const hash = hashSeed(seed || options[0]!);
+  return options[hash % options.length]!;
+}
+
 function getSells(trades: NormalizedTrade[]): NormalizedTrade[] {
   return trades.filter(
     (trade) => trade.side === "SELL" && typeof trade.pnlSol === "number",
@@ -327,8 +348,14 @@ function computeMostUnwellCandidate(trades: NormalizedTrade[]): MomentCandidate 
       description: `After eating ${round(best.previousSell.pnlSol ?? 0, 4)} SOL, the wallet re-entered ${sameToken} ${delayMinutes} minutes later at ${timestampLabel} with ${round(best.nextBuy.solAmount, 4)} SOL.`,
       explanation:
         "This sequence combines a realized loss, fast redeployment, and elevated emotional context into the clearest concern-comedy moment.",
-      humorLine:
-        "From a wellness perspective, this was not a cooldown. This was a sequel.",
+      humorLine: pickVariant(
+        [
+          "From a wellness perspective, this was not a cooldown. This was a sequel.",
+          "No cooldown, only the directors cut.",
+          "The comeback clause got signed mid-bleed.",
+        ],
+        [best.previousSell.signature, best.nextBuy.signature, delayMinutes],
+      ),
       tradeSignatures: [best.previousSell.signature, best.nextBuy.signature],
       confidence: best.score,
     }),
@@ -357,7 +384,14 @@ function computeGoblinHourCandidate(trades: NormalizedTrade[]): MomentCandidate 
       title: "Goblin Hour Moment",
       description: `${worstNight.symbol ?? "Token"} got traded at ${tradeHour(worstNight.timestamp)}:00 UTC with full spiritual confidence.`,
       explanation: "Highest-impact night-session trade in the selected window.",
-      humorLine: "This was posted by insomnia, not strategy.",
+      humorLine: pickVariant(
+        [
+          "This was posted by insomnia, not strategy.",
+          "Night shift trading with full conviction and zero sleep.",
+          "Sleep never cleared the trade; it just watched.",
+        ],
+        [worstNight.signature, worstNight.timestamp],
+      ),
       tradeSignatures: [worstNight.signature],
       confidence: score,
     }),
@@ -389,7 +423,14 @@ function computeConvictionCandidate(trades: NormalizedTrade[]): MomentCandidate 
       description: `${tokenName} got ${count} separate buy commitments in this window.`,
       explanation:
         "Repeated entries into the same token indicate thesis commitment rather than random spray behavior.",
-      humorLine: "You did not date this token. You moved in emotionally.",
+      humorLine: pickVariant(
+        [
+          "You did not date this token. You moved in emotionally.",
+          "This was not a fling. It was a thesis.",
+          "Commitment level: co-signed.",
+        ],
+        [mint, count],
+      ),
       tradeSignatures: mintTrades.map((trade) => trade.signature),
       confidence: score,
     }),
@@ -429,7 +470,14 @@ function computeHadToBeThereCandidate(trades: NormalizedTrade[]): MomentCandidat
       description: `${token} had ${best.sequence.length} back-to-back actions in under 45 minutes and none of them looked normal.`,
       explanation:
         "Fast mixed-side sequence on one token creates highly context-dependent trench lore.",
-      humorLine: "Impossible to explain cleanly. Everyone in the village still remembers it.",
+      humorLine: pickVariant(
+        [
+          "Impossible to explain cleanly. Everyone in the village still remembers it.",
+          "The replay doesnt do it justice. You had to be there.",
+          "Group chat transcript still pinned.",
+        ],
+        [token, best.sequence[0]?.signature],
+      ),
       tradeSignatures: best.sequence.map((trade) => trade.signature),
       confidence: best.score,
     }),
@@ -468,7 +516,14 @@ function computeEscapeCandidate(trades: NormalizedTrade[]): MomentCandidate | nu
       description: `Exited ${best.escapeSell.symbol ?? "token"} before a later sequence printed ${round(best.laterDamage.pnlSol ?? 0, 4)} SOL pain.`,
       explanation:
         "A profitable or flat exit occurred before a later same-token losing realization, indicating narrow avoidance.",
-      humorLine: "You left right before the floor gave a TED Talk.",
+      humorLine: pickVariant(
+        [
+          "You left right before the floor gave a TED Talk.",
+          "Exit timing was clean enough to be suspicious.",
+          "You dodged the disaster by one candle.",
+        ],
+        [best.escapeSell.signature, best.laterDamage.signature],
+      ),
       tradeSignatures: [best.escapeSell.signature, best.laterDamage.signature],
       confidence: best.score,
     }),
@@ -500,7 +555,14 @@ function computeTrenchLoreCandidate(
       title: "Trench Lore Moment",
       description: `${oddTrade.symbol ?? "Token"} produced a trade sequence that only makes sense to people who were there live.`,
       explanation: "Most context-heavy and culturally weird event in the selected window.",
-      humorLine: "You had to be in the trenches chat to process this one.",
+      humorLine: pickVariant(
+        [
+          "You had to be in the trenches chat to process this one.",
+          "This one only makes sense if you were there live.",
+          "Lore-level sequence. Subtitles required.",
+        ],
+        [oddTrade.signature, oddTrade.timestamp],
+      ),
       tradeSignatures: [oddTrade.signature],
       confidence: score,
     }),
@@ -520,7 +582,14 @@ function computeAbsoluteCinemaCandidate(candidates: MomentCandidate[]): MomentCa
       title: "Absolute Cinema Moment",
       description: best.moment.description,
       explanation: `Highest cinematic weight across all detected moments (${best.key}).`,
-      humorLine: "Brother this was cinema.",
+      humorLine: pickVariant(
+        [
+          "Brother this was cinema.",
+          "Absolute cinema. No notes.",
+          "Roll credits. The crowd already clapped.",
+        ],
+        [best.key, best.moment.tradeSignatures?.[0]],
+      ),
       tradeSignatures: best.moment.tradeSignatures,
       confidence: score,
     }),

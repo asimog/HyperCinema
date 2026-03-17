@@ -928,22 +928,23 @@ function buildNarrativeSummary(input: {
     );
   }
 
-  const pnlText = formatSignedSol(input.estimatedPnlSol);
-  const modifiersText = input.modifiers.slice(0, 3).join(", ");
+  const modifiersText = input.modifiers.slice(0, 3).join(", ") || "Chaotic Neutral";
   const event = input.keyEvents[input.keyEvents.length - 1];
   const secondaryText = input.secondaryPersonality
     ? ` with a secondary ${input.secondaryPersonality} streak`
     : "";
 
   const eventSentence = event
-    ? `Key moment: ${event.tradeContext}`
-    : "No single event dominated, so behavior patterns carried the story.";
+    ? `Signature moment: ${event.tradeContext}`
+    : "No single moment owned the screen, so the vibe checks carried the cut.";
+  const pnlSentence =
+    input.estimatedPnlSol >= 0
+      ? "The window closed without a full wipeout."
+      : "PnL took hits, but the lore got louder.";
 
   return (
-    `Over ${input.rangeDays} day(s), this wallet traded ${input.metrics.totalTrades} times across ` +
-    `${input.pumpTokensTraded} Pump tokens (${input.metrics.buyCount} buys / ${input.metrics.sellCount} sells), ` +
-    `finishing at ${pnlText}. The dominant archetype is ${input.primaryPersonality}${secondaryText}. ` +
-    `Behavior leaned on ${modifiersText}. ${eventSentence}`
+    `Over the last ${input.rangeDays} day(s), the ${input.primaryPersonality} arc led${secondaryText}. ` +
+    `Modifier stack: ${modifiersText}. ${eventSentence} ${pnlSentence}`
   );
 }
 

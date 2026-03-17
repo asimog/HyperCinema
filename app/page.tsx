@@ -289,6 +289,12 @@ export default function HomePage() {
               >
                 {isSubmitting ? "Opening the production file..." : "Generate Trench Cinema"}
               </button>
+              <Link
+                href="/gallery"
+                className="cinema-secondary-button inline-flex w-full items-center justify-center rounded-2xl px-5 py-3 text-sm font-medium transition"
+              >
+                View the Gallery
+              </Link>
 
               {error ? (
                 <p className="rounded-2xl border border-red-400/35 bg-red-500/10 px-4 py-3 text-sm text-red-100">

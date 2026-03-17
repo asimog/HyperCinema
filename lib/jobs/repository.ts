@@ -402,6 +402,34 @@ export async function getJobArtifacts(jobId: string): Promise<{
   return { job, report, video };
 }
 
+export async function listCompletedJobArtifacts(
+  limit: number,
+): Promise<Array<{ job: JobDocument; report: ReportDocument | null; video: VideoDocument | null }>> {
+  const baseLimit = Math.max(1, Math.floor(limit));
+  const queryLimit = Math.max(baseLimit * 3, baseLimit);
+  const snapshot = await jobsCollection()
+    .where("status", "==", "complete")
+    .limit(queryLimit)
+    .get();
+
+  const jobs = snapshot.docs
+    .map((doc) => normalizeJobDocument(doc.data() as JobDocument))
+    .sort((a, b) => isoToMs(b.updatedAt) - isoToMs(a.updatedAt))
+    .slice(0, baseLimit);
+
+  const artifacts = await Promise.all(
+    jobs.map(async (job) => {
+      const [report, video] = await Promise.all([
+        getReport(job.jobId),
+        getVideo(job.jobId),
+      ]);
+      return { job, report, video };
+    }),
+  );
+
+  return artifacts;
+}
+
 export async function updateJob(
   jobId: string,
   patch: Partial<Omit<JobDocument, "jobId" | "createdAt">>,

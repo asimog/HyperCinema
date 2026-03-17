@@ -8,6 +8,13 @@ interface ReportCardProps {
 }
 
 export function ReportCard({ report, reportUrl }: ReportCardProps) {
+  const summary = report.summary || report.narrativeSummary || "No summary yet.";
+  const personality =
+    report.walletPersonality || report.styleClassification || "Unclassified";
+  const modifiers = report.walletModifiers?.length
+    ? report.walletModifiers.join(", ")
+    : "None detected";
+
   return (
     <section className="cinema-panel rounded-[2rem] p-5 md:p-6">
       <div className="mb-4 flex items-center justify-between">
@@ -25,57 +32,49 @@ export function ReportCard({ report, reportUrl }: ReportCardProps) {
         </a>
       </div>
 
-      <div className="grid gap-3 text-sm text-[#f4e1c5] md:grid-cols-2">
-        <p>Pump Tokens Traded: {report.pumpTokensTraded}</p>
-        <p>Style: {report.styleClassification}</p>
-        <p>Buys: {report.buyCount}</p>
-        <p>Sells: {report.sellCount}</p>
-        <p>SOL Spent: {report.solSpent}</p>
-        <p>SOL Received: {report.solReceived}</p>
-        <p>Estimated PnL: {report.estimatedPnlSol} SOL</p>
-        <p>Best Trade: {report.bestTrade}</p>
+      <div className="rounded-[1.4rem] border border-white/10 bg-[#0d0a0c]/78 p-4">
+        <p className="cinema-kicker text-[0.62rem] font-semibold">Wallet Address</p>
+        <p className="mt-2 break-all text-sm text-[#f4e1c5]">{report.wallet}</p>
       </div>
 
-      <p className="mt-4 rounded-[1.4rem] border border-white/10 bg-[#0d0a0c]/78 p-4 text-sm leading-relaxed text-[#f3e0c5]">
-        {report.summary}
-      </p>
-
-      {report.walletPersonality ? (
-        <div className="mt-4 rounded-[1.4rem] border border-white/10 bg-[#0d0a0c]/78 p-4">
-          <p className="cinema-kicker text-[0.62rem] font-semibold">
-            Wallet Personality
-          </p>
-          <p className="mt-2 text-base font-semibold text-[var(--accent-cool)]">
-            {report.walletPersonality}
-          </p>
+      <div className="mt-4 grid gap-3 md:grid-cols-3">
+        <div className="cinema-panel-soft rounded-[1.3rem] p-4">
+          <p className="cinema-kicker text-[0.62rem] font-semibold">Persona</p>
+          <p className="mt-2 text-lg font-semibold text-[#fff1dc]">{personality}</p>
           {report.walletSecondaryPersonality ? (
-            <p className="mt-2 text-sm text-[var(--muted)]">
-              Secondary influence: {report.walletSecondaryPersonality}
-            </p>
-          ) : null}
-          {report.walletModifiers?.length ? (
-            <p className="mt-2 text-sm text-[var(--muted)]">
-              Modifiers: {report.walletModifiers.join(", ")}
-            </p>
-          ) : null}
-          {report.narrativeSummary ? (
-            <p className="mt-3 text-sm leading-relaxed text-[#f3e0c5]">
-              {report.narrativeSummary}
+            <p className="mt-1 text-xs text-[var(--muted)]">
+              Secondary: {report.walletSecondaryPersonality}
             </p>
           ) : null}
         </div>
-      ) : null}
-
-      {report.behaviorPatterns?.length ? (
-        <div className="mt-4">
-          <p className="mb-2 cinema-kicker text-[0.62rem] font-semibold">
-            Behavior Patterns
+        <div className="cinema-panel-soft rounded-[1.3rem] p-4">
+          <p className="cinema-kicker text-[0.62rem] font-semibold">Modifiers</p>
+          <p className="mt-2 text-sm text-[#f4e1c5]">{modifiers}</p>
+        </div>
+        <div className="cinema-panel-soft rounded-[1.3rem] p-4">
+          <p className="cinema-kicker text-[0.62rem] font-semibold">Window</p>
+          <p className="mt-2 text-sm text-[#f4e1c5]">
+            Last {report.rangeDays} day(s)
           </p>
-          <ul className="space-y-1 text-sm text-[#f4e1c5]">
-            {report.behaviorPatterns.map((pattern) => (
-              <li key={pattern}>- {pattern}</li>
-            ))}
-          </ul>
+          <p className="mt-1 text-xs text-[var(--muted)]">
+            Style: {report.styleClassification}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-4 rounded-[1.4rem] border border-white/10 bg-[#0d0a0c]/78 p-4">
+        <p className="cinema-kicker text-[0.62rem] font-semibold">Summary</p>
+        <p className="mt-2 text-sm leading-relaxed text-[#f3e0c5]">{summary}</p>
+      </div>
+
+      {report.narrativeSummary ? (
+        <div className="mt-4 rounded-[1.4rem] border border-white/10 bg-[#0d0a0c]/78 p-4">
+          <p className="cinema-kicker text-[0.62rem] font-semibold">
+            Narrative Thread
+          </p>
+          <p className="mt-2 text-sm leading-relaxed text-[#f3e0c5]">
+            {report.narrativeSummary}
+          </p>
         </div>
       ) : null}
 
@@ -100,6 +99,19 @@ export function ReportCard({ report, reportUrl }: ReportCardProps) {
           <ul className="space-y-1 text-sm text-[#f4e1c5]">
             {report.memorableMoments.map((moment) => (
               <li key={moment}>- {moment}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      {report.behaviorPatterns?.length ? (
+        <div className="mt-4">
+          <p className="mb-2 cinema-kicker text-[0.62rem] font-semibold">
+            Behavior Notes
+          </p>
+          <ul className="space-y-1 text-sm text-[#f4e1c5]">
+            {report.behaviorPatterns.map((pattern) => (
+              <li key={pattern}>- {pattern}</li>
             ))}
           </ul>
         </div>
@@ -139,36 +151,6 @@ export function ReportCard({ report, reportUrl }: ReportCardProps) {
           </ul>
         </div>
       ) : null}
-
-      <div className="mt-4 overflow-x-auto">
-        <table className="w-full min-w-[520px] text-left text-xs text-[#d9c7ad]">
-          <thead>
-            <tr className="border-b border-white/10 text-[#a9998d]">
-              <th className="py-2">Time (UTC)</th>
-              <th className="py-2">Symbol</th>
-              <th className="py-2">Side</th>
-              <th className="py-2">Token</th>
-              <th className="py-2">SOL</th>
-            </tr>
-          </thead>
-          <tbody>
-            {report.timeline.slice(-15).map((item) => (
-              <tr
-                key={`${item.signature}-${item.timestamp}`}
-                className="border-b border-white/5"
-              >
-                <td className="py-2">
-                  {new Date(item.timestamp * 1000).toISOString().slice(0, 19)}
-                </td>
-                <td className="py-2">{item.symbol}</td>
-                <td className="py-2 uppercase">{item.side}</td>
-                <td className="py-2">{item.tokenAmount.toFixed(4)}</td>
-                <td className="py-2">{item.solAmount.toFixed(4)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
     </section>
   );
 }

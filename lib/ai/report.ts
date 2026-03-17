@@ -17,22 +17,27 @@ function clampWordCount(text: string, maxWords: number): string {
 export function buildFallbackReportSummary(
   report: Omit<ReportDocument, "summary" | "downloadUrl">,
 ): string {
-  const personality = report.walletPersonality ?? report.styleClassification;
+  const walletShort = `${report.wallet.slice(0, 4)}...${report.wallet.slice(-4)}`;
+  const personality = report.walletPersonality ?? report.styleClassification ?? "Unclassified";
   const secondPersonality = report.walletSecondaryPersonality
-    ? ` (${report.walletSecondaryPersonality})`
+    ? ` with a ${report.walletSecondaryPersonality} side quest`
     : "";
+  const modifiers = report.walletModifiers?.slice(0, 2).join(" + ") ?? "";
   const narrative = report.narrativeSummary?.trim();
-  const moment = report.memorableMoments?.[0] ?? report.funObservations?.[0] ?? null;
+  const moment = report.funObservations?.[0] ?? report.memorableMoments?.[0] ?? null;
+  const outro =
+    report.estimatedPnlSol >= 0
+      ? "The window closed with the plot mostly intact."
+      : "PnL caught strays, but the lore got louder.";
   const base = [
-    `Wallet ${report.wallet} ran ${report.buyCount + report.sellCount} pump trades across ${report.pumpTokensTraded} tokens in ${report.rangeDays} day(s).`,
-    `Flow summary: spent ${report.solSpent.toFixed(4)} SOL, received ${report.solReceived.toFixed(4)} SOL, estimated PnL ${report.estimatedPnlSol.toFixed(4)} SOL.`,
-    `Style read: ${personality}${secondPersonality}.`,
-    `Best trade: ${report.bestTrade}. Worst trade: ${report.worstTrade}.`,
-    narrative
-      ? `Narrative readout: ${narrative}`
-      : "Narrative readout: the wallet alternated between high-conviction entries and fast rotations.",
-    moment ? `Standout moment: ${moment}` : "Standout moment: volatility dictated most decision points.",
-  ].join(" ");
+    `Wallet ${walletShort} just ran a ${personality} arc${secondPersonality} over the last ${report.rangeDays} day(s).`,
+    modifiers ? `Modifier stack: ${modifiers}.` : "",
+    moment ?? "The tape refused to be normal.",
+    narrative ? `Storyline: ${narrative}` : "Storyline: chaos met conviction and kept the camera rolling.",
+    outro,
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   return clampWordCount(base, 140);
 }
@@ -48,11 +53,11 @@ export async function generateReportSummary(
         {
           role: "system",
           content:
-            "You are a trading analyst. Use ONLY the JSON facts provided. Do not invent any trades, tokens, timestamps, or prices. Output strictly JSON with one key: summary.",
+            "You are a trench cinema narrator. Use ONLY the JSON facts provided. Keep it memetic, funny, viral-tuned, and written as natural language (not a stat dump). Do not invent any trades, tokens, timestamps, or prices. Output strictly JSON with one key: summary.",
         },
         {
           role: "user",
-          content: `Generate a concise report summary (80-140 words) from these facts:\n${JSON.stringify(
+          content: `Generate a concise dossier summary (80-140 words) from these facts:\n${JSON.stringify(
             report,
           )}`,
         },

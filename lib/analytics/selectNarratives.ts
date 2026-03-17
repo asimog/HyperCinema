@@ -395,15 +395,50 @@ function buildObservationCandidates(input: {
     kind: "observation" as const,
   }));
 
-  const directObservations: RankedLine[] = [
+  const personalityTemplates: TextTemplate[] = [
     {
-      id: "observation-personality",
-      text: `${input.walletShort} traded like ${input.personalityDisplay} with a live audience and no shame filter.`,
-      score: 1.7,
-      tags: ["cinema", "personality"],
-      source: "generated",
-      kind: "observation",
+      id: "observation-personality-cinema",
+      text: `${input.walletShort} traded like ${input.personalityDisplay} and narrated it in all caps.`,
+      tags: ["personality", "cinema", "viral"],
+      trigger: "cinema",
     },
+    {
+      id: "observation-personality-chaos",
+      text: `${input.walletShort} ran ${input.personalityDisplay} mode with zero desire for subtlety.`,
+      tags: ["personality", "chaos", "quote"],
+      trigger: "chaos",
+    },
+    {
+      id: "observation-personality-night",
+      text: `${input.personalityDisplay} energy hit ${input.walletShort} right around goblin hour.`,
+      tags: ["personality", "night", "goblin"],
+      trigger: "night",
+    },
+    {
+      id: "observation-personality-hero",
+      text: `The ${input.personalityDisplay} arc kept trying to make ${input.walletShort} the main character.`,
+      tags: ["personality", "hero", "cinema"],
+      trigger: "hero",
+    },
+    {
+      id: "observation-personality-viral",
+      text: `Narration voice: ${input.personalityDisplay}. Volume: dangerous.`,
+      tags: ["personality", "viral", "quote"],
+      trigger: "viral",
+    },
+  ];
+
+  const personalityObservations: RankedLine[] = personalityTemplates.map((template) => ({
+    id: template.id,
+    text: template.text,
+    score: scoreTextTemplate(template, input.activeTags) + 0.6,
+    tags: template.tags ?? [],
+    source: "generated",
+    kind: "observation",
+  }));
+
+  const directObservations: RankedLine[] = [
+    ...personalityObservations,
     ...momentObservation(input.moments.trenchLoreMoment, "observation-lore", "lore"),
     ...momentObservation(input.moments.mainCharacterMoment, "observation-hero", "hero"),
     ...momentObservation(input.moments.mostUnwellMoment, "observation-unwell", "unwell"),

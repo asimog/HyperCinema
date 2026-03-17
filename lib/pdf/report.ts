@@ -33,7 +33,7 @@ export async function generateReportPdf(
   const font = await pdf.embedFont(StandardFonts.Helvetica);
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
 
-  page.drawText("HASHCINEMA Trading Report", {
+  page.drawText("HASHCINEMA DOSSIER", {
     x: 40,
     y: 800,
     size: 22,
@@ -41,43 +41,51 @@ export async function generateReportPdf(
     color: rgb(0.08, 0.1, 0.15),
   });
 
-  page.drawText(toPdfSafeText(`Wallet: ${report.wallet}`, "Wallet: n/a"), {
-    x: 40,
-    y: 770,
-    size: 11,
-    font,
-    color: rgb(0.2, 0.22, 0.28),
-  });
-
-  const metrics = [
-    `Range Days: ${report.rangeDays}`,
-    `Pump Tokens Traded: ${report.pumpTokensTraded}`,
-    `Buys: ${report.buyCount}`,
-    `Sells: ${report.sellCount}`,
-    `SOL Spent: ${report.solSpent}`,
-    `SOL Received: ${report.solReceived}`,
-    `Estimated PnL (SOL): ${report.estimatedPnlSol}`,
-    `Best Trade: ${report.bestTrade}`,
-    `Worst Trade: ${report.worstTrade}`,
-    `Style Classification: ${report.styleClassification}`,
-  ];
-
-  metrics.forEach((metric, idx) => {
-    page.drawText(toPdfSafeText(metric, "n/a"), {
+  page.drawText(
+    toPdfSafeText(`Wallet Address: ${report.wallet}`, "Wallet Address: n/a"),
+    {
       x: 40,
-      y: lineY(730, idx),
-      size: 12,
+      y: 770,
+      size: 11,
       font,
+      color: rgb(0.2, 0.22, 0.28),
+    },
+  );
+
+  let cursorY = 745;
+  const personality = report.walletPersonality ?? report.styleClassification ?? "Unclassified";
+  const metaLines = [
+    `Personality: ${personality}`,
+    report.walletSecondaryPersonality
+      ? `Secondary: ${report.walletSecondaryPersonality}`
+      : null,
+    report.walletModifiers?.length
+      ? `Modifiers: ${report.walletModifiers.slice(0, 4).join(", ")}`
+      : null,
+    `Window: last ${report.rangeDays} day(s)`,
+  ].filter(Boolean) as string[];
+
+  metaLines.forEach((line, idx) => {
+    page.drawText(toPdfSafeText(line, "n/a"), {
+      x: 40,
+      y: lineY(cursorY, idx, 14),
+      size: 11,
+      font,
+      color: rgb(0.2, 0.22, 0.28),
     });
   });
 
+  cursorY = lineY(cursorY, metaLines.length, 18);
+
   page.drawText("Summary", {
     x: 40,
-    y: 525,
+    y: cursorY,
     size: 14,
     font: bold,
+    color: rgb(0.08, 0.1, 0.15),
   });
 
+  cursorY -= 16;
   const summaryLines = wrapText(
     toPdfSafeText(report.summary, "No summary available."),
     78,
@@ -85,101 +93,66 @@ export async function generateReportPdf(
   summaryLines.slice(0, 8).forEach((line, idx) => {
     page.drawText(line, {
       x: 40,
-      y: lineY(505, idx, 15),
+      y: lineY(cursorY, idx, 14),
       size: 11,
       font,
       color: rgb(0.1, 0.12, 0.16),
     });
   });
 
-  if (report.walletPersonality) {
-    page.drawText(toPdfSafeText(`Wallet Personality: ${report.walletPersonality}`), {
-      x: 40,
-      y: 380,
-      size: 11,
-      font: bold,
-      color: rgb(0.12, 0.16, 0.22),
-    });
-  }
+  cursorY = lineY(cursorY, summaryLines.length, 14) - 8;
 
-  if (report.walletSecondaryPersonality) {
-    page.drawText(toPdfSafeText(`Secondary: ${report.walletSecondaryPersonality}`), {
-      x: 40,
-      y: 364,
-      size: 10,
-      font,
-      color: rgb(0.2, 0.24, 0.3),
-    });
-  }
+  const highlights = [
+    ...(report.funObservations ?? []),
+    ...(report.memorableMoments ?? []),
+  ]
+    .filter(Boolean)
+    .slice(0, 6);
 
-  if (report.walletModifiers?.length) {
-    const modifierLine = toPdfSafeText(
-      `Modifiers: ${report.walletModifiers.slice(0, 4).join(", ")}`,
-      "Modifiers: n/a",
-    );
-    page.drawText(modifierLine, {
+  if (highlights.length) {
+    page.drawText("Highlights", {
       x: 40,
-      y: 350,
-      size: 10,
-      font,
-      color: rgb(0.2, 0.24, 0.3),
-    });
-  }
-
-  if (report.keyEvents?.length) {
-    page.drawText("Key Events", {
-      x: 40,
-      y: 330,
+      y: cursorY,
       size: 12,
       font: bold,
+      color: rgb(0.08, 0.1, 0.15),
     });
 
-    report.keyEvents.slice(0, 2).forEach((event, idx) => {
-      const line = toPdfSafeText(
-        `${event.type.replace(/_/g, " ")}: ${event.tradeContext}`,
-        "event unavailable",
-      ).slice(0, 96);
-      page.drawText(line, {
+    cursorY -= 16;
+    highlights.forEach((line, idx) => {
+      page.drawText(toPdfSafeText(`- ${line}`, "n/a"), {
         x: 40,
-        y: lineY(314, idx, 14),
-        size: 9,
+        y: lineY(cursorY, idx, 14),
+        size: 10,
+        font,
+        color: rgb(0.16, 0.18, 0.24),
+      });
+    });
+
+    cursorY = lineY(cursorY, highlights.length, 14) - 8;
+  }
+
+  const beats = report.storyBeats?.slice(0, 4) ?? [];
+  if (beats.length) {
+    page.drawText("Story Beats", {
+      x: 40,
+      y: cursorY,
+      size: 12,
+      font: bold,
+      color: rgb(0.08, 0.1, 0.15),
+    });
+
+    cursorY -= 16;
+    beats.forEach((line, idx) => {
+      page.drawText(toPdfSafeText(`- ${line}`, "n/a"), {
+        x: 40,
+        y: lineY(cursorY, idx, 14),
+        size: 10,
         font,
         color: rgb(0.16, 0.18, 0.24),
       });
     });
   }
-
-  page.drawText("Timeline (latest entries)", {
-    x: 40,
-    y: 275,
-    size: 14,
-    font: bold,
-  });
-
-  const timelineHeader = "Time (UTC)            Side   Symbol     Token Amt     SOL Amt";
-  page.drawText(timelineHeader, {
-    x: 40,
-    y: 255,
-    size: 10,
-    font: bold,
-  });
-
-  report.timeline.slice(-8).forEach((item, idx) => {
-    const date = new Date(item.timestamp * 1000).toISOString().slice(0, 19);
-    const side = toPdfSafeText(item.side, "?").slice(0, 4);
-    const symbol = toPdfSafeText(item.symbol, "?");
-    const line = `${date}   ${side.padEnd(4)}   ${symbol
-      .slice(0, 8)
-      .padEnd(8)}   ${item.tokenAmount.toFixed(4).padStart(10)}   ${item.solAmount
-      .toFixed(4)
-      .padStart(8)}`;
-    page.drawText(line, {
-      x: 40,
-      y: lineY(237, idx, 14),
-      size: 9,
-      font,
-    });
-  });
 
   const bytes = await pdf.save();
   return Buffer.from(bytes);

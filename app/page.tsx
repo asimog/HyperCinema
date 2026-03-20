@@ -209,6 +209,24 @@ export default function HomePage() {
                 into a cinematic AI video based on wallet personality analysis.
               </p>
 
+              <div className="mt-6 flex flex-wrap items-center gap-3">
+                <a
+                  href="https://pump.fun/coin/84zXavEyWDyC6AhpPdcdQgA4C9Cs9foDUSEm9V2Hpump"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="cinema-secondary-button inline-flex items-center justify-center rounded-full px-5 py-2 text-sm font-semibold transition"
+                  aria-label="$HASFUN on Pump.fun"
+                >
+                  $HASFUN
+                </a>
+              </div>
+              <p className="mt-3 text-xs font-mono text-[var(--muted)]">
+                Contract Address:
+                <span className="mt-1 block break-all text-[#fff0d5]">
+                  84zXavEyWDyC6AhpPdcdQgA4C9Cs9foDUSEm9V2Hpump
+                </span>
+              </p>
+
               <div className="mt-6 flex flex-wrap gap-3 text-sm">
                 <span className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-[#ffe6bf]">
                   Keep Clicking! Your losses are our data points.

@@ -37,7 +37,7 @@ export default function RootLayout({
         className={`${bodyFont.variable} ${monoFont.variable} ${displayFont.variable} antialiased`}
       >
         <SiteHeader />
-        {children}
+        <div className="pt-20">{children}</div>
       </body>
     </html>
   );

@@ -181,7 +181,7 @@ export default function JobPage() {
   }, [jobId]);
 
   return (
-    <div className="cinema-shell cinema-noise min-h-screen overflow-hidden px-4 py-6 text-[#fff1dc] md:px-8 md:py-8">
+    <div className="cinema-shell cinema-noise min-h-[100dvh] overflow-hidden px-4 py-6 text-[#fff1dc] md:px-8 md:py-8">
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-6">
         <section className="cinema-panel rounded-[2rem] p-6 md:p-8">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">

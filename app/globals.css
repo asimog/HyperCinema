@@ -22,9 +22,11 @@
 
 html {
   scroll-behavior: smooth;
+  background-color: #090a0f;
 }
 
 body {
+  background-color: #090a0f;
   background:
     radial-gradient(circle at top left, rgba(255, 116, 71, 0.18), transparent 32%),
     radial-gradient(circle at 85% 18%, rgba(135, 219, 255, 0.12), transparent 30%),
@@ -32,7 +34,23 @@ body {
     linear-gradient(180deg, #160d0b 0%, #0b090d 45%, #090a0f 100%);
   color: var(--foreground);
   font-family: var(--font-space-grotesk), "Avenir Next", "Segoe UI", sans-serif;
-  min-height: 100vh;
+  min-height: 100dvh;
+  overscroll-behavior-y: none;
+}
+
+.site-body {
+  min-height: 100dvh;
+}
+
+.site-header {
+  padding-top: env(safe-area-inset-top, 0px);
+  background-color: rgba(0, 0, 0, 0.72);
+}
+
+.site-content {
+  min-height: 100dvh;
+  padding-top: calc(5rem + env(safe-area-inset-top, 0px));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 body::before {

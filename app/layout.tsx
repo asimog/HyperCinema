@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Mono, Space_Grotesk, Syne } from "next/font/google";
 import { SiteHeader } from "@/components/SiteHeader";
 import "./globals.css";
@@ -26,6 +26,14 @@ export const metadata: Metadata = {
     "Turn recent Pump.fun memecoin trading into a cinematic AI trailer built from wallet personality, trench lore, and chaotic on-chain behavior.",
 };
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#090a0f",
+  colorScheme: "dark",
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -34,10 +42,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${bodyFont.variable} ${monoFont.variable} ${displayFont.variable} antialiased`}
+        className={`site-body ${bodyFont.variable} ${monoFont.variable} ${displayFont.variable} antialiased`}
       >
         <SiteHeader />
-        <div className="pt-20">{children}</div>
+        <div className="site-content">{children}</div>
       </body>
     </html>
   );

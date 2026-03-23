@@ -1,9 +1,9 @@
-import { PACKAGE_CONFIG } from "@/lib/constants";
 import { getDb } from "@/lib/firebase/admin";
 import { assertTransition } from "@/lib/jobs/state-machine";
+import { getPackageConfig } from "@/lib/packages";
 import { derivePaymentAddress } from "@/lib/payments/dedicated-address";
 import { applyPaymentSettlement } from "@/lib/payments/settlement";
-import { solToLamports } from "@/lib/payments/solana-pay";
+import { getRevenueWalletAddress, solToLamports } from "@/lib/payments/solana-pay";
 import {
   InternalVideoRenderDocument,
   JobDocument,
@@ -64,15 +64,25 @@ function normalizeDispatchOutboxDocument(
 }
 
 function normalizeJobDocument(raw: JobDocument): JobDocument {
+  const packageConfig = getPackageConfig(raw.packageType);
   return {
     ...raw,
+    priceUsdc: raw.priceUsdc ?? packageConfig.priceUsdc,
+    paymentMethod:
+      raw.paymentMethod === "x402_usdc" ? "x402_usdc" : "sol_dedicated_address",
+    paymentCurrency: raw.paymentCurrency === "USDC" ? "USDC" : "SOL",
+    paymentNetwork: "solana",
+    x402Transaction: raw.x402Transaction ?? null,
     paymentAddress: raw.paymentAddress ?? "",
     paymentIndex:
       typeof raw.paymentIndex === "number" && Number.isInteger(raw.paymentIndex)
         ? raw.paymentIndex
         : null,
     paymentRouting:
-      raw.paymentRouting === "dedicated_address" ? "dedicated_address" : "legacy_memo",
+      raw.paymentRouting === "dedicated_address" ||
+      raw.paymentRouting === "x402"
+        ? raw.paymentRouting
+        : "legacy_memo",
     requiredLamports: raw.requiredLamports ?? solToLamports(raw.priceSol),
     receivedLamports: raw.receivedLamports ?? 0,
     paymentSignatures: Array.isArray(raw.paymentSignatures)
@@ -150,7 +160,7 @@ export async function createJob(input: {
   wallet: string;
   packageType: PackageType;
 }): Promise<JobDocument> {
-  const pkg = PACKAGE_CONFIG[input.packageType];
+  const pkg = getPackageConfig(input.packageType);
   const jobId = randomUUID();
 
   return getDb().runTransaction(async (tx) => {
@@ -182,6 +192,7 @@ export async function createJob(input: {
       packageType: pkg.packageType,
       rangeDays: pkg.rangeDays,
       priceSol: pkg.priceSol,
+      priceUsdc: pkg.priceUsdc,
       videoSeconds: pkg.videoSeconds,
       status: "awaiting_payment",
       progress: "awaiting_payment",
@@ -190,6 +201,10 @@ export async function createJob(input: {
       updatedAt: createdAt,
       errorCode: null,
       errorMessage: null,
+      paymentMethod: "sol_dedicated_address",
+      paymentCurrency: "SOL",
+      paymentNetwork: "solana",
+      x402Transaction: null,
       paymentAddress,
       paymentIndex,
       paymentRouting: "dedicated_address",
@@ -207,6 +222,54 @@ export async function createJob(input: {
     tx.set(jobsCollection().doc(jobId), job);
     return job;
   });
+}
+
+export async function createX402PaidJob(input: {
+  wallet: string;
+  packageType: PackageType;
+  transaction: string;
+}): Promise<JobDocument> {
+  const pkg = getPackageConfig(input.packageType);
+  const jobId = randomUUID();
+  const createdAt = nowIso();
+  const paymentAddress = getRevenueWalletAddress();
+
+  const job: JobDocument = {
+    jobId,
+    wallet: input.wallet,
+    packageType: pkg.packageType,
+    rangeDays: pkg.rangeDays,
+    priceSol: pkg.priceSol,
+    priceUsdc: pkg.priceUsdc,
+    videoSeconds: pkg.videoSeconds,
+    status: "payment_confirmed",
+    progress: "payment_confirmed",
+    txSignature: input.transaction,
+    createdAt,
+    updatedAt: createdAt,
+    errorCode: null,
+    errorMessage: null,
+    paymentMethod: "x402_usdc",
+    paymentCurrency: "USDC",
+    paymentNetwork: "solana",
+    x402Transaction: input.transaction,
+    paymentAddress,
+    paymentIndex: null,
+    paymentRouting: "x402",
+    requiredLamports: 0,
+    receivedLamports: 0,
+    paymentSignatures: input.transaction ? [input.transaction] : [],
+    lastPaymentAt: createdAt,
+    sweepStatus: "swept",
+    sweepSignature: input.transaction,
+    sweptLamports: 0,
+    lastSweepAt: createdAt,
+    sweepError: null,
+  };
+
+  await jobsCollection().doc(jobId).set(job);
+  await upsertDispatchOutboxPending(jobId);
+  return job;
 }
 
 export async function getJob(jobId: string): Promise<JobDocument | null> {

@@ -281,6 +281,10 @@ export default function HomePage() {
                 onChange={setPackageType}
                 disabled={isSubmitting}
               />
+              <p className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm leading-relaxed text-[var(--muted)]">
+                Agent flow: use <code>/api/x402/video</code> to buy the same packages over
+                x402 with USDC on Solana.
+              </p>
               <button
                 type="button"
                 onClick={createJob}

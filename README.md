@@ -47,6 +47,12 @@ See: `lib/video/veo.ts` and `lib/cinema/generateVeoPrompt.ts`.
 - `2d`: `0.03 SOL` + 60s video
 - `3d`: `0.04 SOL` + 90s video
 
+### Agent Pricing (x402 on Solana USDC)
+
+- `30s` (`1d`): `$3 USDC`
+- `60s` (`2d`): `$3 USDC`
+- `90s` (`3d`): `$5 USDC`
+
 ## Job States
 
 - `awaiting_payment`
@@ -100,6 +106,13 @@ VIDEO_VEO_MODEL=veo-3.1-fast-generate-001
 VIDEO_RESOLUTION=1080p
 VIDEO_RENDER_POLL_INTERVAL_MS=5000
 VIDEO_RENDER_MAX_POLL_ATTEMPTS=2160
+X402_FACILITATOR_URL=https://x402.dexter.cash
+GOONBOOK_API_BASE_URL=
+GOONBOOK_AGENT_API_KEY=
+GOONBOOK_AGENT_HANDLE=hasmedia
+GOONBOOK_AGENT_DISPLAY_NAME=HASMEDIA
+GOONBOOK_AGENT_BIO=HashArt.fun drops AI video trailers and posts them to GoonBook.
+GOONBOOK_SYNC_BATCH_LIMIT=12
 ANALYTICS_ENGINE_MODE=v2_fallback_legacy
 ```
 
@@ -130,6 +143,55 @@ FFMPEG_PATH=ffmpeg
 - `POST /api/helius-webhook`: verify transfers on-chain, confirm payment, enqueue worker
 - `GET /api/report/[jobId]`
 - `GET /api/video/[jobId]`
+- `POST /api/x402/video`: x402-protected agent endpoint that accepts USDC on Solana and starts a paid job immediately after settlement
+
+### x402 Agent Flow
+
+`POST /api/x402/video`
+
+Request body:
+
+```json
+{
+  "wallet": "YOUR_SOLANA_WALLET",
+  "packageType": "1d"
+}
+```
+
+Or:
+
+```json
+{
+  "wallet": "YOUR_SOLANA_WALLET",
+  "durationSeconds": 60
+}
+```
+
+Behavior:
+
+- No `PAYMENT-SIGNATURE` header: returns `402 Payment Required` with a `PAYMENT-REQUIRED` header for Solana USDC settlement
+- Valid x402 payment: creates a paid job, dispatches processing, and returns job/report/video URLs to poll
+
+### GoonBook Automation
+
+When `GOONBOOK_API_BASE_URL` is configured:
+
+- Every completed job attempts an automatic GoonBook publish using the gallery thumbnail + dossier summary
+- The publisher uses GoonClaw's live agent API flow at `/api/goonbook/agents/register` and `/api/goonbook/agents/posts`
+- If `GOONBOOK_AGENT_API_KEY` is omitted, HashCinema auto-registers the managed `HASMEDIA` agent, stores the returned key server-side, and reuses it for later posts
+- Publication state is stored in Firestore under `goonbook_publications`
+- Managed agent state is stored in Firestore under `goonbook_agent_state`
+- Worker backfill/retry endpoint: `POST /goonbook-sync` on the worker service
+
+## Agent Skill
+
+A repo-local skill lives at `skills/hasmedia/SKILL.md`.
+
+Use it when an agent needs to:
+
+- buy a trailer package over x402
+- poll HashArt job/report/video URLs
+- publish completed drops to GoonBook using the `HASMEDIA` identity
 
 Video backend contract reference: `docs/render-veo-contract.md`
 

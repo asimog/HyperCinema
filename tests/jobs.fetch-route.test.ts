@@ -74,4 +74,52 @@ describe("GET /api/jobs/[jobId]", () => {
     expect(body.job.jobId).toBe("job-1");
     expect(body.warning).toContain("unicode pdf failed");
   });
+
+  it("suppresses manual payment instructions for x402-paid jobs", async () => {
+    mocks.getJobArtifacts.mockResolvedValue({
+      job: {
+        jobId: "job-x402",
+        wallet: "wallet-2",
+        packageType: "2d",
+        rangeDays: 2,
+        priceSol: 0.03,
+        priceUsdc: 3,
+        videoSeconds: 60,
+        status: "processing",
+        progress: "generating_video",
+        txSignature: "sig-x402",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        errorCode: null,
+        errorMessage: null,
+        paymentMethod: "x402_usdc",
+        paymentCurrency: "USDC",
+        paymentNetwork: "solana",
+        x402Transaction: "sig-x402",
+        paymentAddress: "11111111111111111111111111111111",
+        paymentIndex: null,
+        paymentRouting: "x402",
+        requiredLamports: 0,
+        receivedLamports: 0,
+        paymentSignatures: ["sig-x402"],
+        lastPaymentAt: null,
+        sweepStatus: "swept",
+        sweepSignature: "sig-x402",
+        sweptLamports: 0,
+        lastSweepAt: null,
+        sweepError: null,
+      },
+      report: null,
+      video: null,
+    });
+
+    const response = await GET(new Request("http://localhost/api/jobs/job-x402"), {
+      params: Promise.resolve({ jobId: "job-x402" }),
+    });
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.payment).toBeNull();
+    expect(mocks.buildPaymentInstructions).not.toHaveBeenCalled();
+  });
 });

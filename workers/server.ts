@@ -1,7 +1,11 @@
 import { dispatchDueJobs } from "@/lib/jobs/dispatch";
 import { logger } from "@/lib/logging/logger";
 import { createServer } from "http";
-import { executeRetryFailedJobCommand, executeSweepCommand } from "./commands";
+import {
+  executeGoonBookSyncCommand,
+  executeRetryFailedJobCommand,
+  executeSweepCommand,
+} from "./commands";
 import { processJob } from "./process-job";
 
 class BodyTooLargeError extends Error {
@@ -99,6 +103,8 @@ const server = createServer(async (request, response) => {
   const isSweepRoute = request.method === "POST" && pathname === "/sweep";
   const isRetryRoute = request.method === "POST" && pathname === "/retry-job";
   const isDispatchRoute = request.method === "POST" && pathname === "/dispatch";
+  const isGoonBookSyncRoute =
+    request.method === "POST" && pathname === "/goonbook-sync";
   const isHealthRoute = request.method === "GET" && pathname === "/healthz";
 
   if (isHealthRoute) {
@@ -106,7 +112,13 @@ const server = createServer(async (request, response) => {
     return;
   }
 
-  if (!isJobRoute && !isSweepRoute && !isRetryRoute && !isDispatchRoute) {
+  if (
+    !isJobRoute &&
+    !isSweepRoute &&
+    !isRetryRoute &&
+    !isDispatchRoute &&
+    !isGoonBookSyncRoute
+  ) {
     sendJson(response, 404, { error: "Not found" });
     return;
   }
@@ -152,6 +164,19 @@ const server = createServer(async (request, response) => {
     } catch (error) {
       sendJson(response, 500, {
         error: error instanceof Error ? error.message : "Dispatch failure",
+      });
+      return;
+    }
+  }
+
+  if (isGoonBookSyncRoute) {
+    try {
+      const summary = await executeGoonBookSyncCommand(payload);
+      sendJson(response, 200, { ok: true, ...summary });
+      return;
+    } catch (error) {
+      sendJson(response, 500, {
+        error: error instanceof Error ? error.message : "GoonBook sync failure",
       });
       return;
     }

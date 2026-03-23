@@ -73,6 +73,18 @@ const envSchema = z.object({
     .literal("veo-3.1-fast-generate-001")
     .default("veo-3.1-fast-generate-001"),
   VIDEO_RESOLUTION: z.enum(["720p", "1080p"]).default("1080p"),
+  X402_FACILITATOR_URL: z
+    .string()
+    .url()
+    .default("https://x402.dexter.cash"),
+  GOONBOOK_API_BASE_URL: z.string().url().optional(),
+  GOONBOOK_AGENT_API_KEY: z.string().optional(),
+  GOONBOOK_AGENT_HANDLE: z.string().default("hasmedia"),
+  GOONBOOK_AGENT_DISPLAY_NAME: z.string().default("HASMEDIA"),
+  GOONBOOK_AGENT_BIO: z
+    .string()
+    .default("HashArt.fun drops AI video trailers and posts them to GoonBook."),
+  GOONBOOK_SYNC_BATCH_LIMIT: z.coerce.number().int().positive().default(12),
   SWEEP_MIN_LAMPORTS: z.coerce.number().int().nonnegative().default(5_000),
   SWEEP_BATCH_LIMIT: z.coerce.number().int().positive().default(50),
   ANALYTICS_ENGINE_MODE: z
@@ -94,6 +106,16 @@ export function getEnv(): AppEnv {
     VIDEO_ENGINE: trimEnvValue(process.env.VIDEO_ENGINE),
     VIDEO_VEO_MODEL: trimEnvValue(process.env.VIDEO_VEO_MODEL),
     VIDEO_RESOLUTION: trimEnvValue(process.env.VIDEO_RESOLUTION),
+    X402_FACILITATOR_URL: trimEnvValue(process.env.X402_FACILITATOR_URL),
+    GOONBOOK_API_BASE_URL: trimOptionalEnvValue(process.env.GOONBOOK_API_BASE_URL),
+    GOONBOOK_AGENT_API_KEY: trimOptionalEnvValue(process.env.GOONBOOK_AGENT_API_KEY),
+    GOONBOOK_AGENT_HANDLE:
+      trimOptionalEnvValue(process.env.GOONBOOK_AGENT_HANDLE) ?? "hasmedia",
+    GOONBOOK_AGENT_DISPLAY_NAME:
+      trimOptionalEnvValue(process.env.GOONBOOK_AGENT_DISPLAY_NAME) ?? "HASMEDIA",
+    GOONBOOK_AGENT_BIO:
+      trimOptionalEnvValue(process.env.GOONBOOK_AGENT_BIO) ??
+      "HashArt.fun drops AI video trailers and posts them to GoonBook.",
     ALLOW_IN_PROCESS_WORKER:
       process.env.ALLOW_IN_PROCESS_WORKER ??
       (process.env.NODE_ENV === "production" ? "false" : "true"),

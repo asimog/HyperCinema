@@ -14,7 +14,7 @@ interface JobApiPayload {
   job?: JobDocument;
   report?: ReportDocument | null;
   video?: VideoDocument | null;
-  payment?: PaymentInstructions;
+  payment?: PaymentInstructions | null;
   error?: string;
   message?: string;
   warning?: string;
@@ -61,6 +61,23 @@ function nextPollDelay(job: JobDocument | null, elapsedMs: number): number {
   }
 
   return 10000;
+}
+
+function priceLabel(job: JobDocument): string {
+  if (job.paymentMethod === "x402_usdc") {
+    const priceUsdc = job.priceUsdc ?? 0;
+    return `$${priceUsdc} USDC`;
+  }
+
+  return `${job.priceSol} SOL`;
+}
+
+function paymentDescriptor(job: JobDocument): string {
+  if (job.paymentMethod === "x402_usdc") {
+    return "Paid through x402 on Solana";
+  }
+
+  return "Manual dedicated-address checkout";
 }
 
 export default function JobPage() {
@@ -223,7 +240,8 @@ export default function JobPage() {
               </div>
               <div className="cinema-panel-soft rounded-[1.3rem] p-4">
                 <p className="cinema-kicker text-[0.62rem] font-semibold">Price</p>
-                <p className="mt-2 font-display text-3xl text-[#fff1dc]">{job.priceSol} SOL</p>
+                <p className="mt-2 font-display text-3xl text-[#fff1dc]">{priceLabel(job)}</p>
+                <p className="mt-1 text-xs text-[var(--muted)]">{paymentDescriptor(job)}</p>
               </div>
               <div className="cinema-panel-soft rounded-[1.3rem] p-4">
                 <p className="cinema-kicker text-[0.62rem] font-semibold">Pipeline</p>

@@ -27,6 +27,7 @@ import { ReportDocument, WalletStory } from "../lib/types/domain";
 import { buildAndRenderVideo } from "../lib/video/pipeline";
 import { computeAnalyticsFromTrades } from "../lib/analytics/compute";
 import { recoverJobIfNeeded } from "../lib/jobs/recovery";
+import { publishCompletedJobToGoonBook } from "../lib/social/goonbook-publisher";
 
 type AnalyticsEngineMode = ReturnType<typeof getEnv>["ANALYTICS_ENGINE_MODE"];
 const ANALYTICS_STAGE_TIMEOUT_MS = 4 * 60_000;
@@ -411,6 +412,27 @@ export async function processJob(jobId: string): Promise<void> {
         errorMessage: null,
       }),
     ]);
+
+    try {
+      const publication = await publishCompletedJobToGoonBook(jobId);
+      if (publication.status === "failed") {
+        logger.warn("goonbook_publication_attempt_failed", {
+          component: "worker",
+          stage: "publish_goonbook",
+          jobId,
+          errorCode: "goonbook_publication_attempt_failed",
+          errorMessage: publication.reason ?? "Unknown GoonBook publication error",
+        });
+      }
+    } catch (publicationError) {
+      logger.warn("goonbook_publication_attempt_crashed", {
+        component: "worker",
+        stage: "publish_goonbook",
+        jobId,
+        errorCode: "goonbook_publication_attempt_crashed",
+        errorMessage: errorMessage(publicationError),
+      });
+    }
   } catch (error) {
     const message = errorMessage(error);
     await markJobFailed(jobId, "pipeline_error", message);

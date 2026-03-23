@@ -1,5 +1,6 @@
 import { getEnv } from "@/lib/env";
 import { generateReportPdf } from "@/lib/pdf/report";
+import { publishCompletedJobToGoonBook } from "@/lib/social/goonbook-publisher";
 import { uploadBufferToStorage, uploadRemoteFileToStorage } from "@/lib/storage/upload";
 import { InternalVideoRenderDocument } from "@/lib/types/domain";
 import {
@@ -83,6 +84,12 @@ async function finalizeReadyRender(
           errorMessage: null,
         }),
   ]);
+
+  try {
+    await publishCompletedJobToGoonBook(jobId);
+  } catch {
+    // Recovery should not fail the completed job if social publication needs a retry.
+  }
 
   return true;
 }

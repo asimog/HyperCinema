@@ -41,6 +41,9 @@ export function PackageSelector({
                 {item.rangeDays} day{item.rangeDays > 1 ? "s" : ""}
               </p>
               <p className="font-display mt-2 text-3xl leading-none">{item.priceSol} SOL</p>
+              <p className="mt-2 text-xs uppercase tracking-[0.18em] text-[#b7a898]">
+                Agent x402: ${item.priceUsdc} USDC
+              </p>
               {selected ? (
                 <p className="mt-3 text-[0.72rem] uppercase tracking-[0.22em] text-[#ffe4b0]">
                   selected

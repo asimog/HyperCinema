@@ -5,6 +5,8 @@ const mocks = vi.hoisted(() => ({
   sweepDedicatedPaymentAddressForJob: vi.fn(),
   sweepDedicatedPaymentAddresses: vi.fn(),
   retryFailedJob: vi.fn(),
+  publishCompletedJobToGoonBook: vi.fn(),
+  syncGalleryToGoonBook: vi.fn(),
 }));
 
 vi.mock("@/workers/sweep-payments", () => ({
@@ -17,7 +19,16 @@ vi.mock("@/lib/jobs/retry", () => ({
   retryFailedJob: mocks.retryFailedJob,
 }));
 
-import { executeRetryFailedJobCommand, executeSweepCommand } from "@/workers/commands";
+vi.mock("@/lib/social/goonbook-publisher", () => ({
+  publishCompletedJobToGoonBook: mocks.publishCompletedJobToGoonBook,
+  syncGalleryToGoonBook: mocks.syncGalleryToGoonBook,
+}));
+
+import {
+  executeGoonBookSyncCommand,
+  executeRetryFailedJobCommand,
+  executeSweepCommand,
+} from "@/workers/commands";
 
 describe("worker sweep command", () => {
   beforeEach(() => {
@@ -81,5 +92,53 @@ describe("worker retry command", () => {
   it("throws when payload has no jobId", async () => {
     await expect(executeRetryFailedJobCommand({})).rejects.toThrow("Missing jobId");
     expect(mocks.retryFailedJob).not.toHaveBeenCalled();
+  });
+});
+
+describe("worker GoonBook sync command", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("publishes a specific completed job when payload includes jobId", async () => {
+    mocks.publishCompletedJobToGoonBook.mockResolvedValue({
+      jobId: "job-complete",
+      status: "posted",
+      postId: "goonbook-post-1",
+    });
+
+    const result = await executeGoonBookSyncCommand({ jobId: " job-complete " });
+
+    expect(mocks.publishCompletedJobToGoonBook).toHaveBeenCalledWith("job-complete");
+    expect(mocks.syncGalleryToGoonBook).not.toHaveBeenCalled();
+    expect(result).toEqual({
+      scanned: 1,
+      posted: 1,
+      skipped: 0,
+      failed: 0,
+      results: [
+        {
+          jobId: "job-complete",
+          status: "posted",
+          postId: "goonbook-post-1",
+        },
+      ],
+    });
+  });
+
+  it("falls back to gallery sync mode when no jobId is provided", async () => {
+    const summary = {
+      scanned: 4,
+      posted: 2,
+      skipped: 1,
+      failed: 1,
+      results: [],
+    };
+    mocks.syncGalleryToGoonBook.mockResolvedValue(summary);
+
+    const result = await executeGoonBookSyncCommand({ limit: 8 });
+
+    expect(mocks.syncGalleryToGoonBook).toHaveBeenCalledWith(8);
+    expect(result).toEqual(summary);
   });
 });

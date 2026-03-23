@@ -7,6 +7,10 @@ import type {
 
 export type PackageType = "1d" | "2d" | "3d";
 
+export type PaymentMethod = "sol_dedicated_address" | "x402_usdc";
+
+export type PaymentCurrency = "SOL" | "USDC";
+
 export type JobStatus =
   | "awaiting_payment"
   | "payment_detected"
@@ -32,6 +36,7 @@ export interface JobPackage {
   packageType: PackageType;
   rangeDays: number;
   priceSol: number;
+  priceUsdc: number;
   videoSeconds: number;
 }
 
@@ -41,6 +46,7 @@ export interface JobDocument {
   packageType: PackageType;
   rangeDays: number;
   priceSol: number;
+  priceUsdc?: number;
   videoSeconds: number;
   status: JobStatus;
   progress: JobProgress;
@@ -49,9 +55,13 @@ export interface JobDocument {
   updatedAt: string;
   errorCode: string | null;
   errorMessage: string | null;
+  paymentMethod?: PaymentMethod;
+  paymentCurrency?: PaymentCurrency;
+  paymentNetwork?: "solana";
+  x402Transaction?: string | null;
   paymentAddress: string;
   paymentIndex: number | null;
-  paymentRouting: "dedicated_address" | "legacy_memo";
+  paymentRouting: "dedicated_address" | "legacy_memo" | "x402";
   requiredLamports: number;
   receivedLamports: number;
   paymentSignatures: string[];

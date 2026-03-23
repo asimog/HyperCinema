@@ -25,12 +25,14 @@ export function buildFallbackReportSummary(
   const modifiers = report.walletModifiers?.slice(0, 2).join(" + ") ?? "";
   const narrative = report.narrativeSummary?.trim();
   const moment = report.funObservations?.[0] ?? report.memorableMoments?.[0] ?? null;
+  const tradeStats = `Trade stats: spent ${report.solSpent.toFixed(4)} SOL, received ${report.solReceived.toFixed(4)} SOL. Best trade: ${report.bestTrade}. Worst trade: ${report.worstTrade}.`;
   const outro =
     report.estimatedPnlSol >= 0
       ? "The window closed with the plot mostly intact."
       : "PnL caught strays, but the lore got louder.";
   const base = [
     `Wallet ${walletShort} just ran a ${personality} arc${secondPersonality} over the last ${report.rangeDays} day(s).`,
+    tradeStats,
     modifiers ? `Modifier stack: ${modifiers}.` : "",
     moment ?? "The tape refused to be normal.",
     narrative ? `Storyline: ${narrative}` : "Storyline: chaos met conviction and kept the camera rolling.",

@@ -33,7 +33,8 @@ export async function GET(_: Request, context: Context) {
       video,
       status: job.status,
       progress: job.progress,
-      payment: buildPaymentInstructions(job),
+      payment:
+        job.paymentMethod === "x402_usdc" ? null : buildPaymentInstructions(job),
       warning: recoveryWarning,
     });
   } catch (error) {

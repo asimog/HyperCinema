@@ -1,9 +1,10 @@
 import { buildGoogleVeoRenderPayload } from "@/lib/video/veo";
 import { GeneratedCinematicScript, WalletStory } from "@/lib/types/domain";
 
-function buildStory(): WalletStory {
+function buildStory(overrides: Partial<WalletStory> = {}): WalletStory {
   return {
     wallet: "8BfH8gV3yZ7d1kY9uJvB3DhR6yQ2pM8P2a8s9s4s4s4s",
+    storyKind: "token_video",
     rangeDays: 2,
     packageType: "2d",
     durationSeconds: 60,
@@ -197,6 +198,7 @@ function buildStory(): WalletStory {
         solAmount: 1.9,
       },
     ],
+    ...overrides,
   };
 }
 
@@ -232,7 +234,9 @@ function buildScript(): GeneratedCinematicScript {
 describe("google veo prompt engine", () => {
   it("builds prompt + structured metadata payload from wallet story and script", () => {
     const payload = buildGoogleVeoRenderPayload({
-      walletStory: buildStory(),
+      walletStory: buildStory({
+        audioEnabled: true,
+      }),
       script: buildScript(),
       model: "veo-3.1-fast-generate-001",
       resolution: "1080p",
@@ -268,5 +272,85 @@ describe("google veo prompt engine", () => {
     expect(payload.prompt.includes("This is cinema, not analytics.")).toBe(true);
     expect(payload.prompt.includes("4.8 SOL")).toBe(false);
     expect(payload.prompt.includes("0.21 SOL")).toBe(false);
+  });
+
+  it("keeps token-video renders silent unless audio is explicitly enabled", () => {
+    const payload = buildGoogleVeoRenderPayload({
+      walletStory: buildStory({
+        audioEnabled: undefined,
+      }),
+      script: buildScript(),
+    });
+
+    expect(payload.generateAudio).toBe(false);
+  });
+
+  it("defaults bedtime stories to audio-on even when no override is provided", () => {
+    const payload = buildGoogleVeoRenderPayload({
+      walletStory: buildStory({
+        storyKind: "bedtime_story",
+        audioEnabled: undefined,
+      }),
+      script: buildScript(),
+    });
+
+    expect(payload.generateAudio).toBe(true);
+    expect(payload.styleHints).toContain("bedtime");
+  });
+
+  it("builds a trailer-first music video prompt with mode-specific audio guidance", () => {
+    const payload = buildGoogleVeoRenderPayload({
+      walletStory: buildStory({
+        storyKind: "music_video",
+        subjectName: "Neon Anthem",
+        subjectDescription: "A synthwave single gets trailer treatment.",
+        requestedPrompt: "Make the chorus feel enormous.",
+        audioEnabled: undefined,
+      }),
+      script: buildScript(),
+    });
+
+    expect(payload.generateAudio).toBe(true);
+    expect(payload.styleHints).toEqual(
+      expect.arrayContaining([
+        "music-video",
+        "chorus-led",
+        "performance-first",
+        "beat-synced",
+      ]),
+    );
+    expect(payload.prompt).toContain("Build a trailer-first music video.");
+    expect(payload.prompt).toContain(
+      "Audio is enabled. Follow the lyrics, beat, chorus, and musical dynamics without inventing new song facts.",
+    );
+    expect(payload.prompt.includes("This is cinema, not analytics.")).toBe(false);
+  });
+
+  it("builds a scene recreation prompt with source-faithful continuity guidance", () => {
+    const payload = buildGoogleVeoRenderPayload({
+      walletStory: buildStory({
+        storyKind: "scene_recreation",
+        subjectName: "The Last Scene",
+        subjectDescription: "A source scene gets rebuilt at higher voltage.",
+        requestedPrompt: "Preserve the blocking and dialogue cadence.",
+        audioEnabled: true,
+      }),
+      script: buildScript(),
+    });
+
+    expect(payload.generateAudio).toBe(true);
+    expect(payload.styleHints).toEqual(
+      expect.arrayContaining([
+        "scene-recreation",
+        "dialogue-led",
+        "continuity-first",
+        "source-faithful",
+      ]),
+    );
+    expect(payload.prompt).toContain("Build a trailer-grade scene recreation.");
+    expect(payload.prompt).toContain(
+      "Audio is enabled. Preserve the dialogue cadence and source-scene timing without inventing new quotes.",
+    );
+    expect(payload.prompt.includes("This is cinema, not analytics.")).toBe(false);
   });
 });

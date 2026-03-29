@@ -99,7 +99,7 @@ const googleVeoMetadataSchema = z.object({
   provider: z.literal("google_veo"),
   model: z.literal(ALLOWED_VEO_MODEL),
   resolution: resolutionSchema,
-  generateAudio: z.literal(true).default(true),
+  generateAudio: z.boolean().default(true),
   prompt: z.string().min(1),
   styleHints: z.array(z.string()).default([]),
   tokenMetadata: z.array(tokenMetadataSchema).default([]),
@@ -169,14 +169,6 @@ export function parseRenderRequest(payload: unknown): NormalizedRenderRequest {
     throw new Error("provider must be 'google_veo' when videoEngine=google_veo");
   }
 
-  if (parsed.withSound !== true) {
-    throw new Error("withSound must be true for Veo renders.");
-  }
-
-  if (parsed.scenes.some((scene) => scene.includeAudio === false)) {
-    throw new Error("scenes[].includeAudio cannot be false for Veo renders.");
-  }
-
   if (!parsed.prompt || !parsed.prompt.trim()) {
     throw new Error("prompt is required when videoEngine=google_veo");
   }
@@ -184,6 +176,10 @@ export function parseRenderRequest(payload: unknown): NormalizedRenderRequest {
   const metadata = parsed.metadata ?? parsed.googleVeo;
   if (!metadata) {
     throw new Error("metadata or googleVeo is required when videoEngine=google_veo");
+  }
+
+  if (parsed.withSound !== Boolean(metadata.generateAudio)) {
+    throw new Error("withSound must match metadata.generateAudio for Veo renders.");
   }
 
   if (!metadata.model || !metadata.sceneMetadata?.length || !metadata.storyMetadata) {
@@ -206,23 +202,23 @@ export function parseRenderRequest(payload: unknown): NormalizedRenderRequest {
 
   return {
     ...parsed,
-    withSound: true,
+    withSound: Boolean(metadata.generateAudio),
     resolution: requestedResolution,
     scenes: parsed.scenes.map((scene) => ({
       ...scene,
-      includeAudio: true,
+      includeAudio: Boolean(metadata.generateAudio),
     })),
     metadata: {
       ...metadata,
       model: ALLOWED_VEO_MODEL,
       resolution: requestedResolution,
-      generateAudio: true,
+      generateAudio: Boolean(metadata.generateAudio),
     },
     googleVeo: {
       ...metadata,
       model: ALLOWED_VEO_MODEL,
       resolution: requestedResolution,
-      generateAudio: true,
+      generateAudio: Boolean(metadata.generateAudio),
     },
   };
 }

@@ -44,13 +44,14 @@ export async function renderCinematicVideo(params: {
 
   const scenePayload = params.script.scenes.map((scene) => ({
     ...scene,
-    includeAudio: true,
+    includeAudio: params.googleVeo?.generateAudio ?? false,
   }));
+  const withSound = params.googleVeo?.generateAudio ?? false;
   const baseRequestPayload = {
     jobId: params.jobId,
     wallet: params.wallet,
     durationSeconds: params.durationSeconds,
-    withSound: true,
+    withSound,
     resolution: params.googleVeo?.resolution ?? env.VIDEO_RESOLUTION,
     hookLine: params.script.hookLine,
     scenes: scenePayload,

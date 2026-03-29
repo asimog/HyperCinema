@@ -3,6 +3,7 @@ import {
   alignSceneStatesToCount,
   buildSceneContinuityPrompt,
 } from "@/lib/analytics/videoCoherence";
+import { buildStoryCards } from "@/lib/cinema/storyCards";
 import { logger } from "@/lib/logging/logger";
 import {
   isHttpUrl,
@@ -109,12 +110,8 @@ function buildFallbackHookLine(story: WalletStory): string {
     return `${name} moves like ${style}, and the ticker wants a hero entrance.`;
   }
 
-  const walletShort = `${story.wallet.slice(0, 4)}...${story.wallet.slice(-4)}`;
-  const archetype =
-    story.videoIdentitySheet?.archetype ??
-    story.walletPersonality ??
-    story.analytics.styleClassification;
-  return `${walletShort} moved like ${archetype} and left the trench air humming.`;
+  const subject = story.subjectName ?? "this trailer";
+  return `${subject} is staged as a ${creativeStoryLabel(story.storyKind)}, and the opening frame wants to land immediately.`;
 }
 
 function scaleIndex(index: number, sourceLength: number, targetLength: number): number {
@@ -123,6 +120,20 @@ function scaleIndex(index: number, sourceLength: number, targetLength: number): 
   }
 
   return Math.round((index * (sourceLength - 1)) / (targetLength - 1));
+}
+
+function creativeStoryLabel(storyKind: WalletStory["storyKind"]): string {
+  switch (storyKind) {
+    case "bedtime_story":
+      return "bedtime story";
+    case "music_video":
+      return "music video";
+    case "scene_recreation":
+      return "scene recreation";
+    case "generic_cinema":
+    default:
+      return "cinematic short";
+  }
 }
 
 function buildSceneDirectiveRefs(story: WalletStory, targetCount: number) {
@@ -192,6 +203,8 @@ function buildCinematicPromptInput(story: WalletStory): Record<string, unknown> 
     walletModifiers: story.walletModifiers,
     narrativeSummary: story.narrativeSummary,
     storyBeats: story.storyBeats,
+    storyCards: story.storyCards,
+    continuationPrompt: story.continuationPrompt,
     behaviorPatterns: story.behaviorPatterns,
     funObservations: story.funObservations,
     keyEvents: story.keyEvents,
@@ -202,6 +215,47 @@ export function buildFallbackCinematicScript(
   story: WalletStory,
   tokenImageReferences: TokenImageReference[],
 ): GeneratedCinematicScript {
+  if (story.storyKind !== "token_video") {
+    const cards =
+      story.storyCards?.length
+        ? story.storyCards
+        : buildStoryCards({
+            requestKind: story.storyKind,
+            subjectName: story.subjectName,
+            subjectDescription: story.subjectDescription,
+            requestedPrompt: story.requestedPrompt,
+            storyBeats: story.storyBeats,
+            audioEnabled: story.audioEnabled,
+          });
+    const sceneCount = Math.min(4, Math.max(3, cards.length));
+    const duration = Math.max(2, Math.round(story.durationSeconds / sceneCount));
+    const roughScenes: CinematicScene[] = Array.from({ length: sceneCount }, (_, index) => {
+      const card = cards[index] ?? cards[cards.length - 1];
+      return {
+        sceneNumber: index + 1,
+        visualPrompt:
+          card?.visualCue ??
+          `${creativeStoryLabel(story.storyKind)} opening image with a clear emotional hook.`,
+        narration:
+          card?.narrationCue ??
+          card?.teaser ??
+          story.narrativeSummary ??
+          "The brief keeps moving toward a memorable landing frame.",
+        durationSeconds: duration,
+        imageUrl: null,
+        stateRef: `creative-${story.storyKind ?? "cinema"}-scene-${index + 1}`,
+        continuityNote:
+          card?.transitionLabel ?? "Carry the same emotional spine into the next cut.",
+      };
+    });
+
+    const normalizedScenes = normalizeSceneDurations(roughScenes, story.durationSeconds);
+    return {
+      hookLine: buildFallbackHookLine(story),
+      scenes: normalizedScenes,
+    };
+  }
+
   const directives = buildSceneDirectiveRefs(story, 3);
   const promptScenes = story.videoPromptSequence ?? [];
   const roughScenes: CinematicScene[] = Array.from({ length: 3 }, (_, index) => {

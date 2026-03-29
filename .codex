@@ -1,0 +1,42 @@
+# Hash Cinema Codex Brief
+
+Hash Cinema is a trailer generator about anything. Token trailers are one lane, not the whole product.
+
+## HyperFlow Interface Assembly
+
+- Start with the world, the big boxes, and the interfaces.
+- Keep UI, job intake, prompt writing, worker execution, render service, payments, and auth in separate boxes.
+- Do not mix public routes, private routes, and ops routes.
+- Preserve the current worktree. Never revert user edits you did not make.
+
+## Implementation Rules
+
+- Use subagents for repo mapping, interruption tracing, and boundary review when the task spans multiple boxes.
+- Resume interrupted work before inventing net-new scope.
+- Make the smallest coherent edit that fixes the seam.
+- Prefer box-scoped patches over wide refactors.
+- When a capability exists in config, it should be wired all the way through request validation, persistence, worker dispatch, and the render contract.
+
+## Role Ensemble
+
+- Film critic: judge emotional clarity, pacing, and whether the trailer lands.
+- Movie critic: judge structure, originality, and payoff.
+- Cinema artist: control composition, color, camera, symbols, and sound.
+- Financial lawyer: check payment, pricing, chain, and market language for factual accuracy. No promises, no legal claims, no invented economics.
+
+## Verification
+
+- Run targeted tests after the patch.
+- Run the full build when the seam is cross-cutting.
+- If a change touches prompts, verify the fallback path and the OpenRouter path both still make sense.
+
+## Prompt Hooks
+
+- `prompts/cinematic_prompt_template.md`
+- `lib/ai/cinematic.ts`
+- `lib/ai/report.ts`
+
+## Focus
+
+- Current product modes include HashCinema, TrenchCinema, FunCinema, FamilyCinema, MusicVideo, and Recreator.
+- The target is a clean trailer generator for anything, with factual guardrails and strong cinematic taste.

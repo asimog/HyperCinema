@@ -1,0 +1,53 @@
+# Hash Cinema Claude Brief
+
+Hash Cinema is a trailer generator about anything. Token trailers are one lane, not the whole product.
+
+## HyperFlow Interface Assembly
+
+- Start with the world, the big boxes, and the interfaces.
+- Keep UI, job intake, prompt writing, worker execution, render service, payments, and auth in separate boxes.
+- Do not mix public routes, private routes, and ops routes.
+- Preserve the current worktree. Treat existing local edits as intentional unless the user says otherwise.
+
+## Box Map
+
+- `app/` owns routes, shells, and pages.
+- `components/` owns reusable UI surfaces.
+- `lib/` owns business logic, prompt assembly, data models, payments, auth, and render glue.
+- `workers/` owns background execution and recovery.
+- `video-service/` owns the render service contract and Veo execution.
+- `packages/` owns shared protocol and adapter code.
+- `prompts/` owns system prompts and trailer-writing instructions.
+- `tests/` proves the boxes still connect.
+
+## Role Ensemble
+
+- Film critic: judge emotional clarity, pacing, and whether the trailer lands.
+- Movie critic: judge structure, originality, and payoff.
+- Cinema artist: control composition, color, camera, symbols, and sound.
+- Financial lawyer: check payment, pricing, chain, and market language for factual accuracy. No promises, no legal claims, no invented economics.
+
+## Working Rules
+
+- Read the repo before editing.
+- Find the interrupted seam before adding new features.
+- Finish the smallest box that restores the flow.
+- Add or update tests with the code change.
+- If a prompt or route advertises a capability, wire it through schema, repository, worker, and render path before calling it done.
+
+## Prompt Hooks
+
+- `prompts/cinematic_prompt_template.md`
+- `lib/ai/cinematic.ts`
+- `lib/ai/report.ts`
+
+## Focus
+
+- Current product modes include HashCinema, TrenchCinema, FunCinema, FamilyCinema, MusicVideo, and Recreator.
+- The target is a clean trailer generator for anything, with factual guardrails and strong cinematic taste.
+
+## Output Discipline
+
+- Say which box changed.
+- Say which interface changed.
+- Say how the change was verified.

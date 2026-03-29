@@ -47,8 +47,8 @@ export default async function GalleryPage({
           </div>
         </div>
         <p className="route-summary">
-          Finished memecoin videos, token cards, and thumbnail frames. Search by mint or
-          contract address to isolate one asset.
+          Finished public renders only. Private FunCinema and FamilyCinema jobs stay out of
+          this feed, and hidden jobs disappear from the gallery entirely.
         </p>
       </section>
     </div>
@@ -81,6 +81,9 @@ export default async function GalleryPage({
                 Clear
               </Link>
             ) : null}
+            <Link href="/" className="button button-secondary">
+              Home
+            </Link>
           </div>
         </form>
       </section>
@@ -98,7 +101,7 @@ export default async function GalleryPage({
             </div>
             <div className="button-row">
               <Link href="/" className="button button-secondary">
-                Back to homepage
+                Back to launcher
               </Link>
             </div>
           </div>

@@ -14,9 +14,70 @@ function clampWordCount(text: string, maxWords: number): string {
   return `${words.slice(0, maxWords).join(" ")}...`;
 }
 
+function isCreativeSubjectKind(
+  subjectKind: ReportDocument["subjectKind"],
+): subjectKind is
+  | "generic_cinema"
+  | "bedtime_story"
+  | "music_video"
+  | "scene_recreation" {
+  return (
+    subjectKind === "generic_cinema" ||
+    subjectKind === "bedtime_story" ||
+    subjectKind === "music_video" ||
+    subjectKind === "scene_recreation"
+  );
+}
+
 export function buildFallbackReportSummary(
   report: Omit<ReportDocument, "summary" | "downloadUrl">,
 ): string {
+  if (isCreativeSubjectKind(report.subjectKind)) {
+    const subject = report.subjectName ?? "Untitled cinema brief";
+    const scope =
+      report.subjectKind === "bedtime_story"
+        ? "a bedtime story short"
+        : report.subjectKind === "music_video"
+          ? "a trailer-first music video"
+          : report.subjectKind === "scene_recreation"
+            ? "a trailer-grade scene recreation"
+            : report.experience === "funcinema"
+              ? "a private cinema short"
+              : "a cinematic short";
+    const audio =
+      report.subjectKind === "bedtime_story"
+        ? "Narration and very light classical music stay on."
+        : report.subjectKind === "music_video"
+          ? "Audio follows the track, chorus, and rhythm notes when they are enabled."
+          : report.subjectKind === "scene_recreation"
+            ? "Dialogue cadence and scene timing stay visible in the edit."
+            : report.audioEnabled
+              ? "Audio is enabled from the brief."
+              : "The cut stays visual-first with sound optional.";
+
+    const storyMoment =
+      report.storyCards?.[0]?.teaser ??
+      report.storyBeats?.[0] ??
+      (report.subjectKind === "scene_recreation"
+        ? "The source scene is reconstructed with trailer-grade tension."
+        : "The story brief becomes the main source of truth.");
+
+    return clampWordCount(
+      [
+        `${subject} is staged as ${scope} instead of a trading dossier.`,
+        report.subjectDescription
+          ? `Brief: ${report.subjectDescription}.`
+          : "Brief: the story prompt becomes the main source of truth.",
+        audio,
+        storyMoment ? `Direction: ${storyMoment}` : "",
+        report.narrativeSummary
+          ? `Long cut: ${report.narrativeSummary}`
+          : "Direction: keep the sequence concise, readable, and memorable.",
+      ].join(" "),
+      140,
+    );
+  }
+
   if (report.subjectKind === "token_video") {
     const chain = report.subjectChain ? `${report.subjectChain} ` : "";
     const subject =
@@ -96,7 +157,7 @@ export async function generateReportSummary(
         {
           role: "system",
           content:
-            "You are a trench cinema narrator. Use ONLY the JSON facts provided. Keep it memetic, funny, viral-tuned, and written as natural language (not a stat dump). If the subjectKind is token_video, write about the memecoin itself rather than a wallet. Do not invent any trades, tokens, timestamps, prices, or chain data. Output strictly JSON with one key: summary.",
+            "You are the Hash Cinema trailer room's four-lens narrator: film critic, movie critic, cinema artist, and financial lawyer. Use ONLY the JSON facts provided. Keep it memetic, funny, viral-tuned, and written as natural language (not a stat dump). If the subjectKind is token_video, write about the memecoin itself rather than a wallet. If the subjectKind is generic_cinema, bedtime_story, music_video, or scene_recreation, write about the brief, song, or source scene rather than a wallet or token. Do not invent any trades, tokens, timestamps, prices, legal claims, or chain data. Output strictly JSON with one key: summary.",
         },
         {
           role: "user",

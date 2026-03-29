@@ -201,6 +201,7 @@ export class RenderService {
       envResolution: env.VEO_OUTPUT_RESOLUTION,
     });
     const styleHints = metadata?.styleHints ?? [];
+    const generateAudio = metadata?.generateAudio ?? record.request.withSound;
     const chunks = buildSceneChunks({
       request: record.request,
       maxClipSeconds: env.VEO_MAX_CLIP_SECONDS,
@@ -219,7 +220,7 @@ export class RenderService {
         durationSeconds: chunk.durationSeconds,
         imageUrl: chunk.imageUrl,
         styleHints,
-        generateAudio: true,
+        generateAudio,
         storageUri: `gs://${env.FIREBASE_STORAGE_BUCKET}/video-renders/${record.jobId}/clips/${chunk.chunkId}`,
         onProgress: () => touchRenderJob(record.id),
       });

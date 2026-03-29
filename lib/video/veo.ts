@@ -49,7 +49,7 @@ export interface GoogleVeoRenderPayload {
   provider: "google_veo";
   model: "veo-3.1-fast-generate-001";
   resolution: "720p" | "1080p";
-  generateAudio: true;
+  generateAudio: boolean;
   prompt: string;
   styleHints: string[];
   tokenMetadata: VeoTokenMetadata[];
@@ -61,6 +61,9 @@ export interface GoogleVeoRenderPayload {
     subjectChain?: WalletStory["subjectChain"];
     subjectName?: string | null;
     subjectSymbol?: string | null;
+    experience?: WalletStory["experience"];
+    visibility?: WalletStory["visibility"];
+    audioEnabled?: boolean | null;
     rangeDays: number;
     packageType: WalletStory["packageType"];
     durationSeconds: number;
@@ -556,13 +559,86 @@ function buildThemeOverlay(promptScene?: VideoPromptScene): string {
   );
 }
 
+function buildCreativeStoryPrompt(input: {
+  story: WalletStory;
+  script: GeneratedCinematicScript;
+  generateAudio: boolean;
+}): string {
+  const subject = input.story.subjectName ?? "Untitled cinema brief";
+  const description = input.story.subjectDescription?.trim() ?? "Use the supplied story brief as the main source of truth.";
+  const direction = input.story.requestedPrompt?.trim() ?? "Keep the cut concise, visual, and replayable.";
+  const storyCards = input.story.storyCards?.length ? input.story.storyCards : [];
+  const storyCardLines = storyCards
+    .slice(0, 4)
+    .map(
+      (card) =>
+        `${card.phase}: ${card.title} | teaser=${card.teaser} | visual=${card.visualCue} | narration=${card.narrationCue} | transition=${card.transitionLabel}`,
+    )
+    .join("\n");
+  const beats = input.story.storyBeats?.slice(0, 6).join(" | ") ?? "beginning, escalation, closing image";
+  const tone =
+    input.story.storyKind === "bedtime_story"
+      ? "Build a safe, gentle bedtime short with calm pacing, warm visuals, and reassuring narration."
+      : input.story.storyKind === "music_video"
+        ? "Build a trailer-first music video. Let the beat, chorus, and performance language control the cut."
+        : input.story.storyKind === "scene_recreation"
+          ? "Build a trailer-grade scene recreation. Preserve dialogue cadence and blocking while remaking the skin."
+          : "Build a cinematic short for a general topic or story, not a trading recap.";
+  const audioRule =
+    input.story.storyKind === "bedtime_story"
+      ? "Narration must stay on and the music bed should feel like very light classical accompaniment."
+      : input.story.storyKind === "music_video"
+        ? input.generateAudio
+          ? "Audio is enabled. Follow the lyrics, beat, chorus, and musical dynamics without inventing new song facts."
+          : "Audio is muted for now, but the visual rhythm should still read like a music video ready for sound."
+        : input.story.storyKind === "scene_recreation"
+          ? input.generateAudio
+            ? "Audio is enabled. Preserve the dialogue cadence and source-scene timing without inventing new quotes."
+            : "Audio is muted for now, but the reconstruction should still preserve dialogue timing and scene blocking."
+          : input.generateAudio
+            ? "Audio is enabled. Use sparse voiceover and a restrained score that follows the lyrics or dialogue notes when present."
+            : "No narration, no music, no sound effects. The visual edit carries the story alone.";
+
+  const sceneLines = input.script.scenes
+    .slice(0, MAX_SCENES_IN_PROMPT)
+    .map((scene) => {
+      const imageAnchor = scene.imageUrl ? `image=${scene.imageUrl}` : "image=none";
+      return `Scene ${scene.sceneNumber} | visual=${truncateText(scene.visualPrompt, 160)} | narration=${truncateText(scene.narration, 100)} | ${imageAnchor}`;
+    })
+    .join("\n");
+
+  return [
+    tone,
+    `Subject: ${subject}.`,
+    `Brief: ${description}`,
+    `Direction: ${direction}`,
+    audioRule,
+    "Hard constraints: stay faithful to the supplied brief, keep continuity coherent, and never shift into memecoin or wallet analytics language.",
+    `Story beats: ${beats}.`,
+    storyCardLines ? `Story cards:\n${storyCardLines}` : "",
+    "Scene reel:",
+    sceneLines,
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
 function buildPrompt(input: {
   story: WalletStory;
   script: GeneratedCinematicScript;
   tokenMetadata: VeoTokenMetadata[];
   coherence: VeoCoherenceMetadata;
   sceneMetadata: VeoSceneMetadata[];
+  generateAudio: boolean;
 }): string {
+  if (input.story.storyKind !== "token_video") {
+    return buildCreativeStoryPrompt({
+      story: input.story,
+      script: input.script,
+      generateAudio: input.generateAudio,
+    });
+  }
+
   const trailerHook = sanitizePromptText(input.script.hookLine);
   const narrativeSummary = input.story.narrativeSummary?.trim()
     ? sanitizePromptText(input.story.narrativeSummary)
@@ -619,6 +695,11 @@ export function buildGoogleVeoRenderPayload(input: {
   model?: "veo-3.1-fast-generate-001";
   resolution?: "720p" | "1080p";
 }): GoogleVeoRenderPayload {
+  const generateAudio =
+    typeof input.walletStory.audioEnabled === "boolean"
+      ? input.walletStory.audioEnabled
+      : input.walletStory.storyKind === "bedtime_story" ||
+        input.walletStory.storyKind === "music_video";
   const tokenMetadata = buildTokenMetadata(input.walletStory);
   const coherence = resolveCoherence({
     story: input.walletStory,
@@ -635,21 +716,27 @@ export function buildGoogleVeoRenderPayload(input: {
     provider: "google_veo",
     model: input.model ?? "veo-3.1-fast-generate-001",
     resolution: input.resolution ?? "1080p",
-    generateAudio: true,
+    generateAudio,
     prompt: buildPrompt({
       story: input.walletStory,
       script: input.script,
       tokenMetadata,
       coherence,
       sceneMetadata,
+      generateAudio,
     }),
     styleHints: [
-      "memetic",
       "cinematic",
-      "high-energy-edit",
-      "captioned",
-      "satirical",
       "coherence-first",
+      ...(input.walletStory.storyKind === "token_video"
+        ? ["memetic", "high-energy-edit", "captioned", "satirical"]
+        : input.walletStory.storyKind === "bedtime_story"
+          ? ["bedtime", "gentle", "narration-led", "classical-soft"]
+          : input.walletStory.storyKind === "music_video"
+            ? ["music-video", "chorus-led", "performance-first", "beat-synced"]
+            : input.walletStory.storyKind === "scene_recreation"
+              ? ["scene-recreation", "dialogue-led", "continuity-first", "source-faithful"]
+              : ["story-led", "clean-edit", "design-forward"]),
     ],
     tokenMetadata,
     sceneMetadata,
@@ -660,6 +747,9 @@ export function buildGoogleVeoRenderPayload(input: {
       subjectChain: input.walletStory.subjectChain,
       subjectName: input.walletStory.subjectName,
       subjectSymbol: input.walletStory.subjectSymbol,
+      experience: input.walletStory.experience,
+      visibility: input.walletStory.visibility,
+      audioEnabled: input.walletStory.audioEnabled,
       rangeDays: input.walletStory.rangeDays,
       packageType: input.walletStory.packageType,
       durationSeconds: input.walletStory.durationSeconds,

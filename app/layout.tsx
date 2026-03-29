@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Mono, Space_Grotesk, Syne } from "next/font/google";
+import { AppClientProviders } from "@/components/providers/AppClientProviders";
 import { SiteHeader } from "@/components/SiteHeader";
 import "./globals.css";
 
@@ -21,9 +22,9 @@ const displayFont = Syne({
 });
 
 export const metadata: Metadata = {
-  title: "HashCinema | Multichain Memecoin Video Generator",
+  title: "HashArt.fun | HyperFlow Cinema Assembly",
   description:
-    "Generate low-cost cinematic videos for one memecoin at a time across Solana, Ethereum, BNB Chain, and Base.",
+    "Simple route launcher for HashCinema, TrenchCinema, FunCinema, FamilyCinema, MusicVideo, and Recreator with a backwards-compatible compute spine.",
 };
 
 export const viewport: Viewport = {
@@ -44,8 +45,10 @@ export default function RootLayout({
       <body
         className={`site-body ${bodyFont.variable} ${monoFont.variable} ${displayFont.variable} antialiased`}
       >
-        <SiteHeader />
-        <div className="site-content">{children}</div>
+        <AppClientProviders>
+          <SiteHeader />
+          <div className="site-content">{children}</div>
+        </AppClientProviders>
       </body>
     </html>
   );

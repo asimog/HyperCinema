@@ -441,8 +441,10 @@ textarea {
 }
 
 .field input,
+.field select,
 .field textarea,
 input,
+select,
 textarea {
   width: 100%;
   border-radius: 0.2rem;
@@ -457,17 +459,33 @@ textarea {
 }
 
 .field input::placeholder,
+.field select::placeholder,
 .field textarea::placeholder,
 input::placeholder,
+select::placeholder,
 textarea::placeholder {
   color: rgba(159, 199, 192, 0.62);
 }
 
 .field input:focus,
+.field select:focus,
 .field textarea:focus,
 input:focus,
+select:focus,
 textarea:focus {
   border-color: rgba(231, 245, 241, 0.48);
+}
+
+select {
+  appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, rgba(231, 245, 241, 0.75) 50%),
+    linear-gradient(135deg, rgba(231, 245, 241, 0.75) 50%, transparent 50%);
+  background-position:
+    calc(100% - 18px) calc(50% - 3px),
+    calc(100% - 12px) calc(50% - 3px);
+  background-size: 6px 6px;
+  background-repeat: no-repeat;
 }
 
 .inline-note,
@@ -502,6 +520,85 @@ textarea:focus {
   min-height: 18rem;
 }
 
+.simple-home-shell {
+  display: grid;
+  gap: 1rem;
+}
+
+.simple-home-hero {
+  display: grid;
+  gap: 1rem;
+}
+
+.form-row-grid,
+.moderation-grid {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.optional-panel {
+  border: 1px solid rgba(155, 200, 192, 0.18);
+  background: rgba(155, 200, 192, 0.04);
+}
+
+.optional-panel > summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 0.9rem 1rem;
+  font-size: 0.8rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent-soft);
+}
+
+.optional-panel > summary::-webkit-details-marker {
+  display: none;
+}
+
+.optional-panel-body {
+  padding: 0 1rem 1rem;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid rgba(155, 200, 192, 0.18);
+  background: rgba(155, 200, 192, 0.05);
+}
+
+.toggle-row input {
+  width: 1rem;
+  height: 1rem;
+}
+
+.toggle-row span {
+  color: var(--text-subtle);
+  font-size: 0.92rem;
+}
+
+.gate-panel {
+  max-width: 52rem;
+  margin: 0 auto;
+}
+
+.auth-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+
+.auth-pill span {
+  color: var(--accent-soft);
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .adapter-box-card .adapter-box-grid {
   margin-top: 0.75rem;
 }
@@ -526,6 +623,11 @@ textarea:focus {
 
   .module-grid-3x2 {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .form-row-grid,
+  .moderation-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 

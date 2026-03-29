@@ -69,6 +69,28 @@ function normalizeJobDocument(raw: JobDocument): JobDocument {
   const packageConfig = getPackageConfig(raw.packageType);
   return {
     ...raw,
+    pricingMode:
+      raw.pricingMode === "public" || raw.pricingMode === "private"
+        ? raw.pricingMode
+        : "legacy",
+    visibility: raw.visibility === "private" ? "private" : "public",
+    experience:
+      raw.experience === "hashcinema" ||
+      raw.experience === "trenchcinema" ||
+      raw.experience === "funcinema" ||
+      raw.experience === "familycinema"
+        ? raw.experience
+        : "legacy",
+    moderationStatus:
+      raw.moderationStatus === "flagged" || raw.moderationStatus === "hidden"
+        ? raw.moderationStatus
+        : "visible",
+    creatorId: raw.creatorId ?? null,
+    creatorEmail: raw.creatorEmail ?? null,
+    audioEnabled:
+      typeof raw.audioEnabled === "boolean"
+        ? raw.audioEnabled
+        : raw.requestKind === "bedtime_story",
     priceUsdc: raw.priceUsdc ?? packageConfig.priceUsdc,
     paymentMethod:
       raw.paymentMethod === "x402_usdc" ? "x402_usdc" : "sol_dedicated_address",
@@ -99,6 +121,23 @@ function normalizeJobDocument(raw: JobDocument): JobDocument {
     sweptLamports: Math.max(0, Math.floor(raw.sweptLamports ?? 0)),
     lastSweepAt: raw.lastSweepAt ?? null,
     sweepError: raw.sweepError ?? null,
+  };
+}
+
+function resolvePackagePricing(input: {
+  packageType: PackageType;
+  priceSol?: number;
+  priceUsdc?: number;
+  videoSeconds?: number;
+  rangeDays?: number;
+}) {
+  const pkg = getPackageConfig(input.packageType);
+  return {
+    packageType: pkg.packageType,
+    rangeDays: input.rangeDays ?? pkg.rangeDays,
+    priceSol: input.priceSol ?? pkg.priceSol,
+    priceUsdc: input.priceUsdc ?? pkg.priceUsdc,
+    videoSeconds: input.videoSeconds ?? pkg.videoSeconds,
   };
 }
 
@@ -286,8 +325,18 @@ export async function createTokenVideoJob(input: {
   subjectDescription?: string | null;
   stylePreset?: VideoStyleId | null;
   requestedPrompt?: string | null;
+  audioEnabled?: boolean | null;
+  pricingMode?: JobDocument["pricingMode"];
+  visibility?: JobDocument["visibility"];
+  experience?: JobDocument["experience"];
+  creatorId?: string | null;
+  creatorEmail?: string | null;
+  priceSol?: number;
+  priceUsdc?: number;
+  videoSeconds?: number;
+  rangeDays?: number;
 }): Promise<JobDocument> {
-  const pkg = getPackageConfig(input.packageType);
+  const pkg = resolvePackagePricing(input);
   const jobId = randomUUID();
 
   return getDb().runTransaction(async (tx) => {
@@ -317,6 +366,12 @@ export async function createTokenVideoJob(input: {
       jobId,
       wallet: input.tokenAddress,
       requestKind: "token_video",
+      pricingMode: input.pricingMode ?? "legacy",
+      visibility: input.visibility ?? "public",
+      experience: input.experience ?? "legacy",
+      moderationStatus: "visible",
+      creatorId: input.creatorId ?? null,
+      creatorEmail: input.creatorEmail ?? null,
       subjectAddress: input.tokenAddress,
       subjectChain: input.subjectChain,
       subjectName: input.subjectName ?? null,
@@ -325,6 +380,7 @@ export async function createTokenVideoJob(input: {
       subjectDescription: input.subjectDescription ?? null,
       stylePreset: input.stylePreset ?? null,
       requestedPrompt: input.requestedPrompt ?? null,
+      audioEnabled: input.audioEnabled ?? false,
       packageType: pkg.packageType,
       rangeDays: pkg.rangeDays,
       priceSol: pkg.priceSol,
@@ -371,8 +427,18 @@ export async function createX402PaidTokenVideoJob(input: {
   transaction: string;
   stylePreset?: VideoStyleId | null;
   requestedPrompt?: string | null;
+  audioEnabled?: boolean | null;
+  pricingMode?: JobDocument["pricingMode"];
+  visibility?: JobDocument["visibility"];
+  experience?: JobDocument["experience"];
+  creatorId?: string | null;
+  creatorEmail?: string | null;
+  priceSol?: number;
+  priceUsdc?: number;
+  videoSeconds?: number;
+  rangeDays?: number;
 }): Promise<JobDocument> {
-  const pkg = getPackageConfig(input.packageType);
+  const pkg = resolvePackagePricing(input);
   const jobId = randomUUID();
   const createdAt = nowIso();
   const paymentAddress = getRevenueWalletAddress();
@@ -381,6 +447,12 @@ export async function createX402PaidTokenVideoJob(input: {
     jobId,
     wallet: input.tokenAddress,
     requestKind: "token_video",
+    pricingMode: input.pricingMode ?? "legacy",
+    visibility: input.visibility ?? "public",
+    experience: input.experience ?? "legacy",
+    moderationStatus: "visible",
+    creatorId: input.creatorId ?? null,
+    creatorEmail: input.creatorEmail ?? null,
     subjectAddress: input.tokenAddress,
     subjectChain: input.subjectChain,
     subjectName: input.subjectName ?? null,
@@ -389,6 +461,7 @@ export async function createX402PaidTokenVideoJob(input: {
     subjectDescription: input.subjectDescription ?? null,
     stylePreset: input.stylePreset ?? null,
     requestedPrompt: input.requestedPrompt ?? null,
+    audioEnabled: input.audioEnabled ?? false,
     packageType: pkg.packageType,
     rangeDays: pkg.rangeDays,
     priceSol: pkg.priceSol,
@@ -422,6 +495,109 @@ export async function createX402PaidTokenVideoJob(input: {
   await jobsCollection().doc(jobId).set(job);
   await upsertDispatchOutboxPending(jobId);
   return job;
+}
+
+export async function createPromptVideoJob(input: {
+  requestKind:
+    | "generic_cinema"
+    | "bedtime_story"
+    | "music_video"
+    | "scene_recreation";
+  packageType: PackageType;
+  subjectName: string;
+  subjectDescription?: string | null;
+  stylePreset?: VideoStyleId | null;
+  requestedPrompt?: string | null;
+  audioEnabled?: boolean | null;
+  pricingMode?: JobDocument["pricingMode"];
+  visibility?: JobDocument["visibility"];
+  experience?: JobDocument["experience"];
+  creatorId?: string | null;
+  creatorEmail?: string | null;
+  priceSol?: number;
+  priceUsdc?: number;
+  videoSeconds?: number;
+  rangeDays?: number;
+}): Promise<JobDocument> {
+  const pkg = resolvePackagePricing(input);
+  const jobId = randomUUID();
+
+  return getDb().runTransaction(async (tx) => {
+    const createdAt = nowIso();
+    const counterRef = paymentCounterCollection().doc("payment_counter");
+    const counterSnap = await tx.get(counterRef);
+    const currentCounter = counterSnap.exists
+      ? (counterSnap.data()?.nextPaymentIndex as number | undefined)
+      : undefined;
+    const paymentIndex =
+      typeof currentCounter === "number" && Number.isInteger(currentCounter) && currentCounter > 0
+        ? currentCounter
+        : 1;
+
+    const paymentAddress = derivePaymentAddress(paymentIndex);
+
+    tx.set(
+      counterRef,
+      {
+        nextPaymentIndex: paymentIndex + 1,
+        updatedAt: createdAt,
+      },
+      { merge: true },
+    );
+
+    const job: JobDocument = {
+      jobId,
+      wallet: `${input.requestKind}:${jobId}`,
+      requestKind: input.requestKind,
+      pricingMode: input.pricingMode ?? "public",
+      visibility: input.visibility ?? "public",
+      experience: input.experience ?? "hashcinema",
+      moderationStatus: "visible",
+      creatorId: input.creatorId ?? null,
+      creatorEmail: input.creatorEmail ?? null,
+      subjectName: input.subjectName.trim(),
+      subjectDescription: input.subjectDescription?.trim() || null,
+      stylePreset: input.stylePreset ?? null,
+      requestedPrompt: input.requestedPrompt?.trim() || null,
+      audioEnabled:
+        typeof input.audioEnabled === "boolean"
+          ? input.audioEnabled
+          : input.requestKind === "bedtime_story" ||
+              input.requestKind === "music_video" ||
+              input.requestKind === "scene_recreation",
+      packageType: pkg.packageType,
+      rangeDays: pkg.rangeDays,
+      priceSol: pkg.priceSol,
+      priceUsdc: pkg.priceUsdc,
+      videoSeconds: pkg.videoSeconds,
+      status: "awaiting_payment",
+      progress: "awaiting_payment",
+      txSignature: null,
+      createdAt,
+      updatedAt: createdAt,
+      errorCode: null,
+      errorMessage: null,
+      paymentMethod: "sol_dedicated_address",
+      paymentCurrency: "SOL",
+      paymentNetwork: "solana",
+      x402Transaction: null,
+      paymentAddress,
+      paymentIndex,
+      paymentRouting: "dedicated_address",
+      requiredLamports: solToLamports(pkg.priceSol),
+      receivedLamports: 0,
+      paymentSignatures: [],
+      lastPaymentAt: null,
+      sweepStatus: "pending",
+      sweepSignature: null,
+      sweptLamports: 0,
+      lastSweepAt: null,
+      sweepError: null,
+    };
+
+    tx.set(jobsCollection().doc(jobId), job);
+    return job;
+  });
 }
 
 export async function getJob(jobId: string): Promise<JobDocument | null> {
@@ -669,7 +845,7 @@ export async function listCompletedJobArtifacts(
   limit: number,
 ): Promise<Array<{ job: JobDocument; report: ReportDocument | null; video: VideoDocument | null }>> {
   const baseLimit = Math.max(1, Math.floor(limit));
-  const queryLimit = Math.max(baseLimit * 3, baseLimit);
+  const queryLimit = Math.max(baseLimit * 6, baseLimit);
   const snapshot = await jobsCollection()
     .where("status", "==", "complete")
     .limit(queryLimit)
@@ -677,6 +853,7 @@ export async function listCompletedJobArtifacts(
 
   const jobs = snapshot.docs
     .map((doc) => normalizeJobDocument(doc.data() as JobDocument))
+    .filter((job) => job.visibility !== "private" && job.moderationStatus !== "hidden")
     .sort((a, b) => isoToMs(b.updatedAt) - isoToMs(a.updatedAt))
     .slice(0, baseLimit);
 
@@ -709,6 +886,7 @@ export async function listCompletedJobArtifactsByWallet(
 
   const jobs = snapshot.docs
     .map((doc) => normalizeJobDocument(doc.data() as JobDocument))
+    .filter((job) => job.visibility !== "private" && job.moderationStatus !== "hidden")
     .sort((a, b) => isoToMs(b.updatedAt) - isoToMs(a.updatedAt))
     .slice(0, baseLimit);
 
@@ -723,6 +901,74 @@ export async function listCompletedJobArtifactsByWallet(
   );
 
   return artifacts;
+}
+
+export async function listCompletedPrivateJobArtifactsByCreator(
+  creatorId: string,
+  limit: number,
+): Promise<Array<{ job: JobDocument; report: ReportDocument | null; video: VideoDocument | null }>> {
+  const baseLimit = Math.max(1, Math.floor(limit));
+  const trimmed = creatorId.trim();
+  if (!trimmed) return [];
+
+  const snapshot = await jobsCollection()
+    .where("status", "==", "complete")
+    .where("creatorId", "==", trimmed)
+    .limit(Math.max(baseLimit * 4, baseLimit))
+    .get();
+
+  const jobs = snapshot.docs
+    .map((doc) => normalizeJobDocument(doc.data() as JobDocument))
+    .filter((job) => job.visibility === "private")
+    .sort((a, b) => isoToMs(b.updatedAt) - isoToMs(a.updatedAt))
+    .slice(0, baseLimit);
+
+  return Promise.all(
+    jobs.map(async (job) => {
+      const [report, video] = await Promise.all([
+        getReport(job.jobId),
+        getVideo(job.jobId),
+      ]);
+      return { job, report, video };
+    }),
+  );
+}
+
+export async function listModerationJobArtifacts(
+  limit: number,
+): Promise<Array<{ job: JobDocument; report: ReportDocument | null; video: VideoDocument | null }>> {
+  const baseLimit = Math.max(1, Math.floor(limit));
+  const snapshot = await jobsCollection()
+    .where("status", "==", "complete")
+    .limit(Math.max(baseLimit * 6, baseLimit))
+    .get();
+
+  const jobs = snapshot.docs
+    .map((doc) => normalizeJobDocument(doc.data() as JobDocument))
+    .sort((a, b) => isoToMs(b.updatedAt) - isoToMs(a.updatedAt))
+    .slice(0, baseLimit);
+
+  return Promise.all(
+    jobs.map(async (job) => {
+      const [report, video] = await Promise.all([
+        getReport(job.jobId),
+        getVideo(job.jobId),
+      ]);
+      return { job, report, video };
+    }),
+  );
+}
+
+export async function updateJobModeration(
+  jobId: string,
+  moderationStatus: JobDocument["moderationStatus"],
+): Promise<void> {
+  await updateJob(jobId, {
+    moderationStatus:
+      moderationStatus === "flagged" || moderationStatus === "hidden"
+        ? moderationStatus
+        : "visible",
+  });
 }
 
 export async function updateJob(

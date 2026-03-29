@@ -90,6 +90,10 @@ const envSchema = z.object({
   ANALYTICS_ENGINE_MODE: z
     .enum(["v2_fallback_legacy", "v2", "legacy"])
     .default("v2_fallback_legacy"),
+  CROSSMINT_SERVER_API_KEY: z.string().min(1).optional(),
+  NEXT_PUBLIC_CROSSMINT_API_KEY: z.string().min(1).optional(),
+  CROSSMINT_COOKIE_DOMAIN: z.string().min(1).optional(),
+  CROSSMINT_ADMIN_ALLOWLIST: z.string().optional(),
 });
 
 export type AppEnv = z.infer<typeof envSchema>;
@@ -116,6 +120,14 @@ export function getEnv(): AppEnv {
     GOONBOOK_AGENT_BIO:
       trimOptionalEnvValue(process.env.GOONBOOK_AGENT_BIO) ??
       "HashArt.fun drops AI video trailers and posts them to GoonBook.",
+    CROSSMINT_SERVER_API_KEY: trimOptionalEnvValue(process.env.CROSSMINT_SERVER_API_KEY),
+    NEXT_PUBLIC_CROSSMINT_API_KEY: trimOptionalEnvValue(
+      process.env.NEXT_PUBLIC_CROSSMINT_API_KEY,
+    ),
+    CROSSMINT_COOKIE_DOMAIN: trimOptionalEnvValue(process.env.CROSSMINT_COOKIE_DOMAIN),
+    CROSSMINT_ADMIN_ALLOWLIST: trimOptionalEnvValue(
+      process.env.CROSSMINT_ADMIN_ALLOWLIST,
+    ),
     ALLOW_IN_PROCESS_WORKER:
       process.env.ALLOW_IN_PROCESS_WORKER ??
       (process.env.NODE_ENV === "production" ? "false" : "true"),

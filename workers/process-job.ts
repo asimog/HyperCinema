@@ -31,6 +31,7 @@ import { recoverJobIfNeeded } from "../lib/jobs/recovery";
 import { publishCompletedJobToGoonBook } from "../lib/social/goonbook-publisher";
 import { resolveMemecoinMetadata } from "../lib/memecoins/metadata";
 import { buildTokenVideoArtifacts } from "../lib/memecoins/story";
+import { buildPromptVideoArtifacts } from "../lib/generators/story";
 
 type AnalyticsEngineMode = ReturnType<typeof getEnv>["ANALYTICS_ENGINE_MODE"];
 const ANALYTICS_STAGE_TIMEOUT_MS = 4 * 60_000;
@@ -347,6 +348,80 @@ async function processTokenVideoJob(input: {
   ]);
 }
 
+async function processPromptVideoJob(input: {
+  job: JobDocument;
+}): Promise<void> {
+  const context = {
+    jobId: input.job.jobId,
+    wallet: input.job.wallet,
+  };
+
+  await updateJobProgress(input.job.jobId, "generating_report");
+  const computed = buildPromptVideoArtifacts({
+    job: input.job,
+  });
+
+  const summary = await timedStage(context, "generate_report_summary", async () =>
+    generateReportSummary(computed.report),
+  );
+
+  const report: ReportDocument = {
+    ...computed.report,
+    summary,
+    downloadUrl: null,
+  };
+
+  await upsertReport(report);
+
+  await updateJobProgress(input.job.jobId, "generating_script");
+  await updateJobProgress(input.job.jobId, "generating_video");
+  await upsertVideo({
+    jobId: input.job.jobId,
+    videoUrl: null,
+    thumbnailUrl: null,
+    duration: input.job.videoSeconds,
+    renderStatus: "queued",
+  });
+
+  const rendered = await withProgressHeartbeat({
+    jobId: input.job.jobId,
+    progress: "generating_video",
+    operation: async () =>
+      timedStage(context, "build_and_render_video", async () =>
+        buildAndRenderVideo({
+          jobId: input.job.jobId,
+          walletStory: computed.story,
+        }),
+      ),
+  });
+
+  const { storedVideoUrl, reportUrl, thumbnailUrl } = await uploadRenderedAssets({
+    jobId: input.job.jobId,
+    context,
+    rendered,
+    report,
+  });
+
+  await Promise.all([
+    upsertReport({
+      ...report,
+      downloadUrl: reportUrl,
+    }),
+    upsertVideo({
+      jobId: input.job.jobId,
+      videoUrl: storedVideoUrl,
+      thumbnailUrl,
+      duration: input.job.videoSeconds,
+      renderStatus: "ready",
+    }),
+    updateJobStatus(input.job.jobId, "complete", {
+      progress: "complete",
+      errorCode: null,
+      errorMessage: null,
+    }),
+  ]);
+}
+
 export async function processJob(jobId: string): Promise<void> {
   const env = getEnv();
   const mode: AnalyticsEngineMode = env.ANALYTICS_ENGINE_MODE;
@@ -404,6 +479,16 @@ export async function processJob(jobId: string): Promise<void> {
         });
       }
 
+      return;
+    }
+
+    if (
+      job.requestKind === "generic_cinema" ||
+      job.requestKind === "bedtime_story" ||
+      job.requestKind === "music_video" ||
+      job.requestKind === "scene_recreation"
+    ) {
+      await processPromptVideoJob({ job });
       return;
     }
 

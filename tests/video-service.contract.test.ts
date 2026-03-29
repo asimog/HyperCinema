@@ -177,7 +177,7 @@ describe("video-service /render contract", () => {
     });
 
     expect(response.statusCode).toBe(400);
-    expect(response.json().error).toContain("withSound must be true");
+    expect(response.json().error).toContain("withSound must match metadata.generateAudio");
   });
 
   it("rejects unsupported Veo model IDs", async () => {

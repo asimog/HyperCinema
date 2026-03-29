@@ -7,7 +7,28 @@ import type {
 
 export type PackageType = "1d" | "2d" | "3d";
 
-export type JobRequestKind = "wallet_recap" | "token_video";
+export type JobRequestKind =
+  | "wallet_recap"
+  | "token_video"
+  | "generic_cinema"
+  | "bedtime_story"
+  | "music_video"
+  | "scene_recreation";
+
+export type CinemaPricingMode = "legacy" | "public" | "private";
+
+export type CinemaVisibility = "public" | "private";
+
+export type CinemaExperience =
+  | "legacy"
+  | "hashcinema"
+  | "trenchcinema"
+  | "funcinema"
+  | "familycinema"
+  | "musicvideo"
+  | "recreator";
+
+export type ModerationStatus = "visible" | "flagged" | "hidden";
 
 export type SupportedTokenChain = "solana" | "ethereum" | "bsc" | "base";
 
@@ -69,18 +90,39 @@ export interface TokenMarketSnapshot {
   pairUrl: string | null;
 }
 
+export interface StoryCard {
+  id: string;
+  phase: "hook" | "build" | "payoff" | "continuation";
+  title: string;
+  teaser: string;
+  visualCue: string;
+  narrationCue: string;
+  transitionLabel: string;
+}
+
 export interface JobDocument {
   jobId: string;
   wallet: string;
   requestKind?: JobRequestKind;
+  pricingMode?: CinemaPricingMode;
+  visibility?: CinemaVisibility;
+  experience?: CinemaExperience;
+  moderationStatus?: ModerationStatus;
+  creatorId?: string | null;
+  creatorEmail?: string | null;
   subjectAddress?: string;
   subjectChain?: SupportedTokenChain | null;
   subjectName?: string | null;
   subjectSymbol?: string | null;
   subjectImage?: string | null;
   subjectDescription?: string | null;
+  sourceMediaUrl?: string | null;
+  sourceEmbedUrl?: string | null;
+  sourceMediaProvider?: string | null;
+  sourceTranscript?: string | null;
   stylePreset?: VideoStyleId | null;
   requestedPrompt?: string | null;
+  audioEnabled?: boolean | null;
   packageType: PackageType;
   rangeDays: number;
   priceSol: number;
@@ -185,15 +227,28 @@ export interface ReportDocument {
   wallet: string;
   rangeDays: number;
   subjectKind?: JobRequestKind;
+  pricingMode?: CinemaPricingMode;
+  visibility?: CinemaVisibility;
+  experience?: CinemaExperience;
+  moderationStatus?: ModerationStatus;
+  creatorId?: string | null;
+  creatorEmail?: string | null;
   subjectAddress?: string | null;
   subjectChain?: SupportedTokenChain | null;
   subjectName?: string | null;
   subjectSymbol?: string | null;
   subjectImage?: string | null;
   subjectDescription?: string | null;
+  sourceMediaUrl?: string | null;
+  sourceEmbedUrl?: string | null;
+  sourceMediaProvider?: string | null;
+  sourceTranscript?: string | null;
   stylePreset?: VideoStyleId | null;
   styleLabel?: string | null;
   durationSeconds?: number;
+  audioEnabled?: boolean | null;
+  storyCards?: StoryCard[];
+  continuationPrompt?: string | null;
   tokenLinks?: TokenLink[];
   marketSnapshot?: TokenMarketSnapshot;
   pumpTokensTraded: number;
@@ -282,15 +337,25 @@ export interface WalletStoryTokenMetadata {
 export interface WalletStory {
   wallet: string;
   storyKind?: JobRequestKind;
+  pricingMode?: CinemaPricingMode;
+  visibility?: CinemaVisibility;
+  experience?: CinemaExperience;
   subjectAddress?: string;
   subjectChain?: SupportedTokenChain | null;
   subjectName?: string | null;
   subjectSymbol?: string | null;
   subjectImage?: string | null;
   subjectDescription?: string | null;
+  sourceMediaUrl?: string | null;
+  sourceEmbedUrl?: string | null;
+  sourceMediaProvider?: string | null;
+  sourceTranscript?: string | null;
   stylePreset?: VideoStyleId | null;
   styleLabel?: string | null;
   requestedPrompt?: string | null;
+  audioEnabled?: boolean | null;
+  storyCards?: StoryCard[];
+  continuationPrompt?: string | null;
   tokenLinks?: TokenLink[];
   marketSnapshot?: TokenMarketSnapshot;
   rangeDays: number;

@@ -22,7 +22,7 @@ const ALLOWED_VEO_MODEL = "veo-3.1-fast-generate-001" as const;
 export interface GenerateClipInput {
   model: typeof ALLOWED_VEO_MODEL;
   resolution: "720p" | "1080p";
-  generateAudio: true;
+  generateAudio: boolean;
   prompt: string;
   durationSeconds: number;
   imageUrl?: string | null;

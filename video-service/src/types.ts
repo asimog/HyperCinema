@@ -89,6 +89,17 @@ const sceneMetadataSchema = z.object({
 
 const storyMetadataSchema = z.object({
   wallet: z.string().min(1),
+  storyKind: z.string().optional(),
+  subjectAddress: z.string().optional(),
+  subjectChain: z.string().optional(),
+  subjectName: z.string().nullable().optional(),
+  subjectSymbol: z.string().nullable().optional(),
+  experience: z.string().optional(),
+  visibility: z.string().optional(),
+  audioEnabled: z.boolean().nullable().optional(),
+  sourceMediaUrl: z.string().url().nullable().optional(),
+  sourceEmbedUrl: z.string().url().nullable().optional(),
+  sourceMediaProvider: z.string().nullable().optional(),
   rangeDays: z.number().int().positive(),
   packageType: z.enum(["1d", "2d", "3d"]),
   durationSeconds: z.number().int().positive(),

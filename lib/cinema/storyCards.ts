@@ -62,6 +62,7 @@ export function buildContinuationPrompt(input: {
   subjectDescription?: string | null;
   requestedPrompt?: string | null;
   sourceTranscript?: string | null;
+  sourceReferenceLabel?: string | null;
   storyBeats?: string[] | null;
 }): string {
   const subject = input.subjectName?.trim() || "this trailer";
@@ -78,6 +79,9 @@ export function buildContinuationPrompt(input: {
     `Continue ${subject} as the next trailer beat.`,
     description,
     direction,
+    input.sourceReferenceLabel
+      ? `Keep the source reference visible in the world logic: ${input.sourceReferenceLabel}.`
+      : "",
     transcriptHint ? `Keep the dialogue spine anchored to: ${transcriptHint}` : "",
     beatHint ? `Carry forward these prior beats: ${beatHint}` : "",
   ]
@@ -91,6 +95,7 @@ export function buildStoryCards(input: {
   subjectDescription?: string | null;
   requestedPrompt?: string | null;
   sourceTranscript?: string | null;
+  sourceReferenceLabel?: string | null;
   storyBeats?: string[] | null;
   audioEnabled?: boolean | null;
 }): StoryCard[] {
@@ -115,7 +120,9 @@ export function buildStoryCards(input: {
       phase: "hook",
       title: `${subject} / Hook`,
       teaser: beats[0] ?? description,
-      visualCue: `Open with a ${tone} first image that tells the audience what world they entered.`,
+      visualCue: input.sourceReferenceLabel
+        ? `Open with a ${tone} first image that quotes the source iconography from ${input.sourceReferenceLabel} before the world expands.`
+        : `Open with a ${tone} first image that tells the audience what world they entered.`,
       narrationCue: takeTranscriptBeat(
         transcriptLines,
         0,
@@ -129,7 +136,9 @@ export function buildStoryCards(input: {
       title: `${subject} / Build`,
       teaser: beats[1] ?? direction,
       visualCue:
-        "Raise motion, scale, or camera aggression while keeping the protagonist or source iconography stable.",
+        input.sourceReferenceLabel
+          ? `Raise motion, scale, or camera aggression while keeping the protagonist and the source iconography from ${input.sourceReferenceLabel} stable.`
+          : "Raise motion, scale, or camera aggression while keeping the protagonist or source iconography stable.",
       narrationCue: takeTranscriptBeat(
         transcriptLines,
         1,

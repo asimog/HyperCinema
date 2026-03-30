@@ -357,7 +357,7 @@ async function processPromptVideoJob(input: {
   };
 
   await updateJobProgress(input.job.jobId, "generating_report");
-  const computed = buildPromptVideoArtifacts({
+  const computed = await buildPromptVideoArtifacts({
     job: input.job,
   });
 

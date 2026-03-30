@@ -143,7 +143,7 @@ const ONE_LINER_FAMILIES: OneLinerFamily[] = [
     ],
     closers: [
       "and never once checked whether the crowd deserved it",
-      "with enough belief to power the captions",
+      "with enough belief to power the whole cut",
       "while uncertainty got edited out in post",
       "because nuance was terrible for morale",
     ],
@@ -596,7 +596,7 @@ export const VIDEO_VISUAL_SYMBOLS = [
   "glowing chart lines as skyline texture",
   "storm clouds over a digital skyline",
   "sunrise after a trench night",
-  "group-chat screenshots floating like subtitles",
+  "group-chat screenshots floating like translucent windows",
   "boxing gloves hanging on ring ropes",
   "train doors closing under holographic signage",
   "shrine candles and token posters",

@@ -270,6 +270,8 @@ describe("google veo prompt engine", () => {
     expect(payload.prompt.includes("Token image anchors:")).toBe(true);
     expect(payload.prompt.includes("Hard constraints:")).toBe(true);
     expect(payload.prompt.includes("This is cinema, not analytics.")).toBe(true);
+    expect(payload.styleHints).toContain("text-free-by-default");
+    expect(payload.styleHints).not.toContain("captioned");
     expect(payload.prompt.includes("4.8 SOL")).toBe(false);
     expect(payload.prompt.includes("0.21 SOL")).toBe(false);
   });
@@ -351,6 +353,44 @@ describe("google veo prompt engine", () => {
     expect(payload.prompt).toContain(
       "Audio is enabled. Preserve the dialogue cadence and source-scene timing without inventing new quotes.",
     );
+    expect(payload.prompt.includes("This is cinema, not analytics.")).toBe(false);
+  });
+
+  it("grounds generic cinema in the external source and blocks subtitles by default", () => {
+    const payload = buildGoogleVeoRenderPayload({
+      walletStory: buildStory({
+        storyKind: "generic_cinema",
+        subjectName: "You're My Honeybunch",
+        subjectDescription: "A 90s VHS nursery-rhyme adaptation.",
+        requestedPrompt: "Make it feel like a memory, not a lyric video.",
+        audioEnabled: false,
+        sourceMediaUrl: "https://www.youtube.com/watch?v=x55A69SSvsg",
+        sourceMediaProvider: "youtube",
+        sourceReference: {
+          provider: "youtube",
+          url: "https://www.youtube.com/watch?v=x55A69SSvsg",
+          embedUrl: null,
+          title: "You are my honey bunch , cuppy cake song,sugar plum song with lyrics",
+          authorName: "Baby Syrup",
+          thumbnailUrl: "https://i.ytimg.com/vi/x55A69SSvsg/hqdefault.jpg",
+          transcriptExcerpt: "Honeybunch, cuppy cake, sugar plum.",
+          referenceMode: "music_reference",
+        },
+      }),
+      script: buildScript(),
+    });
+
+    expect(payload.prompt).toContain("HyperFlow Interface Assembly boxes:");
+    expect(payload.prompt).toContain("Tianshi");
+    expect(payload.prompt).toContain(
+      "YOUTUBE: You are my honey bunch , cuppy cake song,sugar plum song with lyrics by Baby Syrup",
+    );
+    expect(payload.prompt).toContain(
+      "Treat the source as a music or nursery-rhyme reference.",
+    );
+    expect(payload.prompt).toContain("No subtitles, lyric captions");
+    expect(payload.styleHints).toContain("text-free-by-default");
+    expect(payload.styleHints).not.toContain("captioned");
     expect(payload.prompt.includes("This is cinema, not analytics.")).toBe(false);
   });
 });

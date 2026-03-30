@@ -3,6 +3,15 @@ import {
   alignSceneStatesToCount,
   buildSceneContinuityPrompt,
 } from "@/lib/analytics/videoCoherence";
+import {
+  buildCinematographyKnowledgeLines,
+  buildCreativeAssemblyLines,
+} from "@/lib/cinema/knowledgeBank";
+import {
+  allowsOnScreenText,
+  buildOnScreenTextPolicy,
+  buildSourceReferencePrompt,
+} from "@/lib/cinema/sourceReference";
 import { buildStoryCards } from "@/lib/cinema/storyCards";
 import { logger } from "@/lib/logging/logger";
 import {
@@ -189,6 +198,11 @@ function buildCinematicPromptInput(story: WalletStory): Record<string, unknown> 
     subjectName: story.subjectName,
     subjectSymbol: story.subjectSymbol,
     subjectDescription: story.subjectDescription,
+    sourceMediaUrl: story.sourceMediaUrl,
+    sourceEmbedUrl: story.sourceEmbedUrl,
+    sourceMediaProvider: story.sourceMediaProvider,
+    sourceTranscript: story.sourceTranscript,
+    sourceReference: story.sourceReference,
     stylePreset: story.stylePreset,
     styleLabel: story.styleLabel,
     requestedPrompt: story.requestedPrompt,
@@ -209,6 +223,36 @@ function buildCinematicPromptInput(story: WalletStory): Record<string, unknown> 
     funObservations: story.funObservations,
     keyEvents: story.keyEvents,
   };
+}
+
+function buildScriptSystemPrompt(
+  template: string,
+  story: WalletStory,
+): string {
+  const allowOnScreenText = allowsOnScreenText({
+    requestedPrompt: story.requestedPrompt,
+    subjectDescription: story.subjectDescription,
+  });
+
+  return [
+    template,
+    "",
+    ...buildCreativeAssemblyLines({
+      storyKind: story.storyKind,
+      source: story.sourceReference,
+    }),
+    "",
+    ...buildCinematographyKnowledgeLines(story.storyKind),
+    "",
+    "Source grounding:",
+    ...buildSourceReferencePrompt(story.sourceReference),
+    buildOnScreenTextPolicy({
+      source: story.sourceReference,
+      allowOnScreenText,
+    }),
+  ]
+    .filter(Boolean)
+    .join("\n");
 }
 
 export function buildFallbackCinematicScript(
@@ -325,7 +369,7 @@ export async function generateCinematicScript(
       messages: [
         {
           role: "system",
-          content: template,
+          content: buildScriptSystemPrompt(template, story),
         },
         {
           role: "user",

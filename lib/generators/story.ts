@@ -1,4 +1,8 @@
 import { buildContinuationPrompt, buildStoryCards } from "@/lib/cinema/storyCards";
+import {
+  resolveSourceReferenceSummary,
+  sourceReferenceLabel,
+} from "@/lib/cinema/sourceReference";
 import { getTokenVideoStylePreset } from "@/lib/memecoins/styles";
 import { JobDocument, ReportDocument, WalletStory } from "@/lib/types/domain";
 
@@ -84,39 +88,55 @@ function buildStoryBeats(input: {
   ];
 }
 
-function buildBehaviorPatterns(job: JobDocument, styleLabel: string): string[] {
+function buildBehaviorPatterns(
+  job: JobDocument,
+  styleLabel: string,
+  sourceLabel: string | null,
+): string[] {
   if (job.requestKind === "bedtime_story") {
     return [
       "Narration-first pacing built for winding down instead of spiking attention.",
       "Very soft classical underscore with warm visual continuity across scenes.",
+      sourceLabel
+        ? `A cited source still feeds the visual world, but the bedtime tone stays calm and non-literal.`
+        : null,
       `Style reference stays anchored to ${styleLabel.toLowerCase()} while protecting a calm bedtime tone.`,
-    ];
+    ].filter((item): item is string => Boolean(item));
   }
 
   if (job.requestKind === "music_video") {
     return [
       "Beat-aware pacing keeps the edit locked to the track, chorus, and refrains.",
       "Lyrics or song notes steer the camera language more than any analytics spine.",
+      sourceLabel
+        ? `The source reference ${sourceLabel} remains visible in the emotional and visual logic of the cut.`
+        : null,
       `Style reference stays anchored to ${styleLabel.toLowerCase()} while protecting a performance-film tone.`,
-    ];
+    ].filter((item): item is string => Boolean(item));
   }
 
   if (job.requestKind === "scene_recreation") {
     return [
       "Dialogue cadence and blocking cues drive the reconstruction instead of wallet stats.",
       "The source scene sets the spine; the remake can change the skin and scale.",
+      sourceLabel
+        ? `The source reference ${sourceLabel} must stay legible in the staging choices, not only in the brief text.`
+        : null,
       `Style reference stays anchored to ${styleLabel.toLowerCase()} while protecting source-scene fidelity.`,
-    ];
+    ].filter((item): item is string => Boolean(item));
   }
 
   return [
     "Prompt-driven cinematic generation rather than token-analytics storytelling.",
     "Character references and story notes drive the shot design and narration arc.",
+    sourceLabel
+      ? `Source intake is active: ${sourceLabel} is a primary visual and emotional reference, not a discarded link.`
+      : null,
     `${audioDirection(job)} ${styleLabel} controls the visual finish.`,
-  ];
+  ].filter((item): item is string => Boolean(item));
 }
 
-function buildFunObservations(job: JobDocument): string[] {
+function buildFunObservations(job: JobDocument, sourceLabel: string | null): string[] {
   if (job.requestKind === "bedtime_story") {
     return [
       "The bedtime mode keeps the pacing soft enough for end-of-day viewing.",
@@ -128,24 +148,33 @@ function buildFunObservations(job: JobDocument): string[] {
   if (job.requestKind === "music_video") {
     return [
       "The track can behave like a trailer hook instead of a static audio bed.",
+      sourceLabel
+        ? `The source reference stays in play as a mood and iconography guide instead of disappearing after intake.`
+        : null,
       "Verse, bridge, and chorus moments can all become visual story beats.",
       "The cut can read like a tour poster that learned how to move.",
-    ];
+    ].filter((item): item is string => Boolean(item));
   }
 
   if (job.requestKind === "scene_recreation") {
     return [
       "A remembered scene becomes a trailer-grade reinterpretation instead of a copy.",
       "Dialogue, blocking, and emotional timing stay intact even when the skin changes.",
+      sourceLabel
+        ? `The source reference ${sourceLabel} becomes a staging reference rather than an afterthought.`
+        : null,
       "The reconstruction can feel like a remake trailer that knows the source text deeply.",
-    ];
+    ].filter((item): item is string => Boolean(item));
   }
 
   return [
     "This mode treats prompts, characters, and lyrical notes as the primary source material.",
+    sourceLabel
+      ? `The source reference is explicitly carried into the scene plan instead of being ignored after job creation.`
+      : null,
     "The story can be visual-only by default, then opt into sound when the brief calls for it.",
     "The generator is not locked to memecoins, wallets, or chain metadata.",
-  ];
+  ].filter((item): item is string => Boolean(item));
 }
 
 function buildMemorableMoments(job: JobDocument): string[] {
@@ -176,7 +205,10 @@ function buildMemorableMoments(job: JobDocument): string[] {
   ];
 }
 
-function buildNarrativeSummary(job: JobDocument): string {
+function buildNarrativeSummary(
+  job: JobDocument,
+  sourceLabel: string | null,
+): string {
   const subject = trimOrNull(job.subjectName) ?? "Untitled brief";
   const description =
     trimOrNull(job.subjectDescription) ??
@@ -192,6 +224,7 @@ function buildNarrativeSummary(job: JobDocument): string {
   return [
     `${subject} is staged as a ${job.videoSeconds}-second ${requestKindLabel(job.requestKind)}.`,
     description,
+    sourceLabel ? `Primary source reference: ${sourceLabel}.` : null,
     audioDirection(job),
     requested ? `Creative direction: ${requested}` : null,
   ]
@@ -199,13 +232,22 @@ function buildNarrativeSummary(job: JobDocument): string {
     .join(" ");
 }
 
-export function buildPromptVideoArtifacts(input: {
+export async function buildPromptVideoArtifacts(input: {
   job: JobDocument;
-}): {
+}): Promise<{
   report: Omit<ReportDocument, "summary" | "downloadUrl">;
   story: WalletStory;
-} {
+}> {
   const style = getTokenVideoStylePreset(input.job.stylePreset);
+  const sourceReference = await resolveSourceReferenceSummary({
+    requestKind: input.job.requestKind,
+    sourceMediaUrl: input.job.sourceMediaUrl,
+    sourceEmbedUrl: input.job.sourceEmbedUrl,
+    sourceMediaProvider: input.job.sourceMediaProvider,
+    sourceTranscript: input.job.sourceTranscript,
+    subjectDescription: input.job.subjectDescription,
+  });
+  const sourceLabel = sourceReferenceLabel(sourceReference);
   const subjectName =
     trimOrNull(input.job.subjectName) ??
     (input.job.requestKind === "bedtime_story"
@@ -216,12 +258,14 @@ export function buildPromptVideoArtifacts(input: {
           ? "Scene Recreation Brief"
           : "HashCinema Brief");
   const subjectDescription = trimOrNull(input.job.subjectDescription);
-  const narrativeSummary = buildNarrativeSummary(input.job);
+  const narrativeSummary = buildNarrativeSummary(input.job, sourceLabel);
   const storyCards = buildStoryCards({
     requestKind: input.job.requestKind,
     subjectName,
     subjectDescription,
     requestedPrompt: trimOrNull(input.job.requestedPrompt),
+    sourceTranscript: input.job.sourceTranscript,
+    sourceReferenceLabel: sourceLabel,
     storyBeats: null,
     audioEnabled:
       typeof input.job.audioEnabled === "boolean"
@@ -239,10 +283,12 @@ export function buildPromptVideoArtifacts(input: {
     subjectName,
     subjectDescription,
     requestedPrompt: trimOrNull(input.job.requestedPrompt),
+    sourceTranscript: input.job.sourceTranscript,
+    sourceReferenceLabel: sourceLabel,
     storyBeats,
   });
-  const behaviorPatterns = buildBehaviorPatterns(input.job, style.label);
-  const funObservations = buildFunObservations(input.job);
+  const behaviorPatterns = buildBehaviorPatterns(input.job, style.label, sourceLabel);
+  const funObservations = buildFunObservations(input.job, sourceLabel);
   const memorableMoments = buildMemorableMoments(input.job);
 
   const story: WalletStory = {
@@ -253,6 +299,11 @@ export function buildPromptVideoArtifacts(input: {
     experience: input.job.experience,
     subjectName,
     subjectDescription,
+    sourceMediaUrl: input.job.sourceMediaUrl,
+    sourceEmbedUrl: input.job.sourceEmbedUrl,
+    sourceMediaProvider: input.job.sourceMediaProvider,
+    sourceTranscript: input.job.sourceTranscript,
+    sourceReference,
     stylePreset: style.id,
     styleLabel: style.label,
     requestedPrompt: trimOrNull(input.job.requestedPrompt),
@@ -308,6 +359,11 @@ export function buildPromptVideoArtifacts(input: {
     creatorEmail: input.job.creatorEmail ?? null,
     subjectName,
     subjectDescription,
+    sourceMediaUrl: input.job.sourceMediaUrl,
+    sourceEmbedUrl: input.job.sourceEmbedUrl,
+    sourceMediaProvider: input.job.sourceMediaProvider,
+    sourceTranscript: input.job.sourceTranscript,
+    sourceReference,
     stylePreset: style.id,
     styleLabel: style.label,
     durationSeconds: input.job.videoSeconds,

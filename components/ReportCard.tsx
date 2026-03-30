@@ -185,6 +185,34 @@ export function ReportCard({ report, reportUrl }: ReportCardProps) {
         <span>Summary</span>
         <p>{summary}</p>
       </div>
+
+      {report.sourceReference ? (
+        <div className="summary-card">
+          <span>Source Reference</span>
+          <p>
+            {report.sourceReference.title ?? report.sourceReference.url ?? "External source"}
+            {report.sourceReference.authorName
+              ? ` by ${report.sourceReference.authorName}`
+              : ""}
+            {report.sourceReference.provider
+              ? ` (${report.sourceReference.provider})`
+              : ""}
+          </p>
+          {report.sourceReference.transcriptExcerpt ? (
+            <p>{report.sourceReference.transcriptExcerpt}</p>
+          ) : null}
+          {report.sourceReference.url ? (
+            <a
+              href={report.sourceReference.url}
+              target="_blank"
+              rel="noreferrer"
+              className="button button-secondary"
+            >
+              Open source
+            </a>
+          ) : null}
+        </div>
+      ) : null}
     </section>
   );
 }

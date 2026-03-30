@@ -68,6 +68,8 @@ function buildPromptRequest(): NextRequest {
       requestKind: "generic_cinema",
       subjectName: "HashArt teaser",
       subjectDescription: "A minimal route launcher short.",
+      sourceMediaUrl: "https://www.youtube.com/watch?v=x55A69SSvsg",
+      sourceTranscript: "Open on the hook.\nRide the beat.",
       packageType: "1d",
       pricingMode: "public",
       visibility: "public",
@@ -215,6 +217,13 @@ describe("POST /api/jobs", () => {
     expect(body.jobId).toBe("job-prompt-1");
     expect(body.pricingMode).toBe("public");
     expect(mocks.createPromptVideoJob).toHaveBeenCalledTimes(1);
+    expect(mocks.createPromptVideoJob).toHaveBeenCalledWith(
+      expect.objectContaining({
+        requestKind: "generic_cinema",
+        sourceMediaUrl: "https://www.youtube.com/watch?v=x55A69SSvsg",
+        sourceTranscript: "Open on the hook.\nRide the beat.",
+      }),
+    );
   });
 
   it("creates a prompt-driven music video job with audio enabled by default", async () => {

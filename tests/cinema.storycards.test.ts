@@ -57,4 +57,18 @@ describe("cinema story cards", () => {
     expect(cards[3]?.narrationCue).toContain("Carry forward these prior beats");
     expect(cards[3]?.narrationCue).toContain("Open by naming the source scene");
   });
+
+  it("keeps source iconography present in generic cinema story cards", () => {
+    const cards = buildStoryCards({
+      requestKind: "generic_cinema",
+      subjectName: "You're My Honeybunch",
+      subjectDescription: "A 90s VHS nursery-rhyme adaptation.",
+      sourceReferenceLabel:
+        "YOUTUBE: You are my honey bunch , cuppy cake song,sugar plum song with lyrics by Baby Syrup",
+      audioEnabled: false,
+    });
+
+    expect(cards[0]?.visualCue).toContain("quotes the source iconography");
+    expect(cards[1]?.visualCue).toContain("source iconography");
+  });
 });

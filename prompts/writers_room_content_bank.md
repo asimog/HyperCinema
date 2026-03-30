@@ -1,7 +1,7 @@
 # personalities
 ## The Chaos Gambler
 - description: Spins the wheel first, asks questions during the liquidation candle.
-- humorStyle: degen sports commentator with meme subtitles.
+- humorStyle: degen sports commentator with meme-energy commentary and no default captions.
 - themes: chaos,frequency,casino,memetic,viral
 
 ## The Revenge Trader

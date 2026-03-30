@@ -39,7 +39,8 @@ export type VideoStyleId =
   | "trading_card"
   | "trench_neon"
   | "mythic_poster"
-  | "glass_signal";
+  | "glass_signal"
+  | "crt_anime_90s";
 
 export type PaymentMethod = "sol_dedicated_address" | "x402_usdc";
 
@@ -88,6 +89,17 @@ export interface TokenMarketSnapshot {
   liquidityUsd: number | null;
   volume24hUsd: number | null;
   pairUrl: string | null;
+}
+
+export interface SourceReferenceSummary {
+  provider: string;
+  url: string | null;
+  embedUrl: string | null;
+  title: string | null;
+  authorName: string | null;
+  thumbnailUrl: string | null;
+  transcriptExcerpt: string | null;
+  referenceMode: "reference_video" | "music_reference" | "scene_reference";
 }
 
 export interface StoryCard {
@@ -243,6 +255,7 @@ export interface ReportDocument {
   sourceEmbedUrl?: string | null;
   sourceMediaProvider?: string | null;
   sourceTranscript?: string | null;
+  sourceReference?: SourceReferenceSummary | null;
   stylePreset?: VideoStyleId | null;
   styleLabel?: string | null;
   durationSeconds?: number;
@@ -350,6 +363,7 @@ export interface WalletStory {
   sourceEmbedUrl?: string | null;
   sourceMediaProvider?: string | null;
   sourceTranscript?: string | null;
+  sourceReference?: SourceReferenceSummary | null;
   stylePreset?: VideoStyleId | null;
   styleLabel?: string | null;
   requestedPrompt?: string | null;

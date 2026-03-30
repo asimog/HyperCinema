@@ -33,6 +33,7 @@ const styleSchema = z.enum([
   "trench_neon",
   "mythic_poster",
   "glass_signal",
+  "crt_anime_90s",
 ]);
 
 const sharedCinemaSchema = z.object({
@@ -71,6 +72,10 @@ const promptVideoSchema = sharedCinemaSchema.extend({
   ]),
   subjectName: z.string().min(2).max(120),
   subjectDescription: z.string().max(4_000).optional(),
+  sourceMediaUrl: z.string().url().max(1_500).optional(),
+  sourceEmbedUrl: z.string().url().max(1_500).optional(),
+  sourceMediaProvider: z.string().max(64).optional(),
+  sourceTranscript: z.string().max(12_000).optional(),
 });
 
 const createJobSchema = z.union([tokenVideoSchema, promptVideoSchema]);
@@ -365,6 +370,10 @@ export async function POST(request: NextRequest) {
       packageType: payload.packageType as PackageType,
       subjectName: payload.subjectName,
       subjectDescription: payload.subjectDescription?.trim() || null,
+      sourceMediaUrl: payload.sourceMediaUrl?.trim() || null,
+      sourceEmbedUrl: payload.sourceEmbedUrl?.trim() || null,
+      sourceMediaProvider: payload.sourceMediaProvider?.trim() || null,
+      sourceTranscript: payload.sourceTranscript?.trim() || null,
       stylePreset:
         payload.stylePreset ??
         (payload.requestKind === "bedtime_story" ? "mythic_poster" : "hyperflow_assembly"),

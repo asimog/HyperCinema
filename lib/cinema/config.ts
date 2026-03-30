@@ -127,7 +127,7 @@ export const CINEMA_PAGE_CONFIGS: Record<CinemaPageId, CinemaPageConfig> = {
     subjectDescriptionPlaceholder:
       "What is this piece about in one or two sentences?",
     defaultStyle: "hyperflow_assembly",
-    styleOptions: ["hyperflow_assembly", "glass_signal", "mythic_poster"],
+    styleOptions: ["hyperflow_assembly", "glass_signal", "mythic_poster", "crt_anime_90s"],
     defaultAudioEnabled: false,
     audioMode: "optional",
     supportsChain: false,
@@ -218,7 +218,7 @@ export const CINEMA_PAGE_CONFIGS: Record<CinemaPageId, CinemaPageConfig> = {
     title: "MusicVideo",
     eyebrow: "Public Generate",
     summary:
-      "Build a trailer-first music video from an embedded source, pasted lyrics, or pulled subtitles. Playback stays inside the embed while the render queue builds the visual cut.",
+      "Build a trailer-first music video from an embedded source, pasted lyrics, or a beat sheet. Playback stays inside the embed while the render queue builds the visual cut.",
     requestKind: "music_video",
     pricingMode: "public",
     visibility: "public",
@@ -242,7 +242,7 @@ export const CINEMA_PAGE_CONFIGS: Record<CinemaPageId, CinemaPageConfig> = {
     title: "Recreator",
     eyebrow: "Public Generate",
     summary:
-      "Pull dialogue or subtitles from a source video, turn them into story cards, and recreate the scenes as a trailer-grade reinterpretation.",
+      "Pull dialogue or transcript beats from a source video, turn them into story cards, and recreate the scenes as a trailer-grade reinterpretation.",
     requestKind: "scene_recreation",
     pricingMode: "public",
     visibility: "public",
@@ -258,6 +258,6 @@ export const CINEMA_PAGE_CONFIGS: Record<CinemaPageId, CinemaPageConfig> = {
     audioMode: "optional",
     supportsChain: false,
     themeTone: "dialogue-led recreation studio with screenshot adapter hooks",
-    heroChips: ["public", "subtitle-driven", "next-step sequels"],
+    heroChips: ["public", "source-backed", "next-step sequels"],
   },
 };

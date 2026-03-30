@@ -2,6 +2,15 @@ import {
   alignSceneStatesToCount,
   buildSceneContinuityPrompt,
 } from "@/lib/analytics/videoCoherence";
+import {
+  buildCinematographyKnowledgeLines,
+  buildCreativeAssemblyLines,
+} from "@/lib/cinema/knowledgeBank";
+import {
+  allowsOnScreenText,
+  buildOnScreenTextPolicy,
+  buildSourceReferencePrompt,
+} from "@/lib/cinema/sourceReference";
 import type { SceneState, VideoIdentitySheet, VideoPromptScene } from "@/lib/analytics/types";
 import { round } from "@/lib/utils";
 import { rankTokenMetadataForStory } from "@/lib/tokens/metadata-selection";
@@ -64,6 +73,9 @@ export interface GoogleVeoRenderPayload {
     experience?: WalletStory["experience"];
     visibility?: WalletStory["visibility"];
     audioEnabled?: boolean | null;
+    sourceMediaUrl?: string | null;
+    sourceEmbedUrl?: string | null;
+    sourceMediaProvider?: string | null;
     rangeDays: number;
     packageType: WalletStory["packageType"];
     durationSeconds: number;
@@ -559,6 +571,31 @@ function buildThemeOverlay(promptScene?: VideoPromptScene): string {
   );
 }
 
+function buildCoverageVariationLines(story: WalletStory): string[] {
+  return [
+    "Coverage and edit rules:",
+    "Do not repeat the same centered portrait, background, or movement pattern in consecutive scenes.",
+    "Across the reel, vary at least some of the shot grammar: establishing or wide shot, medium action shot, close-up or detail shot, and one motivated movement beat.",
+    story.storyKind === "scene_recreation"
+      ? "Preserve scene geography and blocking rhythm before adding stylistic escalation."
+      : story.storyKind === "music_video"
+        ? "Let montage density rise with the music, but keep each chorus beat visually distinct."
+        : "Escalate through composition, angle, movement, and lighting changes instead of swapping to arbitrary pretty images.",
+  ];
+}
+
+function buildCrtAnimeStyleBlock(): string {
+  return [
+    "STYLE MANDATE — 90s Anime CRT:",
+    "Render every scene as hand-drawn cel animation in the style of early Dragon Ball Z and Pokemon episodes (1995–2001).",
+    "Visual rules: thick black outlines on all subjects, flat bold shadow fill, limited cel-paint color palette (max 6–8 hues per scene), speed lines for motion, large expressive eyes on characters.",
+    "CRT simulation: add visible horizontal scanlines, slight interlace flicker, phosphor warmth (amber-tinged whites), mild dot-crawl around high-contrast edges, and soft vignette at screen corners.",
+    "Color bleed and chromatic aberration on fast pans. Film grain overlay at low intensity.",
+    "Camera: dramatic low-angle hero shots, explosive zoom-ins, static wide establishing shots. No smooth CGI camera moves.",
+    "Do not use photorealistic lighting, CGI, or modern anime styles. Stay strictly in the 1990s broadcast television aesthetic.",
+  ].join(" ");
+}
+
 function buildCreativeStoryPrompt(input: {
   story: WalletStory;
   script: GeneratedCinematicScript;
@@ -576,6 +613,10 @@ function buildCreativeStoryPrompt(input: {
     )
     .join("\n");
   const beats = input.story.storyBeats?.slice(0, 6).join(" | ") ?? "beginning, escalation, closing image";
+  const allowOnScreenText = allowsOnScreenText({
+    requestedPrompt: input.story.requestedPrompt,
+    subjectDescription: input.story.subjectDescription,
+  });
   const tone =
     input.story.storyKind === "bedtime_story"
       ? "Build a safe, gentle bedtime short with calm pacing, warm visuals, and reassuring narration."
@@ -607,12 +648,27 @@ function buildCreativeStoryPrompt(input: {
     })
     .join("\n");
 
+  const crtBlock = input.story.stylePreset === "crt_anime_90s" ? buildCrtAnimeStyleBlock() : "";
+
   return [
+    crtBlock,
     tone,
     `Subject: ${subject}.`,
     `Brief: ${description}`,
     `Direction: ${direction}`,
     audioRule,
+    ...buildCreativeAssemblyLines({
+      storyKind: input.story.storyKind,
+      source: input.story.sourceReference,
+    }),
+    ...buildCinematographyKnowledgeLines(input.story.storyKind),
+    "Source grounding:",
+    ...buildSourceReferencePrompt(input.story.sourceReference),
+    buildOnScreenTextPolicy({
+      source: input.story.sourceReference,
+      allowOnScreenText,
+    }),
+    ...buildCoverageVariationLines(input.story),
     "Hard constraints: stay faithful to the supplied brief, keep continuity coherent, and never shift into memecoin or wallet analytics language.",
     `Story beats: ${beats}.`,
     storyCardLines ? `Story cards:\n${storyCardLines}` : "",
@@ -631,6 +687,11 @@ function buildPrompt(input: {
   sceneMetadata: VeoSceneMetadata[];
   generateAudio: boolean;
 }): string {
+  const allowOnScreenText = allowsOnScreenText({
+    requestedPrompt: input.story.requestedPrompt,
+    subjectDescription: input.story.subjectDescription,
+  });
+
   if (input.story.storyKind !== "token_video") {
     return buildCreativeStoryPrompt({
       story: input.story,
@@ -656,6 +717,18 @@ function buildPrompt(input: {
     "Render rule: every shot must be derived from identity bible + state transition reel + scene realization. Never re-invent the protagonist mid-video.",
     "Visual rule: diversify locations beyond trading desks. Use symbolic environments and cinematic settings; at most one desk-style shot.",
     "Sound rule: generate coherent trailer audio with a continuous background music bed and sparse voiceover commentary only. No character dialogue. No SFX, no crowd noise, no alarms, no distortion, no clipping.",
+    ...buildCreativeAssemblyLines({
+      storyKind: input.story.storyKind,
+      source: input.story.sourceReference,
+    }),
+    ...buildCinematographyKnowledgeLines(input.story.storyKind),
+    "Source grounding:",
+    ...buildSourceReferencePrompt(input.story.sourceReference),
+    buildOnScreenTextPolicy({
+      source: input.story.sourceReference,
+      allowOnScreenText,
+    }),
+    ...buildCoverageVariationLines(input.story),
     narrativeSummary ? `Narrative summary: ${narrativeSummary}` : "",
     `Trailer hook: ${trailerHook}`,
     buildTokenReferenceLine(input.tokenMetadata),
@@ -728,15 +801,49 @@ export function buildGoogleVeoRenderPayload(input: {
     styleHints: [
       "cinematic",
       "coherence-first",
-      ...(input.walletStory.storyKind === "token_video"
-        ? ["memetic", "high-energy-edit", "captioned", "satirical"]
-        : input.walletStory.storyKind === "bedtime_story"
-          ? ["bedtime", "gentle", "narration-led", "classical-soft"]
-          : input.walletStory.storyKind === "music_video"
-            ? ["music-video", "chorus-led", "performance-first", "beat-synced"]
-            : input.walletStory.storyKind === "scene_recreation"
-              ? ["scene-recreation", "dialogue-led", "continuity-first", "source-faithful"]
-              : ["story-led", "clean-edit", "design-forward"]),
+      ...(input.walletStory.stylePreset === "crt_anime_90s"
+        ? [
+            "90s-anime-aesthetic",
+            "cel-animation",
+            "CRT-television-scanlines",
+            "interlaced-video-artifacts",
+            "limited-color-palette",
+            "hand-drawn-outlines",
+            "Dragon-Ball-Z-Pokemon-era-visual-style",
+            "warm-CRT-phosphor-glow",
+            "slight-color-bleed-and-chromatic-aberration",
+            "film-grain-and-dot-crawl",
+            "bold-flat-shadows",
+            "dramatic-speed-lines",
+            "text-free-by-default",
+          ]
+        : input.walletStory.storyKind === "token_video"
+          ? ["memetic", "high-energy-edit", "satirical", "text-free-by-default"]
+          : input.walletStory.storyKind === "bedtime_story"
+            ? [
+                "bedtime",
+                "gentle",
+                "narration-led",
+                "classical-soft",
+                "text-free-by-default",
+              ]
+            : input.walletStory.storyKind === "music_video"
+              ? [
+                  "music-video",
+                  "chorus-led",
+                  "performance-first",
+                  "beat-synced",
+                  "text-free-by-default",
+                ]
+              : input.walletStory.storyKind === "scene_recreation"
+                ? [
+                    "scene-recreation",
+                    "dialogue-led",
+                    "continuity-first",
+                    "source-faithful",
+                    "text-free-by-default",
+                  ]
+                : ["story-led", "clean-edit", "design-forward", "text-free-by-default"]),
     ],
     tokenMetadata,
     sceneMetadata,
@@ -750,6 +857,9 @@ export function buildGoogleVeoRenderPayload(input: {
       experience: input.walletStory.experience,
       visibility: input.walletStory.visibility,
       audioEnabled: input.walletStory.audioEnabled,
+      sourceMediaUrl: input.walletStory.sourceMediaUrl,
+      sourceEmbedUrl: input.walletStory.sourceEmbedUrl,
+      sourceMediaProvider: input.walletStory.sourceMediaProvider,
       rangeDays: input.walletStory.rangeDays,
       packageType: input.walletStory.packageType,
       durationSeconds: input.walletStory.durationSeconds,

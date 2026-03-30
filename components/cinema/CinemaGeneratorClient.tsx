@@ -1,9 +1,11 @@
 "use client";
 
+import { useCrossmintAuth } from "@crossmint/client-sdk-react-ui";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import { PaymentInstructionsCard } from "@/components/PaymentInstructionsCard";
+import { CrossmintAuthButton } from "@/components/auth/CrossmintAuthButton";
 import { CrossmintHostedPaymentButton } from "@/components/payments/CrossmintHostedPaymentButton";
 import { HyperflowAssemblyScaffold } from "@/components/shell/HyperflowAssemblyScaffold";
 import {
@@ -125,6 +127,16 @@ export function CinemaGeneratorClient(input: {
   viewer: Viewer;
 }) {
   const { config, viewer } = input;
+  const auth = useCrossmintAuth();
+  const isAuthenticated = auth?.status === "logged-in" || viewer !== null;
+
+  // When not logged in on a private node, degrade to public so anonymous users
+  // can still generate — their video just lands in the public gallery.
+  const effectivePricingMode =
+    config.pricingMode === "private" && !isAuthenticated ? "public" : config.pricingMode;
+  const effectiveVisibility =
+    config.visibility === "private" && !isAuthenticated ? "public" : config.visibility;
+
   const [subjectName, setSubjectName] = useState("");
   const [subjectDescription, setSubjectDescription] = useState("");
   const [tokenAddress, setTokenAddress] = useState("");
@@ -135,6 +147,8 @@ export function CinemaGeneratorClient(input: {
   const [storyNotes, setStoryNotes] = useState("");
   const [characterReferences, setCharacterReferences] = useState("");
   const [visualReferences, setVisualReferences] = useState("");
+  const [sourceMediaUrl, setSourceMediaUrl] = useState("");
+  const [sourceTranscript, setSourceTranscript] = useState("");
   const [lyrics, setLyrics] = useState("");
   const [dialogue, setDialogue] = useState("");
   const [imageReferences, setImageReferences] = useState(["", "", "", ""]);
@@ -151,9 +165,9 @@ export function CinemaGeneratorClient(input: {
     () =>
       getCinemaPackageConfig({
         packageType,
-        pricingMode: config.pricingMode,
+        pricingMode: effectivePricingMode,
       }),
-    [config.pricingMode, packageType],
+    [effectivePricingMode, packageType],
   );
 
   async function createJob() {
@@ -192,20 +206,22 @@ export function CinemaGeneratorClient(input: {
               subjectDescription: subjectDescription.trim() || undefined,
               requestedPrompt: creativeDirection,
               audioEnabled: config.audioMode === "required" ? true : audioEnabled,
-              pricingMode: config.pricingMode,
-              visibility: config.visibility,
+              pricingMode: effectivePricingMode,
+              visibility: effectiveVisibility,
               experience: config.id,
             }
           : {
               requestKind: config.requestKind,
               subjectName: subjectName.trim(),
               subjectDescription: subjectDescription.trim() || undefined,
+              sourceMediaUrl: sourceMediaUrl.trim() || undefined,
+              sourceTranscript: sourceTranscript.trim() || undefined,
               packageType,
               stylePreset,
               requestedPrompt: creativeDirection,
               audioEnabled: config.audioMode === "required" ? true : audioEnabled,
-              pricingMode: config.pricingMode,
-              visibility: config.visibility,
+              pricingMode: effectivePricingMode,
+              visibility: effectiveVisibility,
               experience: config.id,
             };
 
@@ -255,6 +271,7 @@ export function CinemaGeneratorClient(input: {
 
         const status = payload.job?.status ?? payload.status;
         if (status === "processing" || status === "complete") {
+          cancelled = true;
           if (timer) clearInterval(timer);
           window.location.href = `/job/${jobPayment.jobId}`;
         }
@@ -314,7 +331,7 @@ export function CinemaGeneratorClient(input: {
               <strong>{packageConfig.priceSol} SOL</strong>
             </div>
             <p className="route-summary compact">
-              {config.pricingMode === "private"
+              {effectivePricingMode === "private"
                 ? "Private studio pricing with gated gallery."
                 : "Public pricing for lightweight open generation."}
             </p>
@@ -368,23 +385,31 @@ export function CinemaGeneratorClient(input: {
         <div className="panel-header">
           <div>
             <p className="eyebrow">Visibility</p>
-            <h2>{config.visibility === "private" ? "Private gallery" : "Public gallery"}</h2>
+            <h2>{effectiveVisibility === "private" ? "Private gallery" : "Public gallery"}</h2>
           </div>
         </div>
         <p className="route-summary compact">
-          {config.visibility === "private"
-            ? viewer
-              ? `Logged in as ${viewer.email ?? viewer.userId}. Completed jobs stay private by default.`
-              : "Crossmint login protects the private gallery and private job creation path."
-            : "Completed jobs can appear in the shared public gallery unless moderated."}
+          {effectiveVisibility === "private"
+            ? `Logged in as ${viewer?.email ?? "private viewer"}. Renders stay in your private gallery.`
+            : config.visibility === "private"
+              ? "Login to keep your renders private. Without login, videos appear in the public gallery."
+              : "Completed jobs can appear in the shared public gallery unless moderated."}
         </p>
+        {config.visibility === "private" && !isAuthenticated ? (
+          <div className="button-row" style={{ marginTop: "0.75rem" }}>
+            <CrossmintAuthButton />
+            <Link href="/login" className="button button-secondary">
+              Login
+            </Link>
+          </div>
+        ) : null}
       </section>
     </div>
   );
 
-  const galleryHref = config.visibility === "private" ? "/gallery/private" : "/gallery";
+  const galleryHref = effectiveVisibility === "private" ? "/gallery/private" : "/gallery";
   const paymentLocator = crossmintProductLocator({
-    pricingMode: config.pricingMode,
+    pricingMode: effectivePricingMode,
     packageType,
   });
 
@@ -485,7 +510,7 @@ export function CinemaGeneratorClient(input: {
                   {CINEMA_PACKAGE_TYPES.map((item) => {
                     const option = getCinemaPackageConfig({
                       packageType: item,
-                      pricingMode: config.pricingMode,
+                      pricingMode: effectivePricingMode,
                     });
                     return (
                       <option key={item} value={item}>
@@ -576,6 +601,42 @@ export function CinemaGeneratorClient(input: {
                 </div>
               </div>
             </details>
+
+            {config.requestKind !== "token_video" ? (
+              <details
+                className="optional-panel"
+                open={
+                  config.requestKind === "music_video" ||
+                  config.requestKind === "scene_recreation"
+                }
+              >
+                <summary>Source box</summary>
+                <div className="optional-panel-body">
+                  <div className="field">
+                    <span>Source URL</span>
+                    <input
+                      value={sourceMediaUrl}
+                      onChange={(event) => setSourceMediaUrl(event.target.value)}
+                      placeholder="YouTube, Vimeo, or reference page URL"
+                      disabled={isSubmitting}
+                    />
+                  </div>
+                  <div className="field">
+                    <span>Transcript or beat sheet</span>
+                    <textarea
+                      rows={4}
+                      value={sourceTranscript}
+                      onChange={(event) => setSourceTranscript(event.target.value)}
+                      placeholder="Optional transcript, lyrics, or scene beats used as source guidance."
+                      disabled={isSubmitting}
+                    />
+                  </div>
+                  <div className="inline-note">
+                    Source links inform the script writer and editor. They do not force burnt-in subtitles unless you explicitly ask for on-screen text in the brief.
+                  </div>
+                </div>
+              </details>
+            ) : null}
 
             <details className="optional-panel">
               <summary>Lyrics and dialogue box</summary>

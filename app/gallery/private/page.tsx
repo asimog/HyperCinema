@@ -1,6 +1,6 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
-import { CrossmintLoginCard } from "@/components/auth/CrossmintLoginCard";
 import { HyperflowAssemblyScaffold } from "@/components/shell/HyperflowAssemblyScaffold";
 import { getCrossmintViewerFromCookies } from "@/lib/crossmint/server";
 import { listCompletedPrivateJobArtifactsByCreator } from "@/lib/jobs/repository";
@@ -13,14 +13,7 @@ function truncate(text: string, maxLength: number): string {
 export default async function PrivateGalleryPage() {
   const viewer = await getCrossmintViewerFromCookies();
   if (!viewer) {
-    return (
-      <div className="cinema-shell cinema-noise min-h-[100dvh] overflow-hidden px-4 py-6 text-[#fff1dc] md:px-8 md:py-8">
-        <CrossmintLoginCard
-          title="Login to open the private gallery"
-          summary="Only authenticated Crossmint viewers can inspect private FunCinema and FamilyCinema renders."
-        />
-      </div>
-    );
+    redirect("/login?next=/gallery/private");
   }
 
   const jobs = await listCompletedPrivateJobArtifactsByCreator(viewer.userId, 12);

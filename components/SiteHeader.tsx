@@ -42,8 +42,8 @@ export function SiteHeader() {
           <Link className="nav-link" href="/gallery">
             Gallery
           </Link>
-          <Link className="nav-link" href="/admin/moderation">
-            Cockpit
+          <Link className="nav-link" href="/login">
+            Login
           </Link>
           <CrossmintAuthButton />
         </nav>

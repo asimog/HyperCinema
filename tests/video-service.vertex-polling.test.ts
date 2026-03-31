@@ -23,6 +23,7 @@ vi.mock("../video-service/src/env", () => ({
 
 import {
   extractInlineVideoBytesFromOperation,
+  sanitizePromptForPolicyRetry,
   VertexVeoClient,
 } from "../video-service/src/providers/vertex-veo";
 
@@ -280,5 +281,67 @@ describe("vertex veo polling endpoint", () => {
         styleHints: [],
       }),
     ).rejects.toThrow("filtered=1");
+  });
+
+  it("rewrites and retries prompts when Vertex rejects policy-sensitive wording", async () => {
+    const fetchMock = global.fetch as unknown as ReturnType<typeof vi.fn>;
+    fetchMock.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          error: {
+            message:
+              "This prompt contains words that violate Vertex AI's usage guidelines. Try rephrasing the prompt.",
+          },
+        }),
+        { status: 400, headers: { "content-type": "application/json" } },
+      ),
+    );
+    fetchMock.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          name: "projects/hashart-fun/locations/us-central1/publishers/google/models/veo-3.1-fast-generate-001/operations/op-safe",
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      ),
+    );
+    fetchMock.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          done: true,
+          response: {
+            video: {
+              uri: "gs://video-renders/hashart-fun/op-safe.mp4",
+            },
+          },
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      ),
+    );
+
+    const originalPrompt =
+      "Subject: Birthday short. Brief: a stocky but not fat square-built short man arrives in canada and is celebrating his birthday with friends. Music cue: happy birthday to you.";
+    const rewrittenPrompt = sanitizePromptForPolicyRetry(originalPrompt);
+
+    const client = new VertexVeoClient();
+    const result = await client.generateClip({
+      model: "veo-3.1-fast-generate-001",
+      resolution: "1080p",
+      generateAudio: true,
+      prompt: originalPrompt,
+      durationSeconds: 8,
+      imageUrl: null,
+      styleHints: [],
+    });
+
+    expect(result.videoUris).toEqual(["gs://video-renders/hashart-fun/op-safe.mp4"]);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+
+    const firstStartBody = String((fetchMock.mock.calls[0] as [string, RequestInit])[1].body);
+    const secondStartBody = String((fetchMock.mock.calls[1] as [string, RequestInit])[1].body);
+
+    expect(firstStartBody).toContain("stocky but not fat");
+    expect(secondStartBody).toContain(rewrittenPrompt);
+    expect(secondStartBody).not.toContain("stocky but not fat");
+    expect(secondStartBody).toContain("birthday singalong");
   });
 });

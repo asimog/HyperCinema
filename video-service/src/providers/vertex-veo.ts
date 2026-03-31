@@ -52,6 +52,51 @@ export function isVertexImageEmptyError(status: number, body: string): boolean {
   );
 }
 
+export function isVertexPromptPolicyError(status: number, body: string): boolean {
+  if (status < 400 || status >= 500) {
+    return false;
+  }
+
+  const normalized = body.toLowerCase();
+  return (
+    normalized.includes("usage guidelines") ||
+    normalized.includes("try rephrasing the prompt") ||
+    normalized.includes("prompt could not be submitted")
+  );
+}
+
+export function sanitizePromptForPolicyRetry(prompt: string): string {
+  const replacements: Array<[RegExp, string]> = [
+    [
+      /\b(?:(?:stocky|heavyset|chubby|fat|skinny|obese|slim|short|tall|square[- ]built)\s+)+(?:man|woman|person|guy|girl|boy|figure)\b/gi,
+      "adult protagonist",
+    ],
+    [/\bnot\s+fat\b/gi, "warm and approachable"],
+    [/\b(?:stocky|heavyset|chubby|fat|skinny|obese|slim|short|tall|square[- ]built)\b/gi, ""],
+    [/\b(?:ugly|hideous|deformed)\b/gi, "distinctive"],
+    [/\blyrics?\s+or\s+song\s+notes\s*:/gi, "Music cue:"],
+    [/\bhappy birthday to you\b/gi, "a birthday singalong"],
+  ];
+
+  let rewritten = prompt;
+  for (const [pattern, replacement] of replacements) {
+    rewritten = rewritten.replace(pattern, replacement);
+  }
+
+  rewritten = rewritten
+    .replace(/\s+([,.;:!?])/g, "$1")
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+
+  const safetyInstruction =
+    "Safety rewrite: keep all character descriptions neutral and respectful, avoid sensitive body labels, and paraphrase song cues instead of quoting lyrics verbatim.";
+
+  return rewritten.includes(safetyInstruction)
+    ? rewritten
+    : `${rewritten}\n${safetyInstruction}`;
+}
+
 function findVideoUris(value: unknown, collector: Set<string>): void {
   if (typeof value === "string") {
     if (
@@ -240,38 +285,66 @@ export class VertexVeoClient {
       ...(authHeader ? { Authorization: authHeader } : {}),
     };
 
-    const makeRequestBody = (imageUrl?: string): Record<string, unknown> => ({
+    const makeRequestBody = (prompt: string, imageUrl?: string): Record<string, unknown> => ({
       instances: [
         {
-          prompt: input.prompt,
+          prompt,
           ...(imageUrl ? { image: { uri: imageUrl } } : {}),
         },
       ],
       parameters,
     });
 
-    const startOperation = async (imageUrl?: string): Promise<Response> =>
+    const startOperation = async (prompt: string, imageUrl?: string): Promise<Response> =>
       fetch(endpoint, {
         method: "POST",
         headers: requestHeaders,
-        body: JSON.stringify(makeRequestBody(imageUrl)),
+        body: JSON.stringify(makeRequestBody(prompt, imageUrl)),
       });
 
     const imageUrl = normalizeImageUrl(input.imageUrl);
-    let startResponse = await startOperation(imageUrl);
+    let startResponse: Response | null = null;
+    let lastStartFailure: { status: number; body: string } | null = null;
+    const startQueue: Array<{ prompt: string; imageUrl?: string }> = [
+      { prompt: input.prompt, imageUrl },
+    ];
+    const seenStarts = new Set<string>();
 
-    if (!startResponse.ok) {
-      const body = await startResponse.text();
-      const canRetryWithoutImage = Boolean(imageUrl) && isVertexImageEmptyError(startResponse.status, body);
-      if (!canRetryWithoutImage) {
-        throw new Error(`Veo start failed (${startResponse.status}): ${body}`);
+    while (startQueue.length > 0) {
+      const attempt = startQueue.shift()!;
+      const attemptKey = `${attempt.imageUrl ?? "no-image"}::${attempt.prompt}`;
+      if (seenStarts.has(attemptKey)) {
+        continue;
+      }
+      seenStarts.add(attemptKey);
+
+      const response = await startOperation(attempt.prompt, attempt.imageUrl);
+      if (response.ok) {
+        startResponse = response;
+        break;
       }
 
-      startResponse = await startOperation(undefined);
-      if (!startResponse.ok) {
-        const fallbackBody = await startResponse.text();
-        throw new Error(`Veo start failed (${startResponse.status}): ${fallbackBody}`);
+      const body = await response.text();
+      lastStartFailure = { status: response.status, body };
+
+      if (attempt.imageUrl && isVertexImageEmptyError(response.status, body)) {
+        startQueue.push({ prompt: attempt.prompt, imageUrl: undefined });
       }
+
+      if (isVertexPromptPolicyError(response.status, body)) {
+        const rewrittenPrompt = sanitizePromptForPolicyRetry(attempt.prompt);
+        startQueue.push({ prompt: rewrittenPrompt, imageUrl: attempt.imageUrl });
+        if (attempt.imageUrl) {
+          startQueue.push({ prompt: rewrittenPrompt, imageUrl: undefined });
+        }
+      }
+    }
+
+    if (!startResponse) {
+      if (!lastStartFailure) {
+        throw new Error("Veo start failed before a response was captured.");
+      }
+      throw new Error(`Veo start failed (${lastStartFailure.status}): ${lastStartFailure.body}`);
     }
 
     const started = (await startResponse.json()) as VertexStartResponse;

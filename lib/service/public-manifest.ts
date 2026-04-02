@@ -2,8 +2,8 @@ import { ACTIVE_PACKAGE_TYPES, PACKAGE_CONFIG } from "@/lib/constants";
 import { TOKEN_VIDEO_STYLE_PRESETS } from "@/lib/memecoins/styles";
 import { InterfaceAdapterServiceManifest } from "@/packages/core/src/protocol";
 
-export const publicHashCinemaServiceManifest: InterfaceAdapterServiceManifest = {
-  id: "hashcinema.multichain-memecoin-video",
+export const publicHyperCinemaServiceManifest: InterfaceAdapterServiceManifest = {
+  id: "hypercinema.multichain-memecoin-video",
   name: "TrenchMyths",
   summary:
     "HyperMyths memecoin video generation from one mint or contract address, packaged for direct UI use or x402 agent calls.",
@@ -29,7 +29,7 @@ export const publicHashCinemaServiceManifest: InterfaceAdapterServiceManifest = 
   })),
   adapters: [
     {
-      id: "hashcinema-manual-sol",
+      id: "hypercinema-manual-sol",
       label: "Manual SOL",
       kind: "manual",
       currency: "SOL",
@@ -37,7 +37,7 @@ export const publicHashCinemaServiceManifest: InterfaceAdapterServiceManifest = 
       endpoint: "/api/jobs",
     },
     {
-      id: "hashcinema-x402",
+      id: "hypercinema-x402",
       label: "x402 / USDC",
       kind: "x402",
       currency: "USDC",

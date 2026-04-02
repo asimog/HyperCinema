@@ -9,6 +9,6 @@ export function lamportsToSol(lamports: number): number {
 }
 
 export function getRevenueWalletAddress(): string {
-  return getEnv().HASHCINEMA_PAYMENT_WALLET;
+  return getEnv().HYPERCINEMA_PAYMENT_WALLET;
 }
 

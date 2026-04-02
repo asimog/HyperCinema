@@ -34,15 +34,15 @@ const envSchema = z.object({
   FIREBASE_PROJECT_ID: z.string().min(1),
   FIREBASE_CLIENT_EMAIL: z.string().min(1).optional(),
   FIREBASE_PRIVATE_KEY: z.string().min(1).optional(),
-  HASHCINEMA_PAYMENT_WALLET: z
+  HYPERCINEMA_PAYMENT_WALLET: z
     .string()
     .min(32)
     .max(64)
     .refine(isValidSolanaPublicKey, {
-      message: "HASHCINEMA_PAYMENT_WALLET must be a valid Solana address",
+      message: "HYPERCINEMA_PAYMENT_WALLET must be a valid Solana address",
     }),
   PAYMENT_MASTER_SEED_HEX: z.string().min(64),
-  PAYMENT_DERIVATION_PREFIX: z.string().default("hashcinema-job"),
+  PAYMENT_DERIVATION_PREFIX: z.string().default("hypercinema-job"),
   FIREBASE_STORAGE_BUCKET: z.string().optional(),
   APP_BASE_URL: z.string().url().default("http://localhost:3000"),
   WORKER_URL: z.string().url().optional(),
@@ -65,7 +65,7 @@ const envSchema = z.object({
     .url()
     .default("https://openrouter.ai/api/v1"),
   OPENROUTER_MODEL: z.string().min(1).optional(),
-  OPENROUTER_APP_NAME: z.string().default("HASHCINEMA"),
+  OPENROUTER_APP_NAME: z.string().default("HYPERCINEMA"),
   OPENROUTER_SITE_URL: z.string().url().optional(),
   VIDEO_API_BASE_URL: z.string().url().optional(),
   VIDEO_ENGINE: z.literal("google_veo").default("google_veo"),

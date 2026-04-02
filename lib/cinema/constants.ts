@@ -5,7 +5,7 @@ import type {
   NarrativeArchetype,
 } from "@/lib/cinema/types";
 
-export const CINEMA_SYSTEM_ID = "hashcinema_veo_cinema_v1";
+export const CINEMA_SYSTEM_ID = "hypercinema_veo_cinema_v1";
 
 export const ENTROPY_ORDER: EntropyLevel[] = ["low", "medium", "high"];
 

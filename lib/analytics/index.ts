@@ -1,5 +1,5 @@
 /**
- * HASHCINEMA Analytics Integration Notes
+ * HYPERCINEMA Analytics Integration Notes
  *
  * Usage:
  *   import { analyzeWalletProfile } from "@/lib/analytics";

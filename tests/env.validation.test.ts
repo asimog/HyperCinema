@@ -12,7 +12,7 @@ function applyBaseEnv(): void {
   process.env.VIDEO_API_KEY = "test-video";
   process.env.FIREBASE_PROJECT_ID = "test-project";
   process.env.PAYMENT_MASTER_SEED_HEX = VALID_MASTER_SEED;
-  process.env.HASHCINEMA_PAYMENT_WALLET = VALID_WALLET;
+  process.env.HYPERCINEMA_PAYMENT_WALLET = VALID_WALLET;
 }
 
 describe.sequential("environment validation", () => {
@@ -23,17 +23,17 @@ describe.sequential("environment validation", () => {
     const { getEnv } = await import("@/lib/env");
     const env = getEnv();
 
-    expect(env.HASHCINEMA_PAYMENT_WALLET).toBe(VALID_WALLET);
+    expect(env.HYPERCINEMA_PAYMENT_WALLET).toBe(VALID_WALLET);
   });
 
   it("rejects an invalid Solana revenue wallet", async () => {
     vi.resetModules();
     applyBaseEnv();
-    process.env.HASHCINEMA_PAYMENT_WALLET = "not-a-solana-wallet";
+    process.env.HYPERCINEMA_PAYMENT_WALLET = "not-a-solana-wallet";
 
     const { getEnv } = await import("@/lib/env");
 
-    expect(() => getEnv()).toThrow(/HASHCINEMA_PAYMENT_WALLET/);
+    expect(() => getEnv()).toThrow(/HYPERCINEMA_PAYMENT_WALLET/);
   });
 
   it("trims whitespace from strict webhook/video env vars", async () => {

@@ -46,7 +46,7 @@ const sharedCinemaSchema = z.object({
   experience: z
     .enum([
       "legacy",
-      "hashcinema",
+      "hypercinema",
       "trenchcinema",
       "funcinema",
       "familycinema",
@@ -148,7 +148,7 @@ function normalizeExperience(input: {
   visibility: CinemaVisibility;
 }): CinemaExperience {
   if (
-    input.experience === "hashcinema" ||
+    input.experience === "hypercinema" ||
     input.experience === "trenchcinema" ||
     input.experience === "funcinema" ||
     input.experience === "familycinema" ||
@@ -174,7 +174,7 @@ function normalizeExperience(input: {
     return "recreator";
   }
 
-  return input.visibility === "private" ? "funcinema" : "hashcinema";
+  return input.visibility === "private" ? "funcinema" : "hypercinema";
 }
 
 function createJobResponse(input: {

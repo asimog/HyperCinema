@@ -76,7 +76,7 @@ const mocks = vi.hoisted(() => ({
     GOONBOOK_AGENT_HANDLE: "hasmedia",
     GOONBOOK_AGENT_DISPLAY_NAME: "HASMEDIA",
     GOONBOOK_AGENT_BIO:
-      "HashArt.fun drops AI video trailers and posts them to GoonBook.",
+      "HyperMyths drops AI video trailers and posts them to GoonBook.",
     GOONBOOK_SYNC_BATCH_LIMIT: 12,
   })),
   getJobArtifacts: vi.fn(),
@@ -187,7 +187,7 @@ describe("goonbook publisher", () => {
         styleClassification: "The Chaos Gambler",
         timeline: [],
         walletPersonality: "The Chaos Gambler",
-        summary: "Fresh HashArt trailer export.",
+        summary: "Fresh HyperMyths trailer export.",
         downloadUrl: "https://hashart.fun/reports/job-1.pdf",
       } as Record<string, unknown>,
       video: {

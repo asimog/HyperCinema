@@ -1,34 +1,30 @@
 import Link from "next/link";
 
-import { HYPERMYTHS_CATEGORIES } from "@/lib/hypermyths/content";
+import { HYPERMYTHS_HERO_CATEGORIES } from "@/lib/hypermyths/content";
 
 export function SiteHeader() {
+  const navItems = [
+    { href: "/", label: "Home" },
+    ...HYPERMYTHS_HERO_CATEGORIES.map((category) => ({
+      href: category.href,
+      label: category.title,
+    })),
+    { href: "/gallery", label: "Gallery" },
+  ];
+
   return (
-    <header className="site-header">
+    <header className="site-header site-header--glass">
       <div className="site-nav">
         <Link href="/" className="site-brand">
-          <span className="site-brand-kicker">HyperMyths.com</span>
-          <span className="site-brand-title">HyperMyths</span>
+          <span className="site-brand-title">HyperMythsX</span>
         </Link>
 
         <nav className="nav-links">
-          <Link className="nav-link" href="/">
-            Home
-          </Link>
-          <Link className="nav-link" href="/trending">
-            Trending
-          </Link>
-          {HYPERMYTHS_CATEGORIES.map((category) => (
-            <Link key={category.id} className="nav-link" href={category.href}>
-              {category.title}
+          {navItems.map((item) => (
+            <Link key={item.href} className="nav-link" href={item.href}>
+              {item.label}
             </Link>
           ))}
-          <Link className="nav-link" href="/gallery">
-            Gallery
-          </Link>
-          <Link className="nav-link" href="/admin/moderation">
-            Cockpit
-          </Link>
         </nav>
       </div>
     </header>

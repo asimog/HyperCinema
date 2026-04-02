@@ -1,12 +1,14 @@
 import { JobPackage, PackageType, VideoStyleId } from "@/lib/types/domain";
 
 export type CinemaPageId =
-  | "hashcinema"
+  | "hypercinema"
   | "trenchcinema"
   | "funcinema"
   | "familycinema"
   | "musicvideo"
-  | "recreator";
+  | "recreator"
+  | "hashmyth"
+  | "lovex";
 
 export interface CinemaPageConfig {
   id: CinemaPageId;
@@ -110,10 +112,10 @@ export function getCinemaPackageConfig(input: {
 export const CINEMA_PACKAGE_TYPES = ["1d", "2d"] as const satisfies readonly PackageType[];
 
 export const CINEMA_PAGE_CONFIGS: Record<CinemaPageId, CinemaPageConfig> = {
-  hashcinema: {
-    id: "hashcinema",
-    route: "/HashCinema",
-    title: "HashMyths",
+  hypercinema: {
+    id: "hypercinema",
+    route: "/HyperCinema",
+    title: "HyperMythsX",
     eyebrow: "Create",
     summary:
       "Full-fledged options editor for polished concept cuts, brand stories, and tightly controlled outputs.",
@@ -122,7 +124,7 @@ export const CINEMA_PAGE_CONFIGS: Record<CinemaPageId, CinemaPageConfig> = {
     visibility: "public",
     requiresAuth: false,
     subjectLabel: "Project title",
-    subjectPlaceholder: "HyperMyths teaser, launch short, or concept trailer",
+    subjectPlaceholder: "HyperMythsX teaser, launch short, or concept trailer",
     subjectDescriptionLabel: "Core idea",
     subjectDescriptionPlaceholder:
       "What is this piece about in one or two sentences?",
@@ -259,5 +261,69 @@ export const CINEMA_PAGE_CONFIGS: Record<CinemaPageId, CinemaPageConfig> = {
     supportsChain: false,
     themeTone: "dialogue-led recreation studio for remakes and scene tributes",
     heroChips: ["public", "source-backed", "next-step sequels"],
+  },
+  hashmyth: {
+    id: "hashmyth",
+    route: "/HashMyth",
+    title: "HashMyth",
+    eyebrow: "Create",
+    summary:
+      "All-chain wallet trading report generator. Paste any token or wallet address and turn your trading story into cinema.",
+    requestKind: "token_video",
+    pricingMode: "public",
+    visibility: "public",
+    requiresAuth: false,
+    subjectLabel: "Token or wallet address",
+    subjectPlaceholder: "Paste a token mint, contract, or wallet address",
+    subjectDescriptionLabel: "Trading story direction",
+    subjectDescriptionPlaceholder:
+      "What was the trade? The win, the loss, the hold, describe the energy.",
+    defaultStyle: "trench_neon",
+    styleOptions: [
+      "trench_neon",
+      "hyperflow_assembly",
+      "trading_card",
+      "glass_signal",
+      "mythic_poster",
+      "crt_anime_90s",
+      "glitch_digital",
+      "cyberpunk_neon",
+      "neon_tokyo_night",
+      "infrared_thermal",
+    ],
+    defaultAudioEnabled: false,
+    audioMode: "optional",
+    supportsChain: true,
+    themeTone: "trading floor adrenaline, numbers, profits, losses made real through cinema",
+    heroChips: ["all chains", "wallet reports", "token stories"],
+  },
+  lovex: {
+    id: "lovex",
+    route: "/LoveX",
+    title: "LoveX",
+    eyebrow: "Create",
+    summary:
+      "Slow, classy cinematic shots with classical music. No words unless you ask. Pure visual romance.",
+    requestKind: "generic_cinema",
+    pricingMode: "public",
+    visibility: "public",
+    requiresAuth: false,
+    subjectLabel: "Love story title",
+    subjectPlaceholder: "A name, a moment, a memory",
+    subjectDescriptionLabel: "The feeling",
+    subjectDescriptionPlaceholder:
+      "Describe the emotion, the person, or the moment you want to capture.",
+    defaultStyle: "love_slow_waltz",
+    styleOptions: [
+      "love_slow_waltz",
+      "love_golden_cinema",
+      "love_moonlit_garden",
+      "love_timeless_portrait",
+    ],
+    defaultAudioEnabled: true,
+    audioMode: "required",
+    supportsChain: false,
+    themeTone: "slow, classy, classical music, visual romance at its finest",
+    heroChips: ["classical music", "no words", "slow & classy"],
   },
 };

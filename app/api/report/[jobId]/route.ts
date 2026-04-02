@@ -24,7 +24,7 @@ export async function GET(_: NextRequest, context: Context) {
     status: 200,
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="hashcinema-${jobId}.pdf"`,
+      "Content-Disposition": `attachment; filename="hypercinema-${jobId}.pdf"`,
       "Cache-Control": "no-store",
     },
   });

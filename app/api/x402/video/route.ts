@@ -8,7 +8,7 @@ import { logger } from "@/lib/logging/logger";
 import { resolveMemecoinMetadata } from "@/lib/memecoins/metadata";
 import { resolvePackage } from "@/lib/packages";
 import { PackageType, VideoStyleId } from "@/lib/types/domain";
-import { getHashArtX402Server, usdToUsdcAtomic } from "@/lib/x402/hashart";
+import { getHyperCinemaX402Server, usdToUsdcAtomic } from "@/lib/x402/hypercinema";
 
 export const runtime = "nodejs";
 
@@ -44,7 +44,7 @@ async function buildRequirements(input: {
   priceUsdc: number;
   durationSeconds: number;
 }) {
-  const server = getHashArtX402Server();
+  const server = getHyperCinemaX402Server();
   return server.buildRequirements({
     amountAtomic: usdToUsdcAtomic(input.priceUsdc),
     resourceUrl: buildResourceUrl(),
@@ -117,7 +117,7 @@ export async function POST(request: NextRequest) {
       chain: parsed.data.chain,
     });
 
-    const server = getHashArtX402Server();
+    const server = getHyperCinemaX402Server();
     const requirements = await buildRequirements({
       packageType: pkg.packageType,
       priceUsdc: pkg.priceUsdc,

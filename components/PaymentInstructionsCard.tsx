@@ -51,7 +51,7 @@ export function PaymentInstructionsCard(props: PaymentInstructionsCardProps) {
   );
 
   const copyPayload = [
-    "HASHCINEMA manual payment",
+    "HYPERCINEMA manual payment",
     `Address: ${props.paymentAddress}`,
     `Amount (SOL): ${payableAmount}`,
     "Network: Solana",

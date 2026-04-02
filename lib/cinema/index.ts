@@ -1,5 +1,5 @@
 /**
- * HASHCINEMA Veo Cinema Subsystem (Google Veo with Sound)
+ * HYPERCINEMA Veo Cinema Subsystem (Google Veo with Sound)
  *
  * Integration Notes
  *
@@ -17,8 +17,8 @@
  *   - `scenePrompts` + one continuous `prompt` for Veo-with-sound
  *
  * How to call:
- *   import { buildHashCinemaVeoPromptPackage } from "@/lib/cinema";
- *   const pkg = buildHashCinemaVeoPromptPackage({ analysis, tokenAssetMap });
+ *   import { buildHyperCinemaVeoPromptPackage } from "@/lib/cinema";
+ *   const pkg = buildHyperCinemaVeoPromptPackage({ analysis, tokenAssetMap });
  *   // Send pkg.prompt to Veo (generateAudio=true) and store pkg.scenePlan/pkg.scenePrompts as metadata.
  */
 
@@ -42,7 +42,7 @@ function placeholderMetaphorMap(): VisualMetaphorMap {
   };
 }
 
-export function buildHashCinemaVeoPromptPackage(input: {
+export function buildHyperCinemaVeoPromptPackage(input: {
   analysis: WalletAnalysisResult;
   tokenAssetMap?: Record<string, TokenAsset>;
 }): VeoPromptPackage {
@@ -97,3 +97,6 @@ export { buildScenePlan } from "@/lib/cinema/buildScenePlan";
 export { generateVeoPromptPackage } from "@/lib/cinema/generateVeoPrompt";
 
 export * from "@/lib/cinema/types";
+export { buildSoundDirectorPackage } from "@/lib/cinema/soundDirector";
+export { executeFinalCut } from "@/lib/cinema/finalCut";
+export type { FinalCutInput, FinalCutResult } from "@/lib/cinema/finalCut";

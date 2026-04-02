@@ -234,3 +234,21 @@ export interface VeoPromptPackage {
   promptCompact?: string;
 }
 
+export interface SoundSceneDirective {
+  sceneIndex: number;
+  sceneType: SceneType;
+  actNumber: 1 | 2 | 3;
+  musicBed: string;
+  motifs: string[];
+  accent: string;
+}
+
+export interface SoundDirectorPackage {
+  leitmotifs: string[];
+  act1Bed: string;
+  act2Bed: string;
+  act3Bed: string;
+  sceneDirectives: SoundSceneDirective[];
+  soundPrompt: string;
+}
+

@@ -24,6 +24,7 @@ type ConciergeStep =
   | "token_address"
   | "chain"
   | "description"
+  | "style"
   | "package"
   | "audio"
   | "confirm"
@@ -33,6 +34,7 @@ type ChatMessage = {
   id: string;
   role: "assistant" | "user";
   text: string;
+  agentName?: string;
 };
 
 type ConciergeDraft = {
@@ -43,6 +45,7 @@ type ConciergeDraft = {
   description: string;
   packageType: PackageType;
   audioEnabled: boolean;
+  stylePreset: VideoStyleId | null;
 };
 
 interface CreateJobResponse {
@@ -72,26 +75,106 @@ interface JobStatusResponse {
   message?: string;
 }
 
+/* ── Agent persona per category ──────────────────────────────────── */
+
+type AgentPersona = {
+  director: string;
+  sound: string;
+  editor: string;
+  greeting: string;
+};
+
+const DEFAULT_PERSONA: AgentPersona = {
+  director: "HyperMythsX",
+  sound: "MythSound",
+  editor: "MythEditor",
+  greeting: "I'm your HyperMythsX. I'll collect your video details, refine the prompt, create the paid job, and track it until render starts.",
+};
+
+const AGENT_PERSONAS: Partial<Record<CinemaPageId, AgentPersona>> = {
+  hashmyth: {
+    director: "HashIntern",
+    sound: "HashIntern",
+    editor: "HashIntern",
+    greeting: "Yo, HashIntern here. Paste a token or wallet address, any chain, and I'll turn your trading story into cinema. Let's see that PnL.",
+  },
+  lovex: {
+    director: "MythFren",
+    sound: "MythFren",
+    editor: "MythFren",
+    greeting: "Hello, MythFren here. Let's craft something slow, classy, and beautiful. Classical music, no words, unless you want them. Pick a style to begin.",
+  },
+  hypercinema: {
+    director: "HyperMythsX",
+    sound: "HyperMythsX",
+    editor: "HyperMythsX",
+    greeting: "HyperMythsX loaded. 42 cinematic styles at your disposal, from VHS grain to Ghibli watercolors. What's the vision?",
+  },
+  trenchcinema: {
+    director: "HyperMythsX",
+    sound: "HyperMythsX",
+    editor: "HyperMythsX",
+    greeting: "HyperMythsX here. Trending lane, memecoin stories, wallet drops, and token mythology across all chains.",
+  },
+  funcinema: {
+    director: "MythEditor",
+    sound: "MythSound",
+    editor: "MythEditor",
+    greeting: "MythEditor reporting. Weird, random, playful, let's make something fun.",
+  },
+  familycinema: {
+    director: "MythLoveIntern",
+    sound: "MythSound",
+    editor: "MythLoveIntern",
+    greeting: "MythLoveIntern here. Family moments deserve care. Let's make a keepsake.",
+  },
+  musicvideo: {
+    director: "MythSound",
+    sound: "MythSound",
+    editor: "MythEditor",
+    greeting: "MythSound in the booth. Music-led, rhythm-first. What's the track?",
+  },
+};
+
+function getPersona(experienceId: CinemaPageId | null): AgentPersona {
+  if (!experienceId) return DEFAULT_PERSONA;
+  return AGENT_PERSONAS[experienceId] ?? DEFAULT_PERSONA;
+}
+
+/* ── Concierge experiences shown as quick choices ────────────────── */
+
 const CONCIERGE_EXPERIENCES = [
-  CINEMA_PAGE_CONFIGS.funcinema,
-  CINEMA_PAGE_CONFIGS.hashcinema,
-  CINEMA_PAGE_CONFIGS.trenchcinema,
-  CINEMA_PAGE_CONFIGS.familycinema,
-  CINEMA_PAGE_CONFIGS.musicvideo,
+  { ...CINEMA_PAGE_CONFIGS.hashmyth, label: "HashMyth" },
+  { ...CINEMA_PAGE_CONFIGS.hypercinema, label: "MythX" },
+  { ...CINEMA_PAGE_CONFIGS.lovex, label: "LoveX" },
+  { ...CINEMA_PAGE_CONFIGS.trenchcinema, label: "Trending" },
 ] as const;
 
 const INITIAL_MESSAGES: ChatMessage[] = [
   {
     id: "assistant-intro-1",
     role: "assistant",
-    text: "Hi, I am your HyperMyths concierge. I will collect your video details, refine the prompt, create the paid job, and track it until render starts.",
+    text: "Hi, I'm your HyperMythsX. I'll collect your video details, refine the prompt, create the paid job, and track it until render starts.",
+    agentName: "HyperMythsX",
   },
   {
     id: "assistant-intro-2",
     role: "assistant",
     text: "First step: choose a category.",
+    agentName: "HyperMythsX",
   },
 ];
+
+/* ── LoveX style dropdown options ────────────────────────────────── */
+
+const LOVEX_STYLE_CHOICES: { value: VideoStyleId; label: string }[] = [
+  { value: "love_slow_waltz", label: "Slow Waltz" },
+  { value: "love_golden_cinema", label: "Golden Cinema" },
+  { value: "love_moonlit_garden", label: "Moonlit Garden" },
+  { value: "love_timeless_portrait", label: "Timeless Portrait" },
+];
+
+/* ── Utility functions ───────────────────────────────────────────── */
 
 function statusLabel(status?: string, progress?: string): string {
   if (status === "awaiting_payment") return "Awaiting payment";
@@ -120,18 +203,25 @@ function crossmintProductLocator(input: {
     : process.env.NEXT_PUBLIC_CROSSMINT_PUBLIC_60_PRODUCT;
 }
 
-function createMessage(role: "assistant" | "user", text: string): ChatMessage {
+function createMessage(
+  role: "assistant" | "user",
+  text: string,
+  agentName?: string,
+): ChatMessage {
   return {
     id: `${role}-${Date.now()}-${Math.random().toString(16).slice(2)}`,
     role,
     text,
+    agentName,
   };
 }
 
 function parseExperience(input: string): CinemaPageId | null {
   const normalized = input.toLowerCase().replace(/\s+/g, "");
-  if (normalized.includes("trench") || normalized.includes("token") || normalized.includes("wallet")) return "trenchcinema";
-  if (normalized.includes("hash") || normalized.includes("editor") || normalized.includes("options")) return "hashcinema";
+  if (normalized.includes("hash") || normalized.includes("trading") || normalized.includes("wallet") || normalized.includes("pnl")) return "hashmyth";
+  if (normalized.includes("hyper") || normalized.includes("cinema") || normalized.includes("style") || normalized.includes("direct")) return "hypercinema";
+  if (normalized.includes("love") || normalized.includes("romance") || normalized.includes("classic") || normalized.includes("slow")) return "lovex";
+  if (normalized.includes("trend") || normalized.includes("gallery") || normalized.includes("trench") || normalized.includes("token") || normalized.includes("meme")) return "trenchcinema";
   if (normalized.includes("fun") || normalized.includes("weird") || normalized.includes("random")) return "funcinema";
   if (normalized.includes("family") || normalized.includes("photo") || normalized.includes("kids") || normalized.includes("mom") || normalized.includes("dad")) return "familycinema";
   if (normalized.includes("music") || normalized.includes("song") || normalized.includes("beat")) return "musicvideo";
@@ -196,6 +286,7 @@ function summaryText(input: {
       : `Title: ${input.draft.subjectName}`,
     input.tokenFlow ? `Chain: ${input.draft.chain}` : null,
     `Description: ${input.draft.description}`,
+    input.draft.stylePreset ? `Style: ${input.draft.stylePreset}` : null,
     `Runtime: ${packageConfig.videoSeconds} seconds`,
     `Audio: ${input.draft.audioEnabled ? "on" : "off"}`,
   ].filter(Boolean);
@@ -219,6 +310,8 @@ function buildForwardedPrompt(input: {
   });
 }
 
+/* ── Main component ──────────────────────────────────────────────── */
+
 export function CinemaConciergeChat() {
   const [messages, setMessages] = useState<ChatMessage[]>(INITIAL_MESSAGES);
   const [step, setStep] = useState<ConciergeStep>("choose_experience");
@@ -230,6 +323,7 @@ export function CinemaConciergeChat() {
     description: "",
     packageType: "1d",
     audioEnabled: false,
+    stylePreset: null,
   });
   const [inputValue, setInputValue] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -243,6 +337,8 @@ export function CinemaConciergeChat() {
     if (!draft.experienceId) return null;
     return CINEMA_PAGE_CONFIGS[draft.experienceId];
   }, [draft.experienceId]);
+
+  const persona = useMemo(() => getPersona(draft.experienceId), [draft.experienceId]);
 
   const paymentLocator = useMemo(() => {
     if (!selectedConfig) return undefined;
@@ -285,14 +381,14 @@ export function CinemaConciergeChat() {
           if (status === "payment_detected") {
             setMessages((current) => [
               ...current,
-              createMessage("assistant", "Payment detected. Waiting for confirmation."),
+              createMessage("assistant", "Payment detected. Waiting for confirmation.", persona.director),
             ]);
           }
 
           if (status === "payment_confirmed") {
             setMessages((current) => [
               ...current,
-              createMessage("assistant", "Payment confirmed. Dispatching your video job now."),
+              createMessage("assistant", "Payment confirmed. Dispatching your video job now.", persona.director),
             ]);
           }
         }
@@ -317,13 +413,15 @@ export function CinemaConciergeChat() {
       cancelled = true;
       if (timer) clearInterval(timer);
     };
-  }, [jobPayment?.jobId]);
+  }, [jobPayment?.jobId, persona.director]);
+
+  const isLoveX = draft.experienceId === "lovex";
 
   const quickChoices = useMemo(() => {
     if (step === "choose_experience") {
       return CONCIERGE_EXPERIENCES.map((config) => ({
         value: config.id,
-        label: config.title,
+        label: config.label,
       }));
     }
 
@@ -335,6 +433,10 @@ export function CinemaConciergeChat() {
         { value: "bsc", label: "BNB Chain" },
         { value: "base", label: "Base" },
       ];
+    }
+
+    if (step === "style" && isLoveX) {
+      return LOVEX_STYLE_CHOICES.map((s) => ({ value: s.value, label: s.label }));
     }
 
     if (step === "package") {
@@ -359,21 +461,37 @@ export function CinemaConciergeChat() {
     }
 
     return [];
-  }, [step]);
+  }, [step, isLoveX]);
+
+  function agentMsg(text: string): ChatMessage {
+    return createMessage("assistant", text, persona.director);
+  }
 
   function askForDescription() {
     setStep("description");
     setMessages((current) => [
       ...current,
-      createMessage("assistant", "Now describe the visual direction and key beats."),
+      agentMsg("Now describe the visual direction and key beats."),
     ]);
+  }
+
+  function askForStyle() {
+    if (isLoveX) {
+      setStep("style");
+      setMessages((current) => [
+        ...current,
+        agentMsg("Pick a look for your love story."),
+      ]);
+      return;
+    }
+    askForPackage();
   }
 
   function askForPackage() {
     setStep("package");
     setMessages((current) => [
       ...current,
-      createMessage("assistant", "Choose runtime: 30 sec or 60 sec."),
+      agentMsg("Choose runtime: 30 sec or 60 sec."),
     ]);
   }
 
@@ -386,9 +504,8 @@ export function CinemaConciergeChat() {
     setStep("confirm");
     setMessages((current) => [
       ...current,
-      createMessage("assistant", "Perfect. Review this brief:"),
-      createMessage(
-        "assistant",
+      agentMsg("Perfect. Review this brief:"),
+      agentMsg(
         summaryText({
           configTitle: input.configTitle,
           draft: input.nextDraft,
@@ -396,12 +513,13 @@ export function CinemaConciergeChat() {
           pricingMode: input.pricingMode,
         }),
       ),
-      createMessage("assistant", "If this looks right, press Generate paid job."),
+      agentMsg("If this looks right, press Generate paid job."),
     ]);
   }
 
   function chooseExperience(experienceId: CinemaPageId) {
     const config = CINEMA_PAGE_CONFIGS[experienceId];
+    const nextPersona = getPersona(experienceId);
     const nextDraft: ConciergeDraft = {
       experienceId,
       subjectName: "",
@@ -410,17 +528,25 @@ export function CinemaConciergeChat() {
       description: "",
       packageType: "1d",
       audioEnabled: config.audioMode === "required",
+      stylePreset: null,
     };
 
     setDraft(nextDraft);
     setError(null);
     setJobPayment(null);
     setJobStatus(null);
+
+    // Greeting from the sub-agent
+    setMessages((current) => [
+      ...current,
+      createMessage("assistant", nextPersona.greeting, nextPersona.director),
+    ]);
+
     if (config.requestKind === "token_video") {
       setStep("token_address");
       setMessages((current) => [
         ...current,
-        createMessage("assistant", "Paste the token contract or mint address."),
+        createMessage("assistant", "Paste the token contract or mint address.", nextPersona.director),
       ]);
       return;
     }
@@ -428,7 +554,7 @@ export function CinemaConciergeChat() {
     setStep("subject");
     setMessages((current) => [
       ...current,
-      createMessage("assistant", "Great. What should we call this video?"),
+      createMessage("assistant", "What should we call this video?", nextPersona.director),
     ]);
   }
 
@@ -441,6 +567,7 @@ export function CinemaConciergeChat() {
       description: "",
       packageType: "1d",
       audioEnabled: false,
+      stylePreset: null,
     });
     setStep("choose_experience");
     setMessages(INITIAL_MESSAGES);
@@ -476,7 +603,7 @@ export function CinemaConciergeChat() {
               tokenAddress: draft.tokenAddress.trim(),
               chain: draft.chain,
               packageType: draft.packageType,
-              stylePreset: selectedConfig.defaultStyle,
+              stylePreset: draft.stylePreset ?? selectedConfig.defaultStyle,
               subjectDescription: draft.description.trim() || undefined,
               requestedPrompt: buildForwardedPrompt({
                 configTitle: selectedConfig.title,
@@ -495,7 +622,7 @@ export function CinemaConciergeChat() {
               subjectName: draft.subjectName.trim(),
               subjectDescription: draft.description.trim() || undefined,
               packageType: draft.packageType,
-              stylePreset: selectedConfig.defaultStyle,
+              stylePreset: draft.stylePreset ?? selectedConfig.defaultStyle,
               requestedPrompt: buildForwardedPrompt({
                 configTitle: selectedConfig.title,
                 draft,
@@ -529,16 +656,13 @@ export function CinemaConciergeChat() {
       setStep("payment");
       setMessages((current) => [
         ...current,
-        createMessage(
-          "assistant",
-          "Job created. Complete payment below and I will keep tracking status.",
-        ),
+        agentMsg("Job created. Complete payment below and I'll keep tracking status."),
       ]);
     } catch (createError) {
       const message =
         createError instanceof Error ? createError.message : "Unexpected error while creating job.";
       setError(message);
-      setMessages((current) => [...current, createMessage("assistant", message)]);
+      setMessages((current) => [...current, agentMsg(message)]);
     } finally {
       setIsCreating(false);
     }
@@ -557,7 +681,7 @@ export function CinemaConciergeChat() {
       if (!parsed) {
         setMessages((current) => [
           ...current,
-          createMessage("assistant", "Pick a studio from the chips so I can map the right flow."),
+          agentMsg("Pick a category from the chips so I can route you to the right sub-agent."),
         ]);
         return;
       }
@@ -569,7 +693,7 @@ export function CinemaConciergeChat() {
     if (!selectedConfig) {
       setMessages((current) => [
         ...current,
-        createMessage("assistant", "Choose a studio first."),
+        agentMsg("Choose a category first."),
       ]);
       setStep("choose_experience");
       return;
@@ -586,7 +710,7 @@ export function CinemaConciergeChat() {
       if (text.length < 20) {
         setMessages((current) => [
           ...current,
-          createMessage("assistant", "That address looks too short. Please paste the full token address."),
+          agentMsg("That address looks too short. Please paste the full token address."),
         ]);
         return;
       }
@@ -595,7 +719,7 @@ export function CinemaConciergeChat() {
       setStep("chain");
       setMessages((current) => [
         ...current,
-        createMessage("assistant", "Which chain should I use?"),
+        agentMsg("Which chain should I use?"),
       ]);
       return;
     }
@@ -605,7 +729,7 @@ export function CinemaConciergeChat() {
       if (!parsedChain) {
         setMessages((current) => [
           ...current,
-          createMessage("assistant", "Choose Auto, Solana, Ethereum, BNB Chain, or Base."),
+          agentMsg("Choose Auto, Solana, Ethereum, BNB Chain, or Base."),
         ]);
         return;
       }
@@ -617,7 +741,29 @@ export function CinemaConciergeChat() {
 
     if (step === "description") {
       setDraft((current) => ({ ...current, description: text }));
-      askForPackage();
+      if (isLoveX) {
+        askForStyle();
+      } else {
+        askForPackage();
+      }
+      return;
+    }
+
+    if (step === "style") {
+      // Try to match LoveX style from text
+      const normalized = text.toLowerCase();
+      const matched = LOVEX_STYLE_CHOICES.find(
+        (s) => normalized.includes(s.label.toLowerCase()) || normalized.includes(s.value),
+      );
+      if (matched) {
+        setDraft((current) => ({ ...current, stylePreset: matched.value }));
+        askForPackage();
+        return;
+      }
+      setMessages((current) => [
+        ...current,
+        agentMsg("Pick one of the four styles from the chips."),
+      ]);
       return;
     }
 
@@ -626,7 +772,7 @@ export function CinemaConciergeChat() {
       if (!parsedPackage) {
         setMessages((current) => [
           ...current,
-          createMessage("assistant", "Use 30 sec or 60 sec."),
+          agentMsg("Use 30 sec or 60 sec."),
         ]);
         return;
       }
@@ -649,7 +795,7 @@ export function CinemaConciergeChat() {
       setStep("audio");
       setMessages((current) => [
         ...current,
-        createMessage("assistant", "Do you want audio on?"),
+        agentMsg("Do you want audio on?"),
       ]);
       return;
     }
@@ -659,7 +805,7 @@ export function CinemaConciergeChat() {
       if (parsedAudio === null) {
         setMessages((current) => [
           ...current,
-          createMessage("assistant", "Please answer yes or no."),
+          agentMsg("Please answer yes or no."),
         ]);
         return;
       }
@@ -688,7 +834,7 @@ export function CinemaConciergeChat() {
 
       setMessages((current) => [
         ...current,
-        createMessage("assistant", "Use Generate paid job or Start over."),
+        agentMsg("Use Generate paid job or Start over."),
       ]);
       return;
     }
@@ -696,10 +842,21 @@ export function CinemaConciergeChat() {
 
   function onChoiceClick(value: string) {
     if (step === "choose_experience") {
-      const config = CINEMA_PAGE_CONFIGS[value as CinemaPageId];
-      setMessages((current) => [...current, createMessage("user", config.title)]);
+      const entry = CONCIERGE_EXPERIENCES.find((e) => e.id === value);
+      const label = entry?.label ?? value;
+      setMessages((current) => [...current, createMessage("user", label)]);
       chooseExperience(value as CinemaPageId);
       return;
+    }
+
+    if (step === "style") {
+      const matched = LOVEX_STYLE_CHOICES.find((s) => s.value === value);
+      if (matched) {
+        setMessages((current) => [...current, createMessage("user", matched.label)]);
+        setDraft((current) => ({ ...current, stylePreset: matched.value as VideoStyleId }));
+        askForPackage();
+        return;
+      }
     }
 
     if (step === "confirm") {
@@ -726,28 +883,30 @@ export function CinemaConciergeChat() {
 
   const inputPlaceholder =
     step === "choose_experience"
-      ? "Type studio name..."
+      ? "Type category name..."
       : step === "subject"
         ? "Video title..."
         : step === "token_address"
-          ? "Token address..."
+          ? "Token or wallet address..."
           : step === "description"
             ? "Describe the visual and story..."
-            : step === "chain"
-              ? "Auto / Solana / Ethereum / BNB Chain / Base"
-              : step === "package"
-                ? "30 sec or 60 sec"
-                : step === "audio"
-                  ? "yes or no"
-                  : "Message";
+            : step === "style"
+              ? "Pick a style..."
+              : step === "chain"
+                ? "Auto / Solana / Ethereum / BNB Chain / Base"
+                : step === "package"
+                  ? "30 sec or 60 sec"
+                  : step === "audio"
+                    ? "yes or no"
+                    : "Message";
 
   return (
     <section className="panel concierge-panel" id="concierge-chat">
       <header className="concierge-header">
-        <p className="eyebrow">Concierge</p>
+        <p className="eyebrow">{persona.director}</p>
         <h2>Build your video in chat</h2>
         <p className="route-summary">
-          I ask for the required fields, create the job, and keep watching payment + render status.
+          Sub-agents: {persona.director} / {persona.sound} / {persona.editor}
         </p>
       </header>
 
@@ -762,7 +921,9 @@ export function CinemaConciergeChat() {
             }`}
           >
             <span className="concierge-role">
-              {message.role === "assistant" ? "Agent" : "You"}
+              {message.role === "assistant"
+                ? message.agentName ?? persona.director
+                : "You"}
             </span>
             <p>{message.text}</p>
           </article>

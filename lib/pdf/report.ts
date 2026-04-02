@@ -35,8 +35,8 @@ export async function generateReportPdf(
 
   page.drawText(
     report.subjectKind === "token_video"
-      ? "HASHCINEMA TOKEN CARD"
-      : "HASHCINEMA DOSSIER",
+      ? "HYPERCINEMA TOKEN CARD"
+      : "HYPERCINEMA DOSSIER",
     {
     x: 40,
     y: 800,

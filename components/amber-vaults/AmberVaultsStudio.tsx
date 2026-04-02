@@ -14,7 +14,7 @@ const ALL_STYLES: { id: VideoStyleId; label: string; description: string }[] = [
   { id: "mythic_poster", label: "Mythic Poster", description: "Epic framing, rich color, hero light" },
   { id: "trench_neon", label: "Trench Neon", description: "Neon-lit meme-trench atmosphere" },
   { id: "trading_card", label: "Trading Card", description: "Flat card graphic with bold borders" },
-  { id: "crt_anime_90s", label: "90s Anime CRT", description: "Dragon Ball Z / Pokemon CRT scanline aesthetic — cel animation, phosphor glow, speed lines" },
+  { id: "crt_anime_90s", label: "90s Anime CRT", description: "Dragon Ball Z / Pokemon CRT scanline aesthetic, cel animation, phosphor glow, speed lines" },
 ];
 
 const ALL_KINDS: { id: RequestKind; label: string; description: string }[] = [
@@ -143,7 +143,7 @@ export function AmberVaultsStudio() {
         <span>Cinema node</span>
         <select value={requestKind} onChange={(e) => setRequestKind(e.target.value as RequestKind)} disabled={isSubmitting}>
           {ALL_KINDS.map((k) => (
-            <option key={k.id} value={k.id}>{k.label} — {k.description}</option>
+            <option key={k.id} value={k.id}>{k.label}, {k.description}</option>
           ))}
         </select>
       </div>
@@ -199,7 +199,7 @@ export function AmberVaultsStudio() {
 
       {stylePreset === "crt_anime_90s" && (
         <div className="inline-note">
-          90s Anime CRT — scanlines, cel animation, Dragon Ball Z / Pokemon phosphor glow, limited palette, speed lines.
+          90s Anime CRT, scanlines, cel animation, Dragon Ball Z / Pokemon phosphor glow, limited palette, speed lines.
         </div>
       )}
 
@@ -248,7 +248,7 @@ export function AmberVaultsStudio() {
               rows={5}
               value={actBreakdown}
               onChange={(e) => setActBreakdown(e.target.value)}
-              placeholder={"Act 1: Opening — cold street, rain, protagonist walking alone.\nAct 2: Discovery — finds the cassette tape in the gutter.\nAct 3: Flashback montage — 90s memories."}
+              placeholder={"Act 1: Opening, cold street, rain, protagonist walking alone.\nAct 2: Discovery, finds the cassette tape in the gutter.\nAct 3: Flashback montage, 90s memories."}
               disabled={isSubmitting}
             />
           </div>
@@ -288,7 +288,7 @@ export function AmberVaultsStudio() {
 
       <div className="inline-note">
         Package: {pkg.videoSeconds}s · {pkg.priceSol} SOL list price ·{" "}
-        <strong>Free for admin — payment bypassed.</strong>
+        <strong>Free for admin, payment bypassed.</strong>
       </div>
 
       <div className="button-row">

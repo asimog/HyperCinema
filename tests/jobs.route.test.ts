@@ -66,14 +66,14 @@ function buildPromptRequest(): NextRequest {
     },
     body: JSON.stringify({
       requestKind: "generic_cinema",
-      subjectName: "HashArt teaser",
+      subjectName: "HyperCinema teaser",
       subjectDescription: "A minimal route launcher short.",
       sourceMediaUrl: "https://www.youtube.com/watch?v=x55A69SSvsg",
       sourceTranscript: "Open on the hook.\nRide the beat.",
       packageType: "1d",
       pricingMode: "public",
       visibility: "public",
-      experience: "hashcinema",
+      experience: "hypercinema",
     }),
   });
 }
@@ -157,10 +157,10 @@ describe("POST /api/jobs", () => {
       priceSol: 0.004,
       paymentAddress: "11111111111111111111111111111111",
       requiredLamports: 4_000_000,
-      subjectName: "HashArt teaser",
+      subjectName: "HyperCinema teaser",
       pricingMode: "public",
       visibility: "public",
-      experience: "hashcinema",
+      experience: "hypercinema",
     });
     mocks.ensurePaymentAddressSubscribedToHeliusWebhook.mockResolvedValue({
       webhookId: "wh-1",

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import { PaymentInstructionsCard } from "@/components/PaymentInstructionsCard";
+import { CinemaConciergeChat } from "@/components/chat/CinemaConciergeChat";
 import { CrossmintHostedPaymentButton } from "@/components/payments/CrossmintHostedPaymentButton";
 import { HyperflowAssemblyScaffold } from "@/components/shell/HyperflowAssemblyScaffold";
 import { buildDirectorPrompt } from "@/lib/cinema/directorPrompt";
@@ -271,7 +272,13 @@ export function CinemaGeneratorClient(input: {
 
   return (
     <div className="cinema-shell cinema-noise min-h-[100dvh] overflow-hidden px-4 py-6 text-[#fff1dc] md:px-8 md:py-8">
-      <HyperflowAssemblyScaffold>
+      <HyperflowAssemblyScaffold
+        leftRail={
+          <div className="home-concierge-column home-concierge-column--workspace">
+            <CinemaConciergeChat />
+          </div>
+        }
+      >
         <section className="panel home-hero-panel">
           <div className="home-hero-copy">
             <p className="eyebrow">{config.themeTone}</p>

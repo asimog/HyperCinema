@@ -4,7 +4,7 @@ import { NextRequest } from "next/server";
 const mocks = vi.hoisted(() => ({
   createX402PaidTokenVideoJob: vi.fn(),
   dispatchSingleJob: vi.fn(),
-  getHashArtX402Server: vi.fn(),
+  getHyperCinemaX402Server: vi.fn(),
   getEnv: vi.fn(),
   resolveMemecoinMetadata: vi.fn(),
 }));
@@ -17,8 +17,8 @@ vi.mock("@/lib/jobs/dispatch", () => ({
   dispatchSingleJob: mocks.dispatchSingleJob,
 }));
 
-vi.mock("@/lib/x402/hashart", () => ({
-  getHashArtX402Server: mocks.getHashArtX402Server,
+vi.mock("@/lib/x402/hypercinema", () => ({
+  getHyperCinemaX402Server: mocks.getHyperCinemaX402Server,
   usdToUsdcAtomic: (amountUsd: number) => String(Math.round(amountUsd * 1_000_000)),
 }));
 
@@ -91,7 +91,7 @@ describe("POST /api/x402/video", () => {
         ],
         resource: {
           url: "https://hashart.fun/api/x402/video",
-          description: "HashCinema 30s memecoin video",
+          description: "HyperMyths 30s memecoin video",
           mimeType: "application/json",
         },
       }),
@@ -104,7 +104,7 @@ describe("POST /api/x402/video", () => {
       }),
     };
 
-    mocks.getHashArtX402Server.mockReturnValue(x402Server);
+    mocks.getHyperCinemaX402Server.mockReturnValue(x402Server);
     mocks.createX402PaidTokenVideoJob.mockResolvedValue({
       jobId: "job-x402-1",
       status: "payment_confirmed",

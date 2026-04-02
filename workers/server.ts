@@ -234,5 +234,5 @@ server.requestTimeout = 30_000;
 server.headersTimeout = 35_000;
 
 server.listen(port, () => {
-  console.log(`HASHCINEMA worker listening on ${port}`);
+  console.log(`HYPERCINEMA worker listening on ${port}`);
 });

@@ -8,14 +8,14 @@ import { getEnv } from "@/lib/env";
 
 let cachedServer: ReturnType<typeof createX402Server> | null = null;
 
-export function getHashArtX402Server() {
+export function getHyperCinemaX402Server() {
   if (cachedServer) {
     return cachedServer;
   }
 
   const env = getEnv();
   cachedServer = createX402Server({
-    payTo: env.HASHCINEMA_PAYMENT_WALLET,
+    payTo: env.HYPERCINEMA_PAYMENT_WALLET,
     facilitatorUrl: env.X402_FACILITATOR_URL,
     network: SOLANA_MAINNET_NETWORK,
   });

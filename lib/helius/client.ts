@@ -12,7 +12,7 @@ export function getHeliusClient() {
   cachedHelius = createHelius({
     apiKey: env.HELIUS_API_KEY,
     network: "mainnet",
-    userAgent: "hashcinema/1.0",
+    userAgent: "hypercinema/1.0",
   });
   return cachedHelius;
 }

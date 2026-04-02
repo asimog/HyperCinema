@@ -75,7 +75,7 @@ function normalizeJobDocument(raw: JobDocument): JobDocument {
         : "legacy",
     visibility: raw.visibility === "private" ? "private" : "public",
     experience:
-      raw.experience === "hashcinema" ||
+      raw.experience === "hypercinema" ||
       raw.experience === "trenchcinema" ||
       raw.experience === "funcinema" ||
       raw.experience === "familycinema" ||
@@ -557,7 +557,7 @@ export async function createPromptVideoJob(input: {
       requestKind: input.requestKind,
       pricingMode: input.pricingMode ?? "public",
       visibility: input.visibility ?? "public",
-      experience: input.experience ?? "hashcinema",
+      experience: input.experience ?? "hypercinema",
       moderationStatus: "visible",
       creatorId: input.creatorId ?? null,
       creatorEmail: input.creatorEmail ?? null,

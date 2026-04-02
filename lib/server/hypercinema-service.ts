@@ -1,15 +1,15 @@
 import { ACTIVE_PACKAGE_TYPES, PACKAGE_CONFIG } from "@/lib/constants";
 import { getEnv } from "@/lib/env";
 import { TOKEN_VIDEO_STYLE_PRESETS } from "@/lib/memecoins/styles";
-import { createHashCinemaX402Adapter } from "@/packages/adapters/src/payments/x402";
+import { createHyperCinemaX402Adapter } from "@/packages/adapters/src/payments/x402";
 import { InterfaceAdapterServiceManifest } from "@/packages/core/src/protocol";
 
-export function getHashCinemaServiceManifest(): InterfaceAdapterServiceManifest {
+export function getHyperCinemaServiceManifest(): InterfaceAdapterServiceManifest {
   const env = getEnv();
   const baseUrl = env.APP_BASE_URL;
 
   return {
-    id: "hashcinema.multichain-memecoin-video",
+    id: "hypercinema.multichain-memecoin-video",
     name: "TrenchMyths",
     summary:
       "HyperMyths memecoin video generation from a single mint or contract address with manual SOL checkout or x402/USDC settlement.",
@@ -38,14 +38,14 @@ export function getHashCinemaServiceManifest(): InterfaceAdapterServiceManifest 
     })),
     adapters: [
       {
-        id: "hashcinema-manual-sol",
+        id: "hypercinema-manual-sol",
         label: "Manual SOL",
         kind: "manual",
         currency: "SOL",
         network: "solana",
         endpoint: new URL("/api/jobs", baseUrl).toString(),
       },
-      createHashCinemaX402Adapter(baseUrl),
+      createHyperCinemaX402Adapter(baseUrl),
     ],
     endpoints: {
       createJob: new URL("/api/jobs", baseUrl).toString(),

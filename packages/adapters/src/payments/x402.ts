@@ -1,8 +1,8 @@
 import { InterfacePaymentAdapter } from "@/packages/core/src/protocol";
 
-export function createHashCinemaX402Adapter(baseUrl: string): InterfacePaymentAdapter {
+export function createHyperCinemaX402Adapter(baseUrl: string): InterfacePaymentAdapter {
   return {
-    id: "hashcinema-x402",
+    id: "hypercinema-x402",
     label: "x402 / USDC",
     kind: "x402",
     currency: "USDC",

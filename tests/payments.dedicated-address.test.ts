@@ -5,7 +5,7 @@ vi.mock("@/lib/env", () => ({
     ({
       PAYMENT_MASTER_SEED_HEX:
         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
-      PAYMENT_DERIVATION_PREFIX: "hashcinema-test",
+      PAYMENT_DERIVATION_PREFIX: "hypercinema-test",
     }) as const,
 }));
 

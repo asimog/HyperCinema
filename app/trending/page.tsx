@@ -1,64 +1,94 @@
 import Link from "next/link";
 
-import { HYPERMYTHS_CATEGORIES, TRENDING_SPOTLIGHTS } from "@/lib/hypermyths/content";
+import { TRENDING_SPOTLIGHTS } from "@/lib/hypermyths/content";
+import { listCompletedJobArtifacts } from "@/lib/jobs/repository";
 
-export default function TrendingPage() {
+export const dynamic = "force-dynamic";
+
+function truncate(text: string, maxLength: number): string {
+  if (text.length <= maxLength) return text;
+  return `${text.slice(0, Math.max(0, maxLength - 3)).trim()}...`;
+}
+
+function buildDescription(report?: {
+  summary?: string;
+  narrativeSummary?: string;
+  funObservations?: string[];
+}): string {
+  const base =
+    report?.summary ||
+    report?.narrativeSummary ||
+    report?.funObservations?.[0] ||
+    "A completed HyperMyths cut.";
+  return truncate(base, 150);
+}
+
+export default async function TrendingPage() {
+  const jobs = await listCompletedJobArtifacts(4);
+
   return (
-    <div className="cinema-shell cinema-noise min-h-[100dvh] overflow-hidden px-4 py-6 text-[#fff1dc] md:px-8 md:py-8">
+    <div className="cinema-shell cinema-noise min-h-[100dvh] overflow-hidden px-4 py-6 text-[#f4efe8] md:px-8 md:py-8">
       <div className="mx-auto max-w-7xl space-y-6">
-        <section className="panel trend-hero">
+        <section className="panel trend-hero trend-hero--sleek">
           <p className="eyebrow">Trending</p>
-          <h1 className="font-display">The most clickable cinematic ideas right now.</h1>
-          <p className="route-summary">
-            Faster, cheaper packaged concepts with a cleaner promise and a stronger opening hook.
-          </p>
+          <h1 className="font-display">Current cuts.</h1>
+          <p className="route-summary">A sharper rail for the ideas people are opening now.</p>
         </section>
 
-        <section className="trend-grid">
+        <section className="trend-grid trend-grid--sleek">
           {TRENDING_SPOTLIGHTS.map((item) => (
-            <article key={item.title} className="surface-card trend-card trend-card--featured">
-              <div className="trend-card-top">
-                <div>
-                  <p className="eyebrow">{item.category}</p>
+            <Link key={item.title} href={item.href} className="surface-card trend-card trend-card--glass">
+              <div className="trend-card-top trend-card-top--sleek">
+                <div className="trend-card-titlewrap">
+                  <span className="trend-card-icon" aria-hidden="true" />
                   <h2>{item.title}</h2>
                 </div>
-                <span className="status-badge">{item.startingPrice}</span>
               </div>
-              <p>{item.promise}</p>
-              <div className="route-badges">
-                {item.tags.map((tag) => (
-                  <span key={tag} className="status-badge">
-                    {tag}
-                  </span>
-                ))}
-              </div>
-              <Link href={item.href} className="button button-primary">
-                Open category
-              </Link>
-            </article>
+              <p className="trend-card-copy">{item.promise}</p>
+            </Link>
           ))}
         </section>
 
-        <section className="panel">
+        <section className="panel trend-recent-panel">
           <div className="panel-header">
             <div>
-              <p className="eyebrow">Categories</p>
-              <h2>Five lanes, one brand</h2>
+              <p className="eyebrow">Gallery</p>
+              <h2>Last 4 generations</h2>
             </div>
+            <Link href="/gallery" className="button button-primary">
+              View complete gallery
+            </Link>
           </div>
-          <div className="category-grid">
-            {HYPERMYTHS_CATEGORIES.map((category) => (
-              <article key={category.id} className="surface-card category-card">
-                <div>
-                  <p className="eyebrow">{category.title}</p>
-                  <p className="route-summary compact">{category.summary}</p>
-                </div>
-                <Link href={category.href} className="button button-secondary home-studio-link">
-                  Open
-                </Link>
-              </article>
-            ))}
-          </div>
+
+          {jobs.length ? (
+            <section className="module-grid-3x2">
+              {jobs.map(({ job, report }) => {
+                const description = buildDescription(report ?? undefined);
+                const title =
+                  report?.subjectName ?? report?.subjectSymbol ?? report?.walletPersonality ?? "HyperMyths";
+                const subline =
+                  report?.subjectSymbol ?? report?.subjectAddress ?? report?.wallet ?? job.wallet;
+
+                return (
+                  <Link
+                    key={job.jobId}
+                    href={`/job/${job.jobId}`}
+                    className="surface-card module-tile"
+                  >
+                    <p className="eyebrow">{job.videoSeconds}s cut</p>
+                    <h2>{title}</h2>
+                    <p>{description}</p>
+                    <div className="module-preview">
+                      <span>Address</span>
+                      <strong>{truncate(subline, 24)}</strong>
+                    </div>
+                  </Link>
+                );
+              })}
+            </section>
+          ) : (
+            <p className="route-summary">No completed videos yet. Generate the first one and it will appear here.</p>
+          )}
         </section>
       </div>
     </div>

@@ -16,18 +16,59 @@ export type TrendingSpotlight = {
   href: string;
 };
 
+/** Primary 4 hero categories shown on the homepage 2x2 grid. */
+export const HYPERMYTHS_HERO_CATEGORIES: HyperMythsCategory[] = [
+  {
+    id: "hashmyth",
+    title: "HashMyth",
+    summary: "All-chain wallet trading report generator. Any token, any wallet. Turn your trades into cinema.",
+    href: "/HashMyth",
+  },
+  {
+    id: "hypercinema",
+    title: "MythX",
+    summary: "42 cinematic styles. VHS, anime, cyberpunk, noir, Ghibli, and more. Pick your look, direct your myth.",
+    href: "/HyperCinema",
+  },
+  {
+    id: "lovex",
+    title: "LoveX",
+    summary: "Slow, classy shots with classical music. No words unless you ask. Pure visual romance.",
+    href: "/LoveX",
+  },
+  {
+    id: "trenchcinema",
+    title: "Trending",
+    summary: "Gallery, new generators, and everything not on the homepage. Explore what is cooking.",
+    href: "/trending",
+  },
+];
+
+/** All categories including legacy/deprecated ones surfaced in Trending. */
 export const HYPERMYTHS_CATEGORIES: HyperMythsCategory[] = [
+  {
+    id: "hashmyth",
+    title: "HashMyth",
+    summary: "All-chain wallet trading report generator. Any token, any wallet. Turn your trades into cinema.",
+    href: "/HashMyth",
+  },
+  {
+    id: "hypercinema",
+    title: "MythX",
+    summary: "42 cinematic styles. Full cinematography control for polished, directed outputs.",
+    href: "/HyperCinema",
+  },
+  {
+    id: "lovex",
+    title: "LoveX",
+    summary: "Slow, classy shots with classical music. Pure visual romance.",
+    href: "/LoveX",
+  },
   {
     id: "funcinema",
     title: "FunMyths",
     summary: "Random and weird cinematic experiments with a playful edge.",
     href: "/FunCinema",
-  },
-  {
-    id: "hashcinema",
-    title: "HashMyths",
-    summary: "Full-fledged options editor for polished, controlled outputs.",
-    href: "/HashCinema",
   },
   {
     id: "trenchcinema",

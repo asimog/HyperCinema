@@ -256,7 +256,7 @@ export async function buildPromptVideoArtifacts(input: {
         ? "Music Video Brief"
         : input.job.requestKind === "scene_recreation"
           ? "Scene Recreation Brief"
-          : "HashMyths Brief");
+          : "HashMyth Brief");
   const subjectDescription = trimOrNull(input.job.subjectDescription);
   const narrativeSummary = buildNarrativeSummary(input.job, sourceLabel);
   const storyCards = buildStoryCards({

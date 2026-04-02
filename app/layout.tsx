@@ -22,7 +22,7 @@ const displayFont = Syne({
 });
 
 export const metadata: Metadata = {
-  title: "HyperMyths.com",
+  title: "HyperMythsX",
   description:
     "Cinematic creation studio for weird ideas, polished briefs, family keepsakes, music-led edits, and token stories.",
 };

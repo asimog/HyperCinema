@@ -1,5 +1,5 @@
 import { analyzeSeedWalletProfile } from "@/lib/analytics";
-import { buildHashCinemaVeoPromptPackage } from "@/lib/cinema";
+import { buildHyperCinemaVeoPromptPackage } from "@/lib/cinema";
 import type { TokenAsset } from "@/lib/cinema/types";
 
 function buildMockTokenAssetMap(input: {
@@ -21,7 +21,7 @@ function buildMockTokenAssetMap(input: {
   return map;
 }
 
-describe("HashCinema Veo cinema subsystem", () => {
+describe("HyperCinema Veo cinema subsystem", () => {
   it("generates 5 distinct cinematic packages from seed wallets", async () => {
     const seeds = [
       { id: "chaotic-overtrader" as const, expectedArcs: ["villain"] as const },
@@ -44,7 +44,7 @@ describe("HashCinema Veo cinema subsystem", () => {
       }
 
       const tokenAssetMap = buildMockTokenAssetMap({ mints, symbolByMint, nameByMint });
-      const pkg = buildHashCinemaVeoPromptPackage({ analysis, tokenAssetMap });
+      const pkg = buildHyperCinemaVeoPromptPackage({ analysis, tokenAssetMap });
 
       expect(seed.expectedArcs).toContain(pkg.storyState.characterArc.id);
 
@@ -101,7 +101,7 @@ describe("HashCinema Veo cinema subsystem", () => {
       symbolByMint: new Map(villainAnalysis.normalizedTrades.flatMap((t) => (t.symbol ? [[t.mint, t.symbol]] : []))),
       nameByMint: new Map(villainAnalysis.normalizedTrades.flatMap((t) => (t.name ? [[t.mint, t.name]] : []))),
     });
-    const villainPkg = buildHashCinemaVeoPromptPackage({
+    const villainPkg = buildHyperCinemaVeoPromptPackage({
       analysis: villainAnalysis,
       tokenAssetMap: villainTokenAssetMap,
     });
@@ -124,7 +124,7 @@ describe("HashCinema Veo cinema subsystem", () => {
       symbolByMint: new Map(martyrAnalysis.normalizedTrades.flatMap((t) => (t.symbol ? [[t.mint, t.symbol]] : []))),
       nameByMint: new Map(martyrAnalysis.normalizedTrades.flatMap((t) => (t.name ? [[t.mint, t.name]] : []))),
     });
-    const martyrPkg = buildHashCinemaVeoPromptPackage({
+    const martyrPkg = buildHyperCinemaVeoPromptPackage({
       analysis: martyrAnalysis,
       tokenAssetMap: martyrTokenAssetMap,
     });

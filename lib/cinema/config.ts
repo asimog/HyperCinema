@@ -1,3 +1,4 @@
+import { HYPERMYTHX_STYLE_PRESETS } from "@/lib/memecoins/styles";
 import { JobPackage, PackageType, VideoStyleId } from "@/lib/types/domain";
 
 export type CinemaPageId =
@@ -129,7 +130,7 @@ export const CINEMA_PAGE_CONFIGS: Record<CinemaPageId, CinemaPageConfig> = {
     subjectDescriptionPlaceholder:
       "What is this piece about in one or two sentences?",
     defaultStyle: "hyperflow_assembly",
-    styleOptions: ["hyperflow_assembly", "glass_signal", "mythic_poster", "crt_anime_90s"],
+    styleOptions: HYPERMYTHX_STYLE_PRESETS.map((preset) => preset.id),
     defaultAudioEnabled: false,
     audioMode: "optional",
     supportsChain: false,

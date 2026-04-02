@@ -48,6 +48,10 @@ type ConciergeDraft = {
   stylePreset: VideoStyleId | null;
 };
 
+interface CinemaConciergeChatProps {
+  initialExperienceId?: CinemaPageId | null;
+}
+
 interface CreateJobResponse {
   jobId: string;
   priceSol: number;
@@ -164,6 +168,61 @@ const INITIAL_MESSAGES: ChatMessage[] = [
     agentName: "HyperMythsX",
   },
 ];
+
+function buildInitialConversationState(initialExperienceId?: CinemaPageId | null) {
+  if (!initialExperienceId) {
+    return {
+      step: "choose_experience" as ConciergeStep,
+      messages: INITIAL_MESSAGES,
+      draft: {
+        experienceId: null,
+        subjectName: "",
+        tokenAddress: "",
+        chain: "auto" as RequestedTokenChain,
+        description: "",
+        packageType: "1d" as PackageType,
+        audioEnabled: false,
+        stylePreset: null,
+      },
+    };
+  }
+
+  const config = CINEMA_PAGE_CONFIGS[initialExperienceId];
+  const persona = getPersona(initialExperienceId);
+  const nextStep: ConciergeStep =
+    config.requestKind === "token_video" ? "token_address" : "subject";
+
+  return {
+    step: nextStep,
+    messages: [
+      {
+        id: "assistant-intro-1",
+        role: "assistant",
+        text: persona.greeting,
+        agentName: persona.director,
+      },
+      {
+        id: "assistant-page-context",
+        role: "assistant",
+        text:
+          config.requestKind === "token_video"
+            ? "Paste the token contract or mint address."
+            : "What should we call this video?",
+        agentName: persona.director,
+      },
+    ] satisfies ChatMessage[],
+    draft: {
+      experienceId: initialExperienceId,
+      subjectName: "",
+      tokenAddress: "",
+      chain: "auto" as RequestedTokenChain,
+      description: "",
+      packageType: "1d" as PackageType,
+      audioEnabled: config.audioMode === "required",
+      stylePreset: null,
+    },
+  };
+}
 
 /* ── LoveX style dropdown options ────────────────────────────────── */
 
@@ -312,19 +371,15 @@ function buildForwardedPrompt(input: {
 
 /* ── Main component ──────────────────────────────────────────────── */
 
-export function CinemaConciergeChat() {
-  const [messages, setMessages] = useState<ChatMessage[]>(INITIAL_MESSAGES);
-  const [step, setStep] = useState<ConciergeStep>("choose_experience");
-  const [draft, setDraft] = useState<ConciergeDraft>({
-    experienceId: null,
-    subjectName: "",
-    tokenAddress: "",
-    chain: "auto",
-    description: "",
-    packageType: "1d",
-    audioEnabled: false,
-    stylePreset: null,
-  });
+export function CinemaConciergeChat(input: CinemaConciergeChatProps) {
+  const initialState = useMemo(
+    () => buildInitialConversationState(input.initialExperienceId ?? null),
+    [input.initialExperienceId],
+  );
+
+  const [messages, setMessages] = useState<ChatMessage[]>(initialState.messages);
+  const [step, setStep] = useState<ConciergeStep>(initialState.step);
+  const [draft, setDraft] = useState<ConciergeDraft>(initialState.draft);
   const [inputValue, setInputValue] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
@@ -332,6 +387,17 @@ export function CinemaConciergeChat() {
   const [jobStatus, setJobStatus] = useState<JobStatusResponse | null>(null);
   const threadRef = useRef<HTMLDivElement | null>(null);
   const lastPolledStatusRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    setMessages(initialState.messages);
+    setStep(initialState.step);
+    setDraft(initialState.draft);
+    setInputValue("");
+    setError(null);
+    setJobPayment(null);
+    setJobStatus(null);
+    lastPolledStatusRef.current = null;
+  }, [initialState]);
 
   const selectedConfig = useMemo(() => {
     if (!draft.experienceId) return null;
@@ -559,18 +625,10 @@ export function CinemaConciergeChat() {
   }
 
   function resetConversation() {
-    setDraft({
-      experienceId: null,
-      subjectName: "",
-      tokenAddress: "",
-      chain: "auto",
-      description: "",
-      packageType: "1d",
-      audioEnabled: false,
-      stylePreset: null,
-    });
-    setStep("choose_experience");
-    setMessages(INITIAL_MESSAGES);
+    const nextState = buildInitialConversationState(input.initialExperienceId ?? null);
+    setDraft(nextState.draft);
+    setStep(nextState.step);
+    setMessages(nextState.messages);
     setInputValue("");
     setError(null);
     setJobPayment(null);
@@ -695,7 +753,7 @@ export function CinemaConciergeChat() {
         ...current,
         agentMsg("Choose a category first."),
       ]);
-      setStep("choose_experience");
+      setStep(input.initialExperienceId ? initialState.step : "choose_experience");
       return;
     }
 

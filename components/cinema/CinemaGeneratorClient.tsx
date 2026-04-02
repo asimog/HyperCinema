@@ -8,6 +8,7 @@ import { CinemaConciergeChat } from "@/components/chat/CinemaConciergeChat";
 import { CrossmintHostedPaymentButton } from "@/components/payments/CrossmintHostedPaymentButton";
 import { HyperflowAssemblyScaffold } from "@/components/shell/HyperflowAssemblyScaffold";
 import { buildDirectorPrompt } from "@/lib/cinema/directorPrompt";
+import { getTokenVideoStylePreset } from "@/lib/memecoins/styles";
 import {
   CINEMA_PACKAGE_TYPES,
   type CinemaPageConfig,
@@ -275,7 +276,7 @@ export function CinemaGeneratorClient(input: {
       <HyperflowAssemblyScaffold
         leftRail={
           <div className="home-concierge-column home-concierge-column--workspace">
-            <CinemaConciergeChat />
+            <CinemaConciergeChat initialExperienceId={config.id} />
           </div>
         }
       >
@@ -388,7 +389,7 @@ export function CinemaGeneratorClient(input: {
                 >
                   {config.styleOptions.map((item) => (
                     <option key={item} value={item}>
-                      {item}
+                      {getTokenVideoStylePreset(item).label}
                     </option>
                   ))}
                 </select>

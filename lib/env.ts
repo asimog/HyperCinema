@@ -135,6 +135,7 @@ export function getEnv(): AppEnv {
       /\\n/g,
       "\n",
     ),
+    HYPERCINEMA_PAYMENT_WALLET: trimEnvValue(process.env.HYPERCINEMA_PAYMENT_WALLET),
   });
 
   if (!parsed.success) {

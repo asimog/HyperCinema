@@ -10,6 +10,7 @@ import {
   type CinemaPageId,
   getCinemaPackageConfig,
 } from "@/lib/cinema/config";
+import { buildDirectorPrompt } from "@/lib/cinema/directorPrompt";
 import type {
   JobDocument,
   PackageType,
@@ -72,24 +73,23 @@ interface JobStatusResponse {
 }
 
 const CONCIERGE_EXPERIENCES = [
+  CINEMA_PAGE_CONFIGS.funcinema,
   CINEMA_PAGE_CONFIGS.hashcinema,
   CINEMA_PAGE_CONFIGS.trenchcinema,
-  CINEMA_PAGE_CONFIGS.funcinema,
   CINEMA_PAGE_CONFIGS.familycinema,
   CINEMA_PAGE_CONFIGS.musicvideo,
-  CINEMA_PAGE_CONFIGS.recreator,
 ] as const;
 
 const INITIAL_MESSAGES: ChatMessage[] = [
   {
     id: "assistant-intro-1",
     role: "assistant",
-    text: "Hi, I am your HyperCinema concierge. I will collect your video details, create the paid job, and track it until render starts.",
+    text: "Hi, I am your HyperMyths concierge. I will collect your video details, refine the prompt, create the paid job, and track it until render starts.",
   },
   {
     id: "assistant-intro-2",
     role: "assistant",
-    text: "First step: choose a studio.",
+    text: "First step: choose a category.",
   },
 ];
 
@@ -130,12 +130,11 @@ function createMessage(role: "assistant" | "user", text: string): ChatMessage {
 
 function parseExperience(input: string): CinemaPageId | null {
   const normalized = input.toLowerCase().replace(/\s+/g, "");
-  if (normalized.includes("hash")) return "hashcinema";
-  if (normalized.includes("trench") || normalized.includes("token")) return "trenchcinema";
-  if (normalized.includes("fun")) return "funcinema";
-  if (normalized.includes("family") || normalized.includes("bedtime")) return "familycinema";
-  if (normalized.includes("music")) return "musicvideo";
-  if (normalized.includes("recreator") || normalized.includes("scene")) return "recreator";
+  if (normalized.includes("trench") || normalized.includes("token") || normalized.includes("wallet")) return "trenchcinema";
+  if (normalized.includes("hash") || normalized.includes("editor") || normalized.includes("options")) return "hashcinema";
+  if (normalized.includes("fun") || normalized.includes("weird") || normalized.includes("random")) return "funcinema";
+  if (normalized.includes("family") || normalized.includes("photo") || normalized.includes("kids") || normalized.includes("mom") || normalized.includes("dad")) return "familycinema";
+  if (normalized.includes("music") || normalized.includes("song") || normalized.includes("beat")) return "musicvideo";
   return null;
 }
 
@@ -191,7 +190,7 @@ function summaryText(input: {
   });
 
   const summaryLines = [
-    `Studio: ${input.configTitle}`,
+    `Category: ${input.configTitle}`,
     input.tokenFlow
       ? `Token address: ${input.draft.tokenAddress}`
       : `Title: ${input.draft.subjectName}`,
@@ -202,6 +201,22 @@ function summaryText(input: {
   ].filter(Boolean);
 
   return summaryLines.join("\n");
+}
+
+function buildForwardedPrompt(input: {
+  configTitle: string;
+  draft: ConciergeDraft;
+  tokenFlow: boolean;
+  requestKind: string;
+}): string {
+  return buildDirectorPrompt({
+    categoryTitle: input.configTitle,
+    subjectName: input.tokenFlow ? input.draft.tokenAddress : input.draft.subjectName,
+    subjectDescription: input.draft.description || undefined,
+    packageType: input.draft.packageType,
+    audioEnabled: input.draft.audioEnabled,
+    requestKind: input.requestKind,
+  });
 }
 
 export function CinemaConciergeChat() {
@@ -463,7 +478,12 @@ export function CinemaConciergeChat() {
               packageType: draft.packageType,
               stylePreset: selectedConfig.defaultStyle,
               subjectDescription: draft.description.trim() || undefined,
-              requestedPrompt: draft.description.trim() || undefined,
+              requestedPrompt: buildForwardedPrompt({
+                configTitle: selectedConfig.title,
+                draft,
+                tokenFlow: true,
+                requestKind: "token_video",
+              }),
               audioEnabled:
                 selectedConfig.audioMode === "required" ? true : draft.audioEnabled,
               pricingMode: selectedConfig.pricingMode,
@@ -476,7 +496,12 @@ export function CinemaConciergeChat() {
               subjectDescription: draft.description.trim() || undefined,
               packageType: draft.packageType,
               stylePreset: selectedConfig.defaultStyle,
-              requestedPrompt: draft.description.trim() || undefined,
+              requestedPrompt: buildForwardedPrompt({
+                configTitle: selectedConfig.title,
+                draft,
+                tokenFlow: false,
+                requestKind: selectedConfig.requestKind,
+              }),
               audioEnabled:
                 selectedConfig.audioMode === "required" ? true : draft.audioEnabled,
               pricingMode: selectedConfig.pricingMode,

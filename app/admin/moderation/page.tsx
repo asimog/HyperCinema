@@ -33,7 +33,7 @@ export default async function ModerationPage({
       <section className="panel rail-panel">
         <div className="panel-header">
           <div>
-            <p className="eyebrow">Pilot Cockpit</p>
+            <p className="eyebrow">HyperMyths Cockpit</p>
             <h2>Gallery moderation</h2>
           </div>
         </div>
@@ -75,10 +75,10 @@ export default async function ModerationPage({
       <HyperflowAssemblyScaffold leftRail={leftRail} rightRail={rightRail}>
         <section className="panel">
           <div className="panel-header">
-            <div>
-              <p className="eyebrow">Admin</p>
-              <h1>Moderation cockpit</h1>
-            </div>
+          <div>
+            <p className="eyebrow">Admin</p>
+            <h1>Moderation cockpit</h1>
+          </div>
           </div>
         </section>
         <ModerationTable

@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { PaymentInstructionsCard } from "@/components/PaymentInstructionsCard";
 import { CrossmintHostedPaymentButton } from "@/components/payments/CrossmintHostedPaymentButton";
 import { HyperflowAssemblyScaffold } from "@/components/shell/HyperflowAssemblyScaffold";
+import { buildDirectorPrompt } from "@/lib/cinema/directorPrompt";
 import {
   CINEMA_PACKAGE_TYPES,
   type CinemaPageConfig,
@@ -77,34 +78,6 @@ function statusLabel(status?: string, progress?: string): string {
   return "Staging";
 }
 
-function buildCreativeDirection(input: {
-  storyNotes: string;
-  characterReferences: string;
-  visualReferences: string;
-  lyrics: string;
-  dialogue: string;
-  imageReferences: string[];
-}): string | undefined {
-  const sections = [
-    input.storyNotes.trim()
-      ? `Story notes: ${input.storyNotes.trim()}`
-      : null,
-    input.characterReferences.trim()
-      ? `Character references: ${input.characterReferences.trim()}`
-      : null,
-    input.visualReferences.trim()
-      ? `Visual references: ${input.visualReferences.trim()}`
-      : null,
-    input.lyrics.trim() ? `Lyrics or song notes: ${input.lyrics.trim()}` : null,
-    input.dialogue.trim() ? `Dialogue direction: ${input.dialogue.trim()}` : null,
-    input.imageReferences.filter(Boolean).length
-      ? `Image reference URLs: ${input.imageReferences.filter(Boolean).join(", ")}`
-      : null,
-  ].filter(Boolean);
-
-  return sections.length ? sections.join("\n") : undefined;
-}
-
 function crossmintProductLocator(input: {
   pricingMode: "public" | "private";
   packageType: PackageType;
@@ -165,13 +138,21 @@ export function CinemaGeneratorClient(input: {
   async function createJob() {
     setError(null);
     setJobPayment(null);
-    const creativeDirection = buildCreativeDirection({
-      storyNotes,
-      characterReferences,
-      visualReferences,
-      lyrics,
-      dialogue,
-      imageReferences,
+    const creativeDirection = buildDirectorPrompt({
+      categoryTitle: config.title,
+      subjectName: config.requestKind === "token_video" ? tokenAddress.trim() : subjectName.trim(),
+      subjectDescription: subjectDescription.trim() || undefined,
+      sourceMediaUrl: sourceMediaUrl.trim() || undefined,
+      sourceTranscript: sourceTranscript.trim() || undefined,
+      storyNotes: storyNotes.trim() || undefined,
+      characterReferences: characterReferences.trim() || undefined,
+      visualReferences: visualReferences.trim() || undefined,
+      lyrics: lyrics.trim() || undefined,
+      dialogue: dialogue.trim() || undefined,
+      imageReferences: imageReferences.map((item) => item.trim()).filter(Boolean),
+      packageType,
+      audioEnabled: config.audioMode === "required" ? true : audioEnabled,
+      requestKind: config.requestKind,
     });
 
     if (config.requestKind === "token_video" && !tokenAddress.trim()) {
@@ -543,7 +524,7 @@ export function CinemaGeneratorClient(input: {
               />
               <span>
                 {config.audioMode === "required"
-                  ? "Audio is required on this route."
+                  ? "Audio is required for this category."
                   : "Optional audio on"}
               </span>
             </label>

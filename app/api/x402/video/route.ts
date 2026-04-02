@@ -48,7 +48,7 @@ async function buildRequirements(input: {
   return server.buildRequirements({
     amountAtomic: usdToUsdcAtomic(input.priceUsdc),
     resourceUrl: buildResourceUrl(),
-    description: `HashCinema ${input.durationSeconds}s memecoin video`,
+    description: `HyperMyths ${input.durationSeconds}s memecoin video`,
     mimeType: "application/json",
     timeoutSeconds: 300,
   });

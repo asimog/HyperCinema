@@ -10,9 +10,9 @@ export function getHashCinemaServiceManifest(): InterfaceAdapterServiceManifest 
 
   return {
     id: "hashcinema.multichain-memecoin-video",
-    name: "HashCinema",
+    name: "TrenchMyths",
     summary:
-      "Multichain memecoin video generation from a single mint or contract address with manual SOL checkout or x402/USDC settlement.",
+      "HyperMyths memecoin video generation from a single mint or contract address with manual SOL checkout or x402/USDC settlement.",
     primaryMode: "token_video",
     supportedChains: ["solana", "ethereum", "bsc", "base"],
     inputSchema: {

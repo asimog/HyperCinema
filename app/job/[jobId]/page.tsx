@@ -195,7 +195,7 @@ export default function JobPage() {
     if (typeof window === "undefined") return "";
     const publicUrl = `${window.location.origin}/job/${jobId}`;
     const tokenName = job?.subjectSymbol ?? job?.subjectName ?? "this memecoin";
-    const text = `HashCinema just turned ${tokenName} into a cinematic token card.`;
+    const text = `HyperMyths just turned ${tokenName} into a cinematic token card.`;
     return `https://x.com/intent/tweet?text=${encodeURIComponent(
       text,
     )}&url=${encodeURIComponent(publicUrl)}`;

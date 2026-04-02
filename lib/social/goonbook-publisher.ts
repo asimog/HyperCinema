@@ -157,16 +157,16 @@ function buildPostBody(input: {
   const summary = clamp(
     input.report?.summary ||
       input.report?.narrativeSummary ||
-      "Fresh HashArt trench cinema export.",
+      "Fresh HyperMyths trench cinema export.",
     420,
   );
   const jobUrl = new URL(`/job/${input.job.jobId}`, env.APP_BASE_URL).toString();
 
   return [
-    `New HashArt drop for ${walletLabel}.`,
+    `New HyperMyths drop for ${walletLabel}.`,
     `${personality}. ${summary}`,
     `Watch: ${jobUrl}`,
-    "#HashArt #GoonBook #Solana",
+    "#HyperMyths #GoonBook #Solana",
   ].join("\n\n");
 }
 
@@ -389,7 +389,7 @@ async function sendGoonBookPostRequest(input: {
           report: input.report,
         }),
         imageAlt: input.video?.thumbnailUrl
-          ? `HashArt trailer thumbnail for ${shortWallet(input.job.wallet)}`
+          ? `HyperMyths trailer thumbnail for ${shortWallet(input.job.wallet)}`
           : null,
         imageUrl: input.video?.thumbnailUrl ?? null,
         mediaCategory: input.video?.thumbnailUrl ? "art" : null,

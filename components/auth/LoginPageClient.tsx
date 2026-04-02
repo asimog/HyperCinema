@@ -26,7 +26,7 @@ export function LoginPageClient({ next }: { next: string }) {
         <div className="panel-header">
           <div>
             <p className="eyebrow">Private Cinema</p>
-            <h2>Sign in to HyperCinema</h2>
+            <h2>Sign in to HyperMyths</h2>
           </div>
         </div>
         <p className="route-summary">
@@ -49,13 +49,13 @@ export function LoginPageClient({ next }: { next: string }) {
               <strong>Videos stay private</strong>
             </div>
             <p className="route-summary compact">
-              FunCinema and FamilyCinema renders are gated to your private gallery only.
+              Family and music projects stay private by default.
             </p>
           </article>
         </div>
         <div className="button-row">
           {isLoggedIn ? (
-            <p className="route-summary compact">You&apos;re signed in — redirecting...</p>
+            <p className="route-summary compact">You&apos;re signed in, redirecting...</p>
           ) : (
             <CrossmintAuthButton />
           )}

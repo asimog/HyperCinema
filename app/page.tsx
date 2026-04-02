@@ -1,30 +1,20 @@
 import Link from "next/link";
 
 import { CinemaConciergeChat } from "@/components/chat/CinemaConciergeChat";
-import { CINEMA_PAGE_CONFIGS } from "@/lib/cinema/config";
-
-const launchPages = [
-  CINEMA_PAGE_CONFIGS.hashcinema,
-  CINEMA_PAGE_CONFIGS.trenchcinema,
-  CINEMA_PAGE_CONFIGS.funcinema,
-  CINEMA_PAGE_CONFIGS.familycinema,
-  CINEMA_PAGE_CONFIGS.musicvideo,
-  CINEMA_PAGE_CONFIGS.recreator,
-];
+import { HYPERMYTHS_CATEGORIES, TRENDING_SPOTLIGHTS } from "@/lib/hypermyths/content";
 
 export default function HomePage() {
   return (
     <div className="cinema-shell cinema-noise min-h-[100dvh] overflow-hidden px-4 py-6 text-[#fff1dc] md:px-8 md:py-8">
       <div className="simple-home-shell home-shell-refined">
         <section className="panel simple-home-hero home-hero-refined">
-          <p className="eyebrow">HashArt.fun</p>
-          <h1 className="font-display">Generate cinematic videos fast.</h1>
+          <p className="eyebrow">HyperMyths.com</p>
+          <h1 className="font-display">Cinematic creation for weird ideas, family memories, and music-driven stories.</h1>
           <p className="route-summary">
-            One focused flow: use the concierge chat, provide details, complete payment, and your
-            job moves straight into the render pipeline.
+            One brand. Five categories. One concierge. Clean briefs, stronger prompts, and a more intentional render flow.
           </p>
           <a href="#concierge-chat" className="button button-primary home-hero-cta">
-            Start with concierge chat
+            Open concierge
           </a>
         </section>
 
@@ -35,39 +25,61 @@ export default function HomePage() {
 
           <div className="home-studios-column">
             <div className="home-studios-header">
-              <p className="eyebrow">Studios</p>
-              <h2 className="font-display">Pick a route and scroll</h2>
+              <p className="eyebrow">Trending</p>
+              <h2 className="font-display">What people are making now</h2>
               <p className="route-summary">
-                Cleaner cards, less noise. Each studio opens a focused generation page.
+                A sharper public rail for the most clickable packaged ideas.
               </p>
             </div>
 
-            <div className="home-studio-stack">
-              {launchPages.map((page, index) => (
-                <article key={page.id} className={`surface-card home-studio-card tone-${index % 6}`}>
-                  <div className="home-studio-copy">
-                    <h3>{page.title}</h3>
-                    <p>{page.summary}</p>
+            <div className="trend-grid trend-grid--compact">
+              {TRENDING_SPOTLIGHTS.slice(0, 4).map((item) => (
+                <article key={item.title} className="surface-card trend-card">
+                  <div className="trend-card-top">
+                    <div>
+                      <p className="eyebrow">{item.category}</p>
+                      <h3>{item.title}</h3>
+                    </div>
+                    <span className="status-badge">{item.startingPrice}</span>
                   </div>
-                  <Link href={page.route} className="button button-secondary home-studio-link">
-                    Open {page.title}
+                  <p>{item.promise}</p>
+                  <div className="route-badges">
+                    {item.tags.map((tag) => (
+                      <span key={tag} className="status-badge">
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                  <Link href={item.href} className="button button-secondary home-studio-link">
+                    Explore
                   </Link>
                 </article>
               ))}
+            </div>
 
-              <article className="surface-card home-studio-card tone-gallery">
-                <div className="home-studio-copy">
-                  <h3>Gallery</h3>
-                  <p>See public generations, references, and recent outputs.</p>
-                </div>
-                <Link href="/gallery" className="button button-secondary home-studio-link">
-                  Open gallery
-                </Link>
-              </article>
+            <div className="home-studios-header home-studios-header--spaced">
+              <p className="eyebrow">Five categories</p>
+              <h2 className="font-display">Choose the lane</h2>
+              <p className="route-summary">
+                Keep the surface simple. The category labels do the organizing.
+              </p>
+            </div>
 
-              <div className="home-admin-link">
-                <Link href="/admin/moderation">Open cockpit moderation</Link>
-              </div>
+            <div className="category-grid">
+              {HYPERMYTHS_CATEGORIES.map((category) => (
+                <article key={category.id} className="surface-card category-card">
+                  <div className="category-card-top">
+                    <div>
+                      <p className="eyebrow">{category.title}</p>
+                      <h3>{category.title}</h3>
+                      <p className="route-summary compact">{category.summary}</p>
+                    </div>
+                  </div>
+                  <Link href={category.href} className="button button-secondary home-studio-link">
+                    Open
+                  </Link>
+                </article>
+              ))}
             </div>
           </div>
         </section>

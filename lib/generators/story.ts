@@ -140,7 +140,7 @@ function buildFunObservations(job: JobDocument, sourceLabel: string | null): str
   if (job.requestKind === "bedtime_story") {
     return [
       "The bedtime mode keeps the pacing soft enough for end-of-day viewing.",
-      "Parents can paste a full story and let HashCinema turn it into a narrated short.",
+      "Parents can paste a full story and let HyperMyths turn it into a narrated short.",
       "Classical cues stay intentionally light so the narration remains the center of gravity.",
     ];
   }
@@ -256,7 +256,7 @@ export async function buildPromptVideoArtifacts(input: {
         ? "Music Video Brief"
         : input.job.requestKind === "scene_recreation"
           ? "Scene Recreation Brief"
-          : "HashCinema Brief");
+          : "HashMyths Brief");
   const subjectDescription = trimOrNull(input.job.subjectDescription);
   const narrativeSummary = buildNarrativeSummary(input.job, sourceLabel);
   const storyCards = buildStoryCards({

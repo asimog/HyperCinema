@@ -130,8 +130,8 @@ textarea {
 .site-brand-kicker {
   color: var(--accent);
   font-family: var(--font-ibm-plex-mono), monospace;
-  font-size: 0.65rem;
-  letter-spacing: 0.14em;
+  font-size: 0.62rem;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
 }
 
@@ -158,13 +158,13 @@ textarea {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 2.2rem;
-  padding: 0.42rem 0.72rem;
+  min-height: 2.1rem;
+  padding: 0.38rem 0.68rem;
   border-radius: 0.2rem;
   border: 1px solid transparent;
   color: var(--muted);
   font-family: var(--font-ibm-plex-mono), monospace;
-  font-size: 0.7rem;
+  font-size: 0.66rem;
   letter-spacing: 0.1em;
   white-space: nowrap;
   text-transform: uppercase;
@@ -304,6 +304,119 @@ textarea {
   display: flex;
   flex-wrap: wrap;
   gap: 0.6rem;
+}
+
+.category-grid,
+.trend-grid {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.trend-grid {
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+}
+
+.trend-grid--compact {
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+}
+
+.category-grid {
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+}
+
+.trend-card,
+.category-card {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.trend-card-top,
+.category-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.8rem;
+}
+
+.trend-card h2,
+.trend-card h3,
+.category-card h3,
+.trend-hero h1 {
+  margin: 0;
+  font-family: var(--font-display), var(--font-space-grotesk), sans-serif;
+  line-height: 1.02;
+  letter-spacing: -0.04em;
+}
+
+.trend-card h2 {
+  font-size: 1.55rem;
+}
+
+.trend-card h3 {
+  font-size: 1.2rem;
+}
+
+.category-card h3 {
+  font-size: 1rem;
+}
+
+.trend-card p,
+.trend-hero p {
+  margin: 0;
+  color: var(--text-subtle);
+}
+
+.trend-hero {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.home-shell-refined {
+  display: grid;
+  gap: 1rem;
+}
+
+.home-hero-refined,
+.home-studios-header,
+.home-studios-header--spaced {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.home-hero-refined h1 {
+  margin: 0;
+  font-size: clamp(3rem, 5.7vw, 6rem);
+  line-height: 0.94;
+  letter-spacing: -0.05em;
+}
+
+.home-hero-cta {
+  width: fit-content;
+  min-width: 14rem;
+  min-height: 3.35rem;
+  padding-inline: 1.3rem;
+  font-size: 0.9rem;
+}
+
+.home-assembly-grid {
+  display: grid;
+  gap: 1rem;
+  align-items: start;
+}
+
+@media (min-width: 1080px) {
+  .home-assembly-grid {
+    grid-template-columns: minmax(24rem, 0.95fr) minmax(0, 1.15fr);
+  }
+}
+
+.home-concierge-column,
+.home-studios-column {
+  min-width: 0;
+}
+
+.home-studio-link {
+  width: fit-content;
 }
 
 .status-badge {

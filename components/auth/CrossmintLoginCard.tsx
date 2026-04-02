@@ -34,7 +34,7 @@ export function CrossmintLoginCard(input: {
           </div>
           <p className="route-summary compact">
             Set `NEXT_PUBLIC_CROSSMINT_API_KEY` and `CROSSMINT_SERVER_API_KEY` to turn the
-            private routes on in production.
+            private studio flow on in production.
           </p>
         </article>
       </div>

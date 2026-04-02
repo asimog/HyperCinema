@@ -22,7 +22,7 @@ function buildDescription(report?: {
     report?.summary ||
     report?.narrativeSummary ||
     report?.funObservations?.[0] ||
-    "A completed HashCinema memecoin cut.";
+    "A completed HyperMyths cut.";
   return truncate(base, 150);
 }
 
@@ -43,7 +43,7 @@ export default async function GalleryPage({
         <div className="panel-header">
           <div>
             <p className="eyebrow">Gallery</p>
-            <h2>Completed token cuts</h2>
+            <h2>Completed cuts</h2>
           </div>
         </div>
         <p className="route-summary">
@@ -114,7 +114,7 @@ export default async function GalleryPage({
                 report?.subjectName ??
                 report?.subjectSymbol ??
                 report?.walletPersonality ??
-                "HashCinema";
+                "HyperMyths";
               const subline =
                 report?.subjectSymbol ??
                 report?.subjectAddress ??

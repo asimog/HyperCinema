@@ -113,16 +113,16 @@ export const CINEMA_PAGE_CONFIGS: Record<CinemaPageId, CinemaPageConfig> = {
   hashcinema: {
     id: "hashcinema",
     route: "/HashCinema",
-    title: "HashCinema",
-    eyebrow: "Generate",
+    title: "HashMyths",
+    eyebrow: "Create",
     summary:
-      "Generic visual cinema generation for any topic, brand, meme, or story. Silent by default, with optional lyrics-driven audio planning.",
+      "Full-fledged options editor for polished concept cuts, brand stories, and tightly controlled outputs.",
     requestKind: "generic_cinema",
     pricingMode: "public",
     visibility: "public",
     requiresAuth: false,
     subjectLabel: "Project title",
-    subjectPlaceholder: "HashArt teaser, launch short, or concept trailer",
+    subjectPlaceholder: "HyperMyths teaser, launch short, or concept trailer",
     subjectDescriptionLabel: "Core idea",
     subjectDescriptionPlaceholder:
       "What is this piece about in one or two sentences?",
@@ -137,10 +137,10 @@ export const CINEMA_PAGE_CONFIGS: Record<CinemaPageId, CinemaPageConfig> = {
   trenchcinema: {
     id: "trenchcinema",
     route: "/TrenchCinema",
-    title: "TrenchCinema",
-    eyebrow: "Generate",
+    title: "TrenchMyths",
+    eyebrow: "Create",
     summary:
-      "Memecoin-focused video generation for Solana, Ethereum, BNB Chain, and Base. Token metadata stays the source of truth and sound remains optional.",
+      "Memecoin stories, wallet-led trailers, and token mythology for Solana, Ethereum, BNB Chain, and Base.",
     requestKind: "token_video",
     pricingMode: "public",
     visibility: "public",
@@ -167,10 +167,10 @@ export const CINEMA_PAGE_CONFIGS: Record<CinemaPageId, CinemaPageConfig> = {
   funcinema: {
     id: "funcinema",
     route: "/FunCinema",
-    title: "FunCinema",
-    eyebrow: "Generate",
+    title: "FunMyths",
+    eyebrow: "Create",
     summary:
-      "Playful video studio for jokes, ideas, experiments, and quick creative tests.",
+      "Random and weird cinematic experiments with playful pacing and controlled chaos.",
     requestKind: "generic_cinema",
     pricingMode: "public",
     visibility: "public",
@@ -191,10 +191,10 @@ export const CINEMA_PAGE_CONFIGS: Record<CinemaPageId, CinemaPageConfig> = {
   familycinema: {
     id: "familycinema",
     route: "/FamilyCinema",
-    title: "FamilyCinema",
-    eyebrow: "Generate",
+    title: "Family",
+    eyebrow: "Create",
     summary:
-      "Bedtime story studio for families. Paste a story seed, keep narration on, and make something gentle and calm.",
+      "Occasions, family photos, and gentle private keepsakes with a warm finish.",
     requestKind: "bedtime_story",
     pricingMode: "public",
     visibility: "public",
@@ -215,10 +215,10 @@ export const CINEMA_PAGE_CONFIGS: Record<CinemaPageId, CinemaPageConfig> = {
   musicvideo: {
     id: "musicvideo",
     route: "/MusicVideo",
-    title: "MusicVideo",
-    eyebrow: "Generate",
+    title: "Music",
+    eyebrow: "Create",
     summary:
-      "Build a trailer-first music video from an embedded source, pasted lyrics, or a beat sheet. Playback stays inside the embed while the render queue builds the visual cut.",
+      "Music-led edits, remakes, and rhythm-first visual stories that sync to the track.",
     requestKind: "music_video",
     pricingMode: "public",
     visibility: "public",

@@ -263,7 +263,7 @@ export async function POST(request: NextRequest) {
       const session = await ensurePrivateSession(request);
       if (!session) {
         return NextResponse.json(
-          { error: "Crossmint login required for private cinema routes." },
+          { error: "Crossmint login required for private studio access." },
           { status: 401 },
         );
       }

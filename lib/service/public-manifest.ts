@@ -4,9 +4,9 @@ import { InterfaceAdapterServiceManifest } from "@/packages/core/src/protocol";
 
 export const publicHashCinemaServiceManifest: InterfaceAdapterServiceManifest = {
   id: "hashcinema.multichain-memecoin-video",
-  name: "HashCinema",
+  name: "TrenchMyths",
   summary:
-    "Multichain memecoin video generation from one mint or contract address, packaged for direct UI use or x402 agent calls.",
+    "HyperMyths memecoin video generation from one mint or contract address, packaged for direct UI use or x402 agent calls.",
   primaryMode: "token_video",
   supportedChains: ["solana", "ethereum", "bsc", "base"],
   inputSchema: {

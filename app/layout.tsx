@@ -22,9 +22,9 @@ const displayFont = Syne({
 });
 
 export const metadata: Metadata = {
-  title: "HashArt.fun | HyperCinema",
+  title: "HyperMyths.com",
   description:
-    "Simple video maker for trailers, stories, music videos, token clips, and scene recreations.",
+    "Cinematic creation studio for weird ideas, polished briefs, family keepsakes, music-led edits, and token stories.",
 };
 
 export const viewport: Viewport = {

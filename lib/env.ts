@@ -83,7 +83,7 @@ const envSchema = z.object({
   GOONBOOK_AGENT_DISPLAY_NAME: z.string().default("HASMEDIA"),
   GOONBOOK_AGENT_BIO: z
     .string()
-    .default("HashArt.fun drops AI video trailers and posts them to GoonBook."),
+    .default("HyperMyths drops AI video trailers and posts them to GoonBook."),
   GOONBOOK_SYNC_BATCH_LIMIT: z.coerce.number().int().positive().default(12),
   SWEEP_MIN_LAMPORTS: z.coerce.number().int().nonnegative().default(5_000),
   SWEEP_BATCH_LIMIT: z.coerce.number().int().positive().default(50),
@@ -119,7 +119,7 @@ export function getEnv(): AppEnv {
       trimOptionalEnvValue(process.env.GOONBOOK_AGENT_DISPLAY_NAME) ?? "HASMEDIA",
     GOONBOOK_AGENT_BIO:
       trimOptionalEnvValue(process.env.GOONBOOK_AGENT_BIO) ??
-      "HashArt.fun drops AI video trailers and posts them to GoonBook.",
+      "HyperMyths drops AI video trailers and posts them to GoonBook.",
     CROSSMINT_SERVER_API_KEY: trimOptionalEnvValue(process.env.CROSSMINT_SERVER_API_KEY),
     NEXT_PUBLIC_CROSSMINT_API_KEY: trimOptionalEnvValue(
       process.env.NEXT_PUBLIC_CROSSMINT_API_KEY,

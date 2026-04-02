@@ -1,21 +1,13 @@
 import Link from "next/link";
 
-import { CrossmintAuthButton } from "@/components/auth/CrossmintAuthButton";
-
 export function SiteHeader() {
   return (
     <header className="site-header">
       <div className="site-nav">
-        <div className="site-nav-copy">
-          <p className="eyebrow">HashArt.fun</p>
-          <div className="site-nav-taglines">
-            <p className="site-nav-tagline">HyperFlow interface assembly</p>
-            <p className="site-nav-summary">
-              Public cinema nodes, private cinema nodes, one shared compute and payment
-              backbone.
-            </p>
-          </div>
-        </div>
+        <Link href="/" className="site-brand">
+          <span className="site-brand-kicker">HashArt.fun</span>
+          <span className="site-brand-title">HyperCinema</span>
+        </Link>
 
         <nav className="nav-links">
           <Link className="nav-link" href="/">
@@ -42,10 +34,9 @@ export function SiteHeader() {
           <Link className="nav-link" href="/gallery">
             Gallery
           </Link>
-          <Link className="nav-link" href="/login">
-            Login
+          <Link className="nav-link" href="/admin/moderation">
+            Cockpit
           </Link>
-          <CrossmintAuthButton />
         </nav>
       </div>
     </header>

@@ -1,11 +1,9 @@
 "use client";
 
-import { useCrossmintAuth } from "@crossmint/client-sdk-react-ui";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import { PaymentInstructionsCard } from "@/components/PaymentInstructionsCard";
-import { CrossmintAuthButton } from "@/components/auth/CrossmintAuthButton";
 import { CrossmintHostedPaymentButton } from "@/components/payments/CrossmintHostedPaymentButton";
 import { HyperflowAssemblyScaffold } from "@/components/shell/HyperflowAssemblyScaffold";
 import {
@@ -126,16 +124,10 @@ export function CinemaGeneratorClient(input: {
   config: CinemaPageConfig;
   viewer: Viewer;
 }) {
-  const { config, viewer } = input;
-  const auth = useCrossmintAuth();
-  const isAuthenticated = auth?.status === "logged-in" || viewer !== null;
+  const { config } = input;
 
-  // When not logged in on a private node, degrade to public so anonymous users
-  // can still generate — their video just lands in the public gallery.
-  const effectivePricingMode =
-    config.pricingMode === "private" && !isAuthenticated ? "public" : config.pricingMode;
-  const effectiveVisibility =
-    config.visibility === "private" && !isAuthenticated ? "public" : config.visibility;
+  const effectivePricingMode = config.pricingMode;
+  const effectiveVisibility = config.visibility;
 
   const [subjectName, setSubjectName] = useState("");
   const [subjectDescription, setSubjectDescription] = useState("");
@@ -291,123 +283,6 @@ export function CinemaGeneratorClient(input: {
     };
   }, [jobPayment?.jobId]);
 
-  const leftRail = (
-    <div className="rail-stack">
-      <section className="panel rail-panel">
-        <div className="panel-header">
-          <div>
-            <p className="eyebrow">{config.eyebrow}</p>
-            <h2>{config.title}</h2>
-          </div>
-        </div>
-        <p className="route-summary">{config.summary}</p>
-        <div className="route-badges">
-          {config.heroChips.map((chip) => (
-            <span key={chip} className="status-badge">
-              {chip}
-            </span>
-          ))}
-        </div>
-      </section>
-
-      <section className="panel rail-panel">
-        <div className="panel-header">
-          <div>
-            <p className="eyebrow">Package</p>
-            <h2>{packageConfig.label}</h2>
-          </div>
-        </div>
-        <div className="mini-list">
-          <article className="mini-item-card">
-            <div>
-              <span>Runtime</span>
-              <strong>{packageConfig.videoSeconds} seconds</strong>
-            </div>
-            <p className="route-summary compact">{packageConfig.subtitle}</p>
-          </article>
-          <article className="mini-item-card">
-            <div>
-              <span>Rate</span>
-              <strong>{packageConfig.priceSol} SOL</strong>
-            </div>
-            <p className="route-summary compact">
-              {effectivePricingMode === "private"
-                ? "Private studio pricing with gated gallery."
-                : "Public pricing for lightweight open generation."}
-            </p>
-          </article>
-        </div>
-      </section>
-    </div>
-  );
-
-  const rightRail = (
-    <div className="rail-stack">
-      <section className="panel rail-panel">
-        <div className="panel-header">
-          <div>
-            <p className="eyebrow">Interface Boxes</p>
-            <h2>Optional dropdowns</h2>
-          </div>
-        </div>
-        <div className="mini-list">
-          <article className="mini-item-card">
-            <div>
-              <span>Characters</span>
-              <strong>Reference identities</strong>
-            </div>
-            <p className="route-summary compact">
-              Give the generator people, archetypes, or roles to preserve on screen.
-            </p>
-          </article>
-          <article className="mini-item-card">
-            <div>
-              <span>Stories</span>
-              <strong>Direction, pacing, ending</strong>
-            </div>
-            <p className="route-summary compact">
-              Feed the story spine, not just the topic label.
-            </p>
-          </article>
-          <article className="mini-item-card">
-            <div>
-              <span>Lyrics</span>
-              <strong>Optional audio guide</strong>
-            </div>
-            <p className="route-summary compact">
-              Useful when audio is on. Silent routes simply ignore it.
-            </p>
-          </article>
-        </div>
-      </section>
-
-      <section className="panel rail-panel">
-        <div className="panel-header">
-          <div>
-            <p className="eyebrow">Visibility</p>
-            <h2>{effectiveVisibility === "private" ? "Private gallery" : "Public gallery"}</h2>
-          </div>
-        </div>
-        <p className="route-summary compact">
-          {effectiveVisibility === "private"
-            ? `Logged in as ${viewer?.email ?? "private viewer"}. Renders stay in your private gallery.`
-            : config.visibility === "private"
-              ? "Login to keep your renders private. Without login, videos appear in the public gallery."
-              : "Completed jobs can appear in the shared public gallery unless moderated."}
-        </p>
-        {config.visibility === "private" && !isAuthenticated ? (
-          <div className="button-row" style={{ marginTop: "0.75rem" }}>
-            <CrossmintAuthButton />
-            <Link href="/login" className="button button-secondary">
-              Login
-            </Link>
-          </div>
-        ) : null}
-      </section>
-    </div>
-  );
-
-  const galleryHref = effectiveVisibility === "private" ? "/gallery/private" : "/gallery";
   const paymentLocator = crossmintProductLocator({
     pricingMode: effectivePricingMode,
     packageType,
@@ -415,7 +290,7 @@ export function CinemaGeneratorClient(input: {
 
   return (
     <div className="cinema-shell cinema-noise min-h-[100dvh] overflow-hidden px-4 py-6 text-[#fff1dc] md:px-8 md:py-8">
-      <HyperflowAssemblyScaffold leftRail={leftRail} rightRail={rightRail}>
+      <HyperflowAssemblyScaffold>
         <section className="panel home-hero-panel">
           <div className="home-hero-copy">
             <p className="eyebrow">{config.themeTone}</p>
@@ -438,13 +313,8 @@ export function CinemaGeneratorClient(input: {
         <section className="panel">
           <div className="panel-header">
             <div>
-              <p className="eyebrow">Assembly Form</p>
+              <p className="eyebrow">Generate</p>
               <h2>Configure the brief</h2>
-            </div>
-            <div className="button-row">
-              <Link className="button button-secondary" href={galleryHref}>
-                Open gallery
-              </Link>
             </div>
           </div>
 
@@ -514,7 +384,7 @@ export function CinemaGeneratorClient(input: {
                     });
                     return (
                       <option key={item} value={item}>
-                        {option.label} · {option.priceSol} SOL
+                        {option.label} - {option.priceSol} SOL
                       </option>
                     );
                   })}
@@ -679,8 +549,7 @@ export function CinemaGeneratorClient(input: {
             </label>
 
             <div className="inline-note">
-              Legacy hashmedia and x402 callers keep using the original adapter contract. These
-              route nodes only add pricing, visibility, and story-brief layers on top.
+              Keep the brief short and clear. The best results usually come from one strong idea.
             </div>
 
             <div className="button-row">
@@ -735,3 +604,4 @@ export function CinemaGeneratorClient(input: {
     </div>
   );
 }
+

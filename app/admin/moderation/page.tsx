@@ -1,41 +1,28 @@
 import Link from "next/link";
 
-import { CrossmintLoginCard } from "@/components/auth/CrossmintLoginCard";
+import { hasCockpitAccess } from "@/lib/admin/cockpit-auth";
+import { CredentialLoginCard } from "@/components/auth/CredentialLoginCard";
 import { ModerationTable } from "@/components/admin/ModerationTable";
 import { HyperflowAssemblyScaffold } from "@/components/shell/HyperflowAssemblyScaffold";
-import { getCrossmintViewerFromCookies, isCrossmintAdmin } from "@/lib/crossmint/server";
 import { listModerationJobArtifacts } from "@/lib/jobs/repository";
 
-export default async function ModerationPage() {
-  const viewer = await getCrossmintViewerFromCookies();
+export default async function ModerationPage({
+  searchParams,
+}: {
+  searchParams: { [key: string]: string | string[] | undefined };
+}) {
+  const error = searchParams.error as string;
+  const isAuthed = await hasCockpitAccess();
 
-  if (!viewer) {
-    return (
-      <div className="cinema-shell cinema-noise min-h-[100dvh] overflow-hidden px-4 py-6 text-[#fff1dc] md:px-8 md:py-8">
-        <CrossmintLoginCard
-          title="Login to open the moderation cockpit"
-          summary="The public gallery cockpit is admin-only and uses the same Crossmint auth layer as the private cinema routes."
-        />
-      </div>
-    );
-  }
+  if (!isAuthed) {
+    const errorMessage = error === "invalid" ? "Invalid username or password. Please try again." : undefined;
 
-  if (!isCrossmintAdmin({ email: viewer.email, userId: viewer.userId })) {
     return (
-      <div className="cinema-shell cinema-noise min-h-[100dvh] overflow-hidden px-4 py-6 text-[#fff1dc] md:px-8 md:py-8">
-        <section className="panel gate-panel">
-          <div className="panel-header">
-            <div>
-              <p className="eyebrow">Cockpit</p>
-              <h2>Admin access required</h2>
-            </div>
-          </div>
-          <p className="route-summary">
-            Your Crossmint session is live, but this panel is limited to the configured admin
-            allowlist.
-          </p>
-        </section>
-      </div>
+      <CredentialLoginCard
+        title="Open the cockpit"
+        summary="Enter the cockpit credentials to manage the gallery."
+        error={errorMessage}
+      />
     );
   }
 
@@ -47,12 +34,11 @@ export default async function ModerationPage() {
         <div className="panel-header">
           <div>
             <p className="eyebrow">Pilot Cockpit</p>
-            <h2>Public gallery moderation</h2>
+            <h2>Gallery moderation</h2>
           </div>
         </div>
         <p className="route-summary">
-          Review completed jobs, flag questionable items, and hide anything that should not
-          remain public.
+          Review finished jobs, flag anything questionable, and hide anything that should not remain public.
         </p>
       </section>
     </div>
@@ -64,7 +50,7 @@ export default async function ModerationPage() {
         <div className="panel-header">
           <div>
             <p className="eyebrow">Shortcuts</p>
-            <h2>Jump routes</h2>
+            <h2>Quick links</h2>
           </div>
         </div>
         <div className="button-row">
@@ -72,9 +58,14 @@ export default async function ModerationPage() {
             Home
           </Link>
           <Link href="/gallery" className="button button-secondary">
-            Public gallery
+            Gallery
           </Link>
         </div>
+        <form action="/api/cockpit/logout" method="POST" style={{ marginTop: "0.75rem" }}>
+          <button type="submit" className="button button-secondary">
+            Log out
+          </button>
+        </form>
       </section>
     </div>
   );

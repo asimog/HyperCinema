@@ -22,9 +22,9 @@ const displayFont = Syne({
 });
 
 export const metadata: Metadata = {
-  title: "HashArt.fun | HyperFlow Cinema Assembly",
+  title: "HashArt.fun | HyperCinema",
   description:
-    "Simple route launcher for HashCinema, TrenchCinema, FunCinema, FamilyCinema, MusicVideo, and Recreator with a backwards-compatible compute spine.",
+    "Simple video maker for trailers, stories, music videos, token clips, and scene recreations.",
 };
 
 export const viewport: Viewport = {

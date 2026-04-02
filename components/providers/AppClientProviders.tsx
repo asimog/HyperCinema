@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  CrossmintAuthProvider,
   CrossmintCheckoutProvider,
   CrossmintProvider,
 } from "@crossmint/client-sdk-react-ui";
@@ -16,14 +15,7 @@ export function AppClientProviders({ children }: { children: ReactNode }) {
 
   return (
     <CrossmintProvider apiKey={apiKey}>
-      <CrossmintAuthProvider
-        refreshRoute="/api/crossmint/refresh"
-        logoutRoute="/api/crossmint/logout"
-        loginMethods={["email", "google"]}
-        authModalTitle="Sign in to open private cinema"
-      >
-        <CrossmintCheckoutProvider>{children}</CrossmintCheckoutProvider>
-      </CrossmintAuthProvider>
+      <CrossmintCheckoutProvider>{children}</CrossmintCheckoutProvider>
     </CrossmintProvider>
   );
 }

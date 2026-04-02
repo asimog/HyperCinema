@@ -47,8 +47,7 @@ export default async function GalleryPage({
           </div>
         </div>
         <p className="route-summary">
-          Finished public renders only. Private FunCinema and FamilyCinema jobs stay out of
-          this feed, and hidden jobs disappear from the gallery entirely.
+          Finished public renders. Hidden jobs disappear from the gallery.
         </p>
       </section>
     </div>
@@ -96,8 +95,8 @@ export default async function GalleryPage({
         <section className="panel">
           <div className="panel-header">
             <div>
-              <p className="eyebrow">HashCinema Gallery</p>
-              <h1>Recent memecoin videos</h1>
+              <p className="eyebrow">Gallery</p>
+              <h1>Recent videos</h1>
             </div>
             <div className="button-row">
               <Link href="/" className="button button-secondary">

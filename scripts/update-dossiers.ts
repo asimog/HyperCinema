@@ -126,7 +126,9 @@ async function main() {
     const behaviorPatterns = cleanLines(report.behaviorPatterns, 4);
     const storyBeats = cleanLines(report.storyBeats, 5);
 
-    const { summary: _summary, downloadUrl: _downloadUrl, ...summaryInput } = report;
+    const { summary: removedSummary, downloadUrl: removedDownloadUrl, ...summaryInput } = report;
+    void removedSummary;
+    void removedDownloadUrl;
     const summary = buildFallbackReportSummary(summaryInput);
 
     const patch: Partial<ReportDocument> = {

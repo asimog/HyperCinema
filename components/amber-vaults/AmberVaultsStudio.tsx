@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 
-import { CINEMA_PAGE_CONFIGS, CINEMA_PACKAGE_TYPES, getCinemaPackageConfig } from "@/lib/cinema/config";
+import { CINEMA_PACKAGE_TYPES, getCinemaPackageConfig } from "@/lib/cinema/config";
 import type { PackageType, VideoStyleId, RequestedTokenChain } from "@/lib/types/domain";
 
 type RequestKind = "generic_cinema" | "bedtime_story" | "music_video" | "scene_recreation" | "token_video";

@@ -3,16 +3,24 @@
 import type { ReactNode } from "react";
 
 export function HyperflowAssemblyScaffold(input: {
-  leftRail: ReactNode;
-  rightRail: ReactNode;
+  leftRail?: ReactNode;
+  rightRail?: ReactNode;
   children: ReactNode;
 }) {
+  const hasLeftRail = Boolean(input.leftRail);
+  const hasRightRail = Boolean(input.rightRail);
+  const layoutClassName = hasLeftRail && hasRightRail
+    ? "hyperflow-layout hyperflow-layout--triple"
+    : hasLeftRail || hasRightRail
+      ? "hyperflow-layout hyperflow-layout--double"
+      : "hyperflow-layout hyperflow-layout--main";
+
   return (
     <div className="hyperflow-shell">
-      <div className="hyperflow-layout">
-        <aside className="hyperflow-left-rail">{input.leftRail}</aside>
+      <div className={layoutClassName}>
+        {hasLeftRail ? <aside className="hyperflow-left-rail">{input.leftRail}</aside> : null}
         <main className="hyperflow-main">{input.children}</main>
-        <aside className="hyperflow-right-rail">{input.rightRail}</aside>
+        {hasRightRail ? <aside className="hyperflow-right-rail">{input.rightRail}</aside> : null}
       </div>
     </div>
   );

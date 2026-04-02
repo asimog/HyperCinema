@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { CinemaConciergeChat } from "@/components/chat/CinemaConciergeChat";
+import { GetPageIcon } from "@/components/ui/AppIcons";
 import { HYPERMYTHS_HERO_CATEGORIES } from "@/lib/hypermyths/content";
 
 const HERO_TONES = ["tone-0", "tone-1", "tone-5", "tone-gallery"] as const;
@@ -12,7 +13,9 @@ export default function HomePage() {
         <div className="home-stage-backdrop" aria-hidden="true" />
 
         <section className="hero-quad-grid" id="hero-grid">
-          {HYPERMYTHS_HERO_CATEGORIES.map((category, index) => (
+          {HYPERMYTHS_HERO_CATEGORIES.map((category, index) => {
+            const HeroIcon = GetPageIcon(category.id);
+            return (
             <Link
               key={category.id}
               href={category.href}
@@ -20,7 +23,7 @@ export default function HomePage() {
             >
               <div className="hero-quad-card-inner">
                 <div className="hero-quad-icon-row">
-                  <span className="hero-quad-icon" aria-hidden="true" />
+                  <HeroIcon className="hero-quad-icon" aria-hidden="true" />
                 </div>
                 <h2 className="font-display">{category.title}</h2>
                 <p className="route-summary compact">{category.summary}</p>
@@ -29,7 +32,8 @@ export default function HomePage() {
                 Enter
               </span>
             </Link>
-          ))}
+            );
+          })}
         </section>
 
         <section className="home-concierge-home">

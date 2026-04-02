@@ -7,6 +7,7 @@ import { PaymentInstructionsCard } from "@/components/PaymentInstructionsCard";
 import { CinemaConciergeChat } from "@/components/chat/CinemaConciergeChat";
 import { CrossmintHostedPaymentButton } from "@/components/payments/CrossmintHostedPaymentButton";
 import { HyperflowAssemblyScaffold } from "@/components/shell/HyperflowAssemblyScaffold";
+import { ArrowRightIcon, SparkIcon } from "@/components/ui/AppIcons";
 import { buildDirectorPrompt } from "@/lib/cinema/directorPrompt";
 import { getTokenVideoStylePreset } from "@/lib/memecoins/styles";
 import {
@@ -548,6 +549,7 @@ export function CinemaGeneratorClient(input: {
                 disabled={isSubmitting}
                 className="button button-primary"
               >
+                <SparkIcon className="button-icon" aria-hidden="true" />
                 {isSubmitting ? "Opening payment..." : "Generate cinema"}
               </button>
             </div>
@@ -565,6 +567,7 @@ export function CinemaGeneratorClient(input: {
               </div>
               <div className="button-row">
                 <Link className="button button-secondary" href={`/job/${jobPayment.jobId}`}>
+                  <ArrowRightIcon className="button-icon" aria-hidden="true" />
                   Open job page
                 </Link>
               </div>

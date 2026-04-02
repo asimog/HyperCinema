@@ -3,6 +3,11 @@
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 
+import {
+  CopyIcon,
+  WalletIcon,
+} from "@/components/ui/AppIcons";
+
 interface PaymentInstructionsCardProps {
   amountSol: number;
   paymentAddress: string;
@@ -159,6 +164,7 @@ export function PaymentInstructionsCard(props: PaymentInstructionsCardProps) {
             onClick={() => void copy("Address", props.paymentAddress)}
             className="cinema-secondary-button mt-3 rounded-xl px-3 py-2 text-xs font-medium transition"
           >
+            <CopyIcon className="button-icon" aria-hidden="true" />
             Copy address
           </button>
         </div>
@@ -171,6 +177,7 @@ export function PaymentInstructionsCard(props: PaymentInstructionsCardProps) {
             onClick={() => void copy("Amount", payableAmount)}
             className="cinema-secondary-button mt-3 rounded-xl px-3 py-2 text-xs font-medium transition"
           >
+            <CopyIcon className="button-icon" aria-hidden="true" />
             Copy amount
           </button>
         </div>
@@ -181,6 +188,7 @@ export function PaymentInstructionsCard(props: PaymentInstructionsCardProps) {
             onClick={() => void copy("Payment payload", copyPayload)}
             className="cinema-secondary-button inline-flex rounded-2xl px-4 py-3 text-sm font-medium transition"
           >
+            <WalletIcon className="button-icon" aria-hidden="true" />
             Copy full payment instructions
           </button>
         </div>

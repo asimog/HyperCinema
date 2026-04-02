@@ -6,6 +6,19 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { PaymentInstructionsCard } from "@/components/PaymentInstructionsCard";
 import { CrossmintHostedPaymentButton } from "@/components/payments/CrossmintHostedPaymentButton";
 import {
+  ArrowRightIcon,
+  ChainIcon,
+  ClockIcon,
+  FilmIcon,
+  HashIcon,
+  HeartIcon,
+  PaletteIcon,
+  SendIcon,
+  SparkIcon,
+  TrendingIcon,
+  WalletIcon,
+} from "@/components/ui/AppIcons";
+import {
   CINEMA_PAGE_CONFIGS,
   type CinemaPageId,
   getCinemaPackageConfig,
@@ -529,6 +542,44 @@ export function CinemaConciergeChat(input: CinemaConciergeChatProps) {
     return [];
   }, [step, isLoveX]);
 
+  function quickChoiceIcon(value: string) {
+    if (step === "choose_experience") {
+      switch (value) {
+        case "hashmyth":
+          return HashIcon;
+        case "hypercinema":
+          return PaletteIcon;
+        case "lovex":
+          return HeartIcon;
+        case "trenchcinema":
+          return TrendingIcon;
+        default:
+          return FilmIcon;
+      }
+    }
+
+    if (step === "chain") {
+      switch (value) {
+        case "solana":
+          return SparkIcon;
+        case "ethereum":
+          return ChainIcon;
+        case "bsc":
+          return WalletIcon;
+        case "base":
+          return PaletteIcon;
+        default:
+          return ArrowRightIcon;
+      }
+    }
+
+    if (step === "package") return ClockIcon;
+    if (step === "audio") return SendIcon;
+    if (step === "confirm") return SparkIcon;
+
+    return ArrowRightIcon;
+  }
+
   function agentMsg(text: string): ChatMessage {
     return createMessage("assistant", text, persona.director);
   }
@@ -990,17 +1041,21 @@ export function CinemaConciergeChat(input: CinemaConciergeChatProps) {
 
       {quickChoices.length ? (
         <div className="concierge-choices">
-          {quickChoices.map((choice) => (
-            <button
-              key={choice.value}
-              type="button"
-              className="button button-secondary concierge-choice"
-              onClick={() => onChoiceClick(choice.value)}
-              disabled={isCreating}
-            >
-              {choice.label}
-            </button>
-          ))}
+          {quickChoices.map((choice) => {
+            const QuickChoiceIcon = quickChoiceIcon(choice.value);
+            return (
+              <button
+                key={choice.value}
+                type="button"
+                className="button button-secondary concierge-choice"
+                onClick={() => onChoiceClick(choice.value)}
+                disabled={isCreating}
+              >
+                <QuickChoiceIcon className="button-icon" aria-hidden="true" />
+                {choice.label}
+              </button>
+            );
+          })}
         </div>
       ) : null}
 
@@ -1024,6 +1079,7 @@ export function CinemaConciergeChat(input: CinemaConciergeChatProps) {
             className="button button-primary concierge-send"
             disabled={isCreating || !inputValue.trim()}
           >
+            <SendIcon className="button-icon" aria-hidden="true" />
             Send
           </button>
         </form>
@@ -1040,6 +1096,7 @@ export function CinemaConciergeChat(input: CinemaConciergeChatProps) {
             </div>
             <div className="button-row">
               <Link className="button button-secondary" href={`/job/${jobPayment.jobId}`}>
+                <ArrowRightIcon className="button-icon" aria-hidden="true" />
                 Open job
               </Link>
             </div>

@@ -1,5 +1,6 @@
 "use client";
 
+import { ChainBadgeIcon } from "@/components/ui/AppIcons";
 import { RequestedTokenChain } from "@/lib/types/domain";
 
 const CHAIN_OPTIONS: Array<{
@@ -64,9 +65,17 @@ export function ChainSelector({ value, onChange, disabled }: ChainSelectorProps)
                   : "border-white/10 bg-[#120f11]/78 text-[#f1e2ca] hover:border-[rgba(152,200,191,0.28)] hover:bg-[#171214]"
               } disabled:cursor-not-allowed disabled:opacity-60`}
             >
-              <p className="text-xs uppercase tracking-[0.18em] text-[#a9998d]">
-                {option.label}
-              </p>
+              <div className="flex items-start justify-between gap-3">
+                <div className="space-y-2">
+                  <ChainBadgeIcon
+                    className="selector-card-icon"
+                    aria-hidden="true"
+                  />
+                  <p className="text-xs uppercase tracking-[0.18em] text-[#a9998d]">
+                    {option.label}
+                  </p>
+                </div>
+              </div>
               <p className="mt-2 text-xs leading-relaxed text-[#cbbcad]">
                 {option.description}
               </p>

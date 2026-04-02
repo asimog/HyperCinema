@@ -1,5 +1,6 @@
 "use client";
 
+import { PaletteIcon } from "@/components/ui/AppIcons";
 import { TOKEN_VIDEO_STYLE_PRESETS } from "@/lib/memecoins/styles";
 import { VideoStyleId } from "@/lib/types/domain";
 
@@ -43,7 +44,8 @@ export function StylePresetSelector({
               } disabled:cursor-not-allowed disabled:opacity-60`}
             >
               <div className="flex items-start justify-between gap-3">
-                <div>
+                <div className="space-y-2">
+                  <PaletteIcon className="selector-card-icon" aria-hidden="true" />
                   <p className="text-xs uppercase tracking-[0.18em] text-[#a9998d]">
                     {preset.shortLabel}
                   </p>

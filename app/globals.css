@@ -122,8 +122,9 @@ textarea {
 }
 
 .site-brand {
-  display: inline-grid;
-  gap: 0.1rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
   margin-right: 0.6rem;
 }
 
@@ -144,6 +145,13 @@ textarea {
   line-height: 1;
 }
 
+.site-brand-icon {
+  width: 1.1rem;
+  height: 1.1rem;
+  flex: 0 0 auto;
+  color: var(--accent);
+}
+
 .nav-links {
   display: flex;
   flex-wrap: nowrap;
@@ -158,6 +166,7 @@ textarea {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 0.42rem;
   min-height: 2.1rem;
   padding: 0.38rem 0.68rem;
   border-radius: 0.2rem;
@@ -172,6 +181,13 @@ textarea {
     border-color 160ms ease,
     color 160ms ease,
     background 160ms ease;
+}
+
+.nav-link-icon {
+  width: 0.9rem;
+  height: 0.9rem;
+  flex: 0 0 auto;
+  color: currentColor;
 }
 
 .nav-link:hover {
@@ -1285,6 +1301,22 @@ select {
   box-shadow:
     0 0 0 1px rgba(0, 0, 0, 0.18) inset,
     0 10px 20px rgba(0, 0, 0, 0.18);
+  color: #fff1dc;
+}
+
+.selector-card-icon {
+  width: 1rem;
+  height: 1rem;
+  color: var(--accent);
+  flex: 0 0 auto;
+}
+
+.button-icon {
+  width: 0.92rem;
+  height: 0.92rem;
+  margin-right: 0.45rem;
+  vertical-align: -0.14em;
+  color: currentColor;
 }
 
 .hero-quad-footer {

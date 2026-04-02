@@ -2,6 +2,8 @@
 
 import { CrossmintHostedCheckout } from "@crossmint/client-sdk-react-ui";
 
+import { WalletIcon } from "@/components/ui/AppIcons";
+
 export function CrossmintHostedPaymentButton(input: {
   productLocator?: string | null;
   theme?: "dark" | "light" | "crossmint";
@@ -40,8 +42,11 @@ export function CrossmintHostedPaymentButton(input: {
           },
         },
       }}
-    >
-      {input.label}
+      >
+      <span className="inline-flex items-center gap-2">
+        <WalletIcon className="button-icon" aria-hidden="true" />
+        {input.label}
+      </span>
     </CrossmintHostedCheckout>
   );
 }

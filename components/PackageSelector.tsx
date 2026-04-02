@@ -1,5 +1,6 @@
 "use client";
 
+import { ClockIcon } from "@/components/ui/AppIcons";
 import { ACTIVE_PACKAGE_TYPES, PACKAGE_CONFIG } from "@/lib/constants";
 import { PackageType } from "@/lib/types/domain";
 
@@ -39,7 +40,8 @@ export function PackageSelector({
               } disabled:cursor-not-allowed disabled:opacity-60`}
             >
               <div className="flex items-start justify-between gap-3">
-                <div>
+                <div className="space-y-2">
+                  <ClockIcon className="selector-card-icon" aria-hidden="true" />
                   <p className="text-xs uppercase tracking-[0.18em] text-[#a9998d]">
                     {item.label ?? `${item.videoSeconds}s`}
                   </p>

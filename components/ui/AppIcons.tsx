@@ -1,5 +1,3 @@
-"use client";
-
 import type { ComponentPropsWithoutRef, ReactNode } from "react";
 import type { CinemaPageId } from "@/lib/cinema/config";
 import type { RequestedTokenChain } from "@/lib/types/domain";

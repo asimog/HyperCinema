@@ -53,6 +53,7 @@ export function ChainSelector({ value, onChange, disabled }: ChainSelectorProps)
       <div className="grid gap-3 md:grid-cols-5">
         {CHAIN_OPTIONS.map((option) => {
           const selected = option.value === value;
+          const ChainIcon = ChainBadgeIcon(option.value);
           return (
             <button
               key={option.value}
@@ -67,7 +68,7 @@ export function ChainSelector({ value, onChange, disabled }: ChainSelectorProps)
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="space-y-2">
-                  <ChainBadgeIcon
+                  <ChainIcon
                     className="selector-card-icon"
                     aria-hidden="true"
                   />

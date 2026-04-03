@@ -27,21 +27,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getCrossmintSessionFromRequest } from "@/lib/crossmint/server";
 import { getCinemaPackageConfig } from "@/lib/cinema/config";
+import {
+  getDefaultStylePresetForExperience,
+  videoStyleSchema,
+} from "@/lib/styles/video-style-validation";
 
 export const runtime = "nodejs";
 
-const styleSchema = z.enum([
-  "hyperflow_assembly",
-  "trading_card",
-  "trench_neon",
-  "mythic_poster",
-  "glass_signal",
-  "crt_anime_90s",
-]);
-
 const sharedCinemaSchema = z.object({
   packageType: z.enum(["1d", "2d"]),
-  stylePreset: styleSchema.optional(),
+  stylePreset: videoStyleSchema.optional(),
   requestedPrompt: z.string().max(4_000).optional(),
   audioEnabled: z.boolean().optional(),
   discountCode: z.string().max(32).optional(),
@@ -295,9 +290,10 @@ export async function POST(request: NextRequest) {
 
     const pkg = resolvePricing({
       packageType: payload.packageType as PackageType,
-      pricingMode,
-    });
+    pricingMode,
+  });
     const discountCode = payload.discountCode?.trim() ? normalizeDiscountCode(payload.discountCode) : null;
+    const defaultStylePreset = getDefaultStylePresetForExperience(experience);
 
     if (!isPromptPayload(payload)) {
       const resolved = await resolveMemecoinMetadata({
@@ -316,7 +312,7 @@ export async function POST(request: NextRequest) {
           subjectDescription:
             payload.subjectDescription?.trim() ||
             resolved.description,
-          stylePreset: (payload.stylePreset ?? "hyperflow_assembly") as VideoStyleId,
+          stylePreset: (payload.stylePreset ?? defaultStylePreset) as VideoStyleId,
           requestedPrompt: payload.requestedPrompt?.trim() || null,
           audioEnabled: payload.audioEnabled,
           pricingMode,
@@ -348,7 +344,7 @@ export async function POST(request: NextRequest) {
           tokenAddress: payload.tokenAddress,
           packageType: payload.packageType as PackageType,
           subjectChain: resolved.chain,
-          stylePreset: (payload.stylePreset ?? "hyperflow_assembly") as VideoStyleId,
+          stylePreset: (payload.stylePreset ?? defaultStylePreset) as VideoStyleId,
           requestedPrompt: payload.requestedPrompt?.trim() || null,
           maxAgeMinutes: 20,
         });
@@ -374,7 +370,7 @@ export async function POST(request: NextRequest) {
         subjectDescription:
           payload.subjectDescription?.trim() ||
           resolved.description,
-        stylePreset: (payload.stylePreset ?? "hyperflow_assembly") as VideoStyleId,
+        stylePreset: (payload.stylePreset ?? defaultStylePreset) as VideoStyleId,
         requestedPrompt: payload.requestedPrompt?.trim() || null,
         audioEnabled: payload.audioEnabled,
         pricingMode,
@@ -432,9 +428,7 @@ export async function POST(request: NextRequest) {
         sourceEmbedUrl: payload.sourceEmbedUrl?.trim() || null,
         sourceMediaProvider: payload.sourceMediaProvider?.trim() || null,
         sourceTranscript: payload.sourceTranscript?.trim() || null,
-        stylePreset:
-          payload.stylePreset ??
-          (payload.requestKind === "bedtime_story" ? "mythic_poster" : "hyperflow_assembly"),
+        stylePreset: (payload.stylePreset ?? defaultStylePreset) as VideoStyleId,
         requestedPrompt: payload.requestedPrompt?.trim() || null,
         audioEnabled: payload.audioEnabled,
         pricingMode,
@@ -465,9 +459,7 @@ export async function POST(request: NextRequest) {
       sourceEmbedUrl: payload.sourceEmbedUrl?.trim() || null,
       sourceMediaProvider: payload.sourceMediaProvider?.trim() || null,
       sourceTranscript: payload.sourceTranscript?.trim() || null,
-      stylePreset:
-        payload.stylePreset ??
-        (payload.requestKind === "bedtime_story" ? "mythic_poster" : "hyperflow_assembly"),
+      stylePreset: (payload.stylePreset ?? defaultStylePreset) as VideoStyleId,
       requestedPrompt: payload.requestedPrompt?.trim() || null,
       audioEnabled: payload.audioEnabled,
       pricingMode,

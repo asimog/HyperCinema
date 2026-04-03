@@ -15,17 +15,12 @@ import {
 } from "@/lib/types/domain";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import {
+  getDefaultStylePresetForExperience,
+  videoStyleSchema,
+} from "@/lib/styles/video-style-validation";
 
 export const runtime = "nodejs";
-
-const styleSchema = z.enum([
-  "hyperflow_assembly",
-  "trading_card",
-  "trench_neon",
-  "mythic_poster",
-  "glass_signal",
-  "crt_anime_90s",
-]);
 
 const freeGenerateSchema = z.discriminatedUnion("requestKind", [
   z.object({
@@ -33,11 +28,25 @@ const freeGenerateSchema = z.discriminatedUnion("requestKind", [
     tokenAddress: z.string().min(32).max(64),
     chain: z.enum(["auto", "solana", "ethereum", "bsc", "base"]).default("auto"),
     packageType: z.enum(["1d", "2d"]),
-    stylePreset: styleSchema.default("hyperflow_assembly"),
+    stylePreset: videoStyleSchema.optional(),
     subjectDescription: z.string().max(1_200).optional(),
     requestedPrompt: z.string().max(4_000).optional(),
     audioEnabled: z.boolean().optional(),
-    experience: z.string().optional(),
+    experience: z
+      .enum([
+        "legacy",
+        "hypercinema",
+        "hyperm",
+        "mythx",
+        "trenchcinema",
+        "funcinema",
+        "familycinema",
+        "musicvideo",
+        "recreator",
+        "hashmyth",
+        "lovex",
+      ])
+      .optional(),
   }),
   z.object({
     requestKind: z.enum(["generic_cinema", "mythx", "bedtime_story", "music_video", "scene_recreation"]),
@@ -47,7 +56,7 @@ const freeGenerateSchema = z.discriminatedUnion("requestKind", [
     sourceMediaProvider: z.string().max(64).optional(),
     sourceTranscript: z.string().max(12_000).optional(),
     packageType: z.enum(["1d", "2d"]),
-    stylePreset: styleSchema.default("hyperflow_assembly"),
+    stylePreset: videoStyleSchema.optional(),
     requestedPrompt: z.string().max(4_000).optional(),
     audioEnabled: z.boolean().optional(),
     experience: z
@@ -96,6 +105,9 @@ export async function POST(request: NextRequest) {
       packageType: payload.packageType as PackageType,
       pricingMode: "private",
     });
+    const defaultStylePreset = getDefaultStylePresetForExperience(payload.experience);
+    const stylePreset: VideoStyleId =
+      payload.stylePreset ?? defaultStylePreset ?? "hyperflow_assembly";
 
     let jobId: string;
 
@@ -113,7 +125,7 @@ export async function POST(request: NextRequest) {
         subjectSymbol: resolved.symbol,
         subjectImage: resolved.image,
         subjectDescription: payload.subjectDescription?.trim() || resolved.description,
-        stylePreset: payload.stylePreset as VideoStyleId,
+        stylePreset: stylePreset as VideoStyleId,
         requestedPrompt: payload.requestedPrompt?.trim() || null,
         audioEnabled: payload.audioEnabled,
         pricingMode: "private",
@@ -136,7 +148,7 @@ export async function POST(request: NextRequest) {
         sourceEmbedUrl: null,
         sourceMediaProvider: payload.sourceMediaProvider?.trim() || null,
         sourceTranscript: payload.sourceTranscript?.trim() || null,
-        stylePreset: payload.stylePreset as VideoStyleId,
+        stylePreset: stylePreset as VideoStyleId,
         requestedPrompt: payload.requestedPrompt?.trim() || null,
         audioEnabled: payload.audioEnabled,
         pricingMode: "private",

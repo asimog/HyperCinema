@@ -9,6 +9,7 @@ import { resolveMemecoinMetadata } from "@/lib/memecoins/metadata";
 import { resolvePackage } from "@/lib/packages";
 import { PackageType, VideoStyleId } from "@/lib/types/domain";
 import { getHyperCinemaX402Server, usdToUsdcAtomic } from "@/lib/x402/hypercinema";
+import { videoStyleSchema } from "@/lib/styles/video-style-validation";
 
 export const runtime = "nodejs";
 
@@ -16,15 +17,7 @@ const agentVideoRequestSchema = z
   .object({
     tokenAddress: z.string().min(32).max(64),
     chain: z.enum(["auto", "solana", "ethereum", "bsc", "base"]).default("auto"),
-    stylePreset: z
-      .enum([
-        "hyperflow_assembly",
-        "trading_card",
-        "trench_neon",
-        "mythic_poster",
-        "glass_signal",
-      ])
-      .default("hyperflow_assembly"),
+    stylePreset: videoStyleSchema.optional(),
     requestedPrompt: z.string().max(240).optional(),
     packageType: z.enum(["1d", "2d"]).optional(),
     durationSeconds: z.union([z.literal(30), z.literal(60)]).optional(),
@@ -116,6 +109,8 @@ export async function POST(request: NextRequest) {
       address: parsed.data.tokenAddress,
       chain: parsed.data.chain,
     });
+    const stylePreset: VideoStyleId =
+      parsed.data.stylePreset ?? "hyperflow_assembly";
 
     const server = getHyperCinemaX402Server();
     const requirements = await buildRequirements({
@@ -168,7 +163,7 @@ export async function POST(request: NextRequest) {
       subjectImage: resolved.image,
       subjectDescription: resolved.description,
       transaction: settlement.transaction,
-      stylePreset: parsed.data.stylePreset as VideoStyleId,
+      stylePreset,
       requestedPrompt: parsed.data.requestedPrompt?.trim() || null,
     });
 

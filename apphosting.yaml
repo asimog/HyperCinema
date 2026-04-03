@@ -15,8 +15,6 @@ env:
     secret: FIREBASE_STORAGE_BUCKET
   - variable: GOONBOOK_API_BASE_URL
     secret: GOONBOOK_API_BASE_URL
-  - variable: HYPERCINEMA_PAYMENT_WALLET
-    secret: HYPERCINEMA_PAYMENT_WALLET
   - variable: HELIUS_API_KEY
     secret: HELIUS_API_KEY
   - variable: HELIUS_WEBHOOK_SECRET

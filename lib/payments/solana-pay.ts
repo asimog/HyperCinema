@@ -1,4 +1,6 @@
-import { getEnv } from "@/lib/env";
+import {
+  HYPERCINEMA_REVENUE_WALLET_ADDRESS,
+} from "@/lib/payments/revenue-wallet";
 
 export function solToLamports(solAmount: number): number {
   return Math.round(solAmount * 1_000_000_000);
@@ -9,6 +11,6 @@ export function lamportsToSol(lamports: number): number {
 }
 
 export function getRevenueWalletAddress(): string {
-  return getEnv().HYPERCINEMA_PAYMENT_WALLET;
+  return HYPERCINEMA_REVENUE_WALLET_ADDRESS;
 }
 

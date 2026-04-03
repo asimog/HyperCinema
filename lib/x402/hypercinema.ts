@@ -5,6 +5,7 @@ import {
 import { toAtomicUnits } from "@dexterai/x402/utils";
 
 import { getEnv } from "@/lib/env";
+import { getRevenueWalletAddress } from "@/lib/payments/solana-pay";
 
 let cachedServer: ReturnType<typeof createX402Server> | null = null;
 
@@ -15,7 +16,7 @@ export function getHyperCinemaX402Server() {
 
   const env = getEnv();
   cachedServer = createX402Server({
-    payTo: env.HYPERCINEMA_PAYMENT_WALLET,
+    payTo: getRevenueWalletAddress(),
     facilitatorUrl: env.X402_FACILITATOR_URL,
     network: SOLANA_MAINNET_NETWORK,
   });

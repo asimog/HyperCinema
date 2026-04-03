@@ -1,15 +1,4 @@
 import { z } from "zod";
-import { PublicKey } from "@solana/web3.js";
-
-function isValidSolanaPublicKey(value: string): boolean {
-  try {
-    // PublicKey constructor validates base58 format and key length.
-    new PublicKey(value);
-    return true;
-  } catch {
-    return false;
-  }
-}
 
 function trimEnvValue(value: string | undefined): string | undefined {
   return typeof value === "string" ? value.trim() : value;
@@ -58,15 +47,8 @@ const envSchema = z.object({
   FIREBASE_PROJECT_ID: z.string().min(1),
   FIREBASE_CLIENT_EMAIL: z.string().min(1).optional(),
   FIREBASE_PRIVATE_KEY: z.string().min(1).optional(),
-  HYPERCINEMA_PAYMENT_WALLET: z
-    .string()
-    .min(32)
-    .max(64)
-    .refine(isValidSolanaPublicKey, {
-      message: "HYPERCINEMA_PAYMENT_WALLET must be a valid Solana address",
-    }),
   PAYMENT_MASTER_SEED_HEX: z.string().min(64),
-  PAYMENT_DERIVATION_PREFIX: z.string().default("hypercinema-job"),
+  PAYMENT_DERIVATION_PREFIX: z.string().default("hashcinema-job"),
   FIREBASE_STORAGE_BUCKET: z.string().optional(),
   APP_BASE_URL: z.string().url().default("http://localhost:3000"),
   WORKER_URL: z.string().url().optional(),
@@ -197,7 +179,6 @@ export function getEnv(): AppEnv {
       /\\n/g,
       "\n",
     ),
-    HYPERCINEMA_PAYMENT_WALLET: trimEnvValue(process.env.HYPERCINEMA_PAYMENT_WALLET),
   });
 
   if (!parsed.success) {

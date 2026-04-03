@@ -19,12 +19,6 @@ export type TrendingSpotlight = {
 /** Primary 4 hero categories shown on the homepage 2x2 grid. */
 export const HYPERMYTHS_HERO_CATEGORIES: HyperMythsCategory[] = [
   {
-    id: "hyperm",
-    title: "HyperM",
-    summary: "Full-fledged creator for polished concept cuts, brand stories, and tightly controlled outputs.",
-    href: "/HyperM",
-  },
-  {
     id: "mythx",
     title: "MythX",
     summary: "Autobiography from the last 42 tweets of an X profile. No title required, just a handle or bio link.",
@@ -41,18 +35,18 @@ export const HYPERMYTHS_HERO_CATEGORIES: HyperMythsCategory[] = [
     title: "HashMyth",
     summary: "Wallet and memecoin generator. Any token, any wallet. Turn the on-chain story into cinema.",
     href: "/HashMyth",
+  },
+  {
+    id: "hyperm",
+    title: "HyperM",
+    summary: "Full-fledged creator for polished concept cuts, brand stories, and tightly controlled outputs.",
+    href: "/HyperM",
   },
 ];
 
 /** All categories including legacy/deprecated ones surfaced in Trending. */
 export const HYPERMYTHS_CATEGORIES: HyperMythsCategory[] = [
   {
-    id: "hyperm",
-    title: "HyperM",
-    summary: "Full-fledged creator for polished concept cuts, brand stories, and tightly controlled outputs.",
-    href: "/HyperM",
-  },
-  {
     id: "mythx",
     title: "MythX",
     summary: "Autobiography from the last 42 tweets of an X profile. No title required, just a handle or bio link.",
@@ -69,6 +63,12 @@ export const HYPERMYTHS_CATEGORIES: HyperMythsCategory[] = [
     title: "HashMyth",
     summary: "Wallet and memecoin generator. Any token, any wallet. Turn the on-chain story into cinema.",
     href: "/HashMyth",
+  },
+  {
+    id: "hyperm",
+    title: "HyperM",
+    summary: "Full-fledged creator for polished concept cuts, brand stories, and tightly controlled outputs.",
+    href: "/HyperM",
   },
   {
     id: "funcinema",

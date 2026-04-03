@@ -178,10 +178,10 @@ function getPersona(experienceId: CinemaPageId | null): AgentPersona {
 /* ── Concierge experiences shown as quick choices ────────────────── */
 
 const CONCIERGE_EXPERIENCES = [
-  { ...CINEMA_PAGE_CONFIGS.hyperm, label: "HyperM" },
   { ...CINEMA_PAGE_CONFIGS.mythx, label: "MythX" },
   { ...CINEMA_PAGE_CONFIGS.lovex, label: "LoveX" },
   { ...CINEMA_PAGE_CONFIGS.hashmyth, label: "HashMyth" },
+  { ...CINEMA_PAGE_CONFIGS.hyperm, label: "HyperM" },
 ] as const;
 
 const INITIAL_MESSAGES: ChatMessage[] = [

@@ -212,8 +212,8 @@ function soundCues(scene: SceneDefinition, state: StoryState): string[] {
             : [];
 
   const ordered = uniq([
-    "background music bed",
-    "voiceover commentary",
+    "cinematic score bed",
+    "atmospheric sound design",
     ...leitmotifs,
     ...actAccents,
     ...entropyAccents,
@@ -334,7 +334,7 @@ function buildContinuousPrompt(input: {
     "Facts-first rule: do not invent factual trades, tokens, or events. Use token images only when provided as anchors.",
     "Continuity: keep one trader protagonist present (or strongly implied) in every scene; maintain visual motif continuity across scenes.",
     "Token image rule: when an image URL is provided, treat it as an in-world poster, hologram, billboard, shrine, reflection, or mascot apparition, not a UI thumbnail.",
-    "Audio rule: continuous background music bed with sparse voiceover commentary only. No character dialogue. No SFX, no crowd noise, no alarms, no distortion.",
+    "Audio rule: cinematic score and atmospheric sound design first. No narration or voice unless the user explicitly requests it. No SFX, no crowd noise, no alarms, no distortion.",
   ].join("\n");
 
   const identity = [

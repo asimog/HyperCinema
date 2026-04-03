@@ -11,6 +11,7 @@ import {
   buildOnScreenTextPolicy,
   buildSourceReferencePrompt,
 } from "@/lib/cinema/sourceReference";
+import { buildAudioDirectionLine } from "@/lib/cinema/audioPolicy";
 import type { SceneState, VideoIdentitySheet, VideoPromptScene } from "@/lib/analytics/types";
 import { round } from "@/lib/utils";
 import { rankTokenMetadataForStory } from "@/lib/tokens/metadata-selection";
@@ -478,10 +479,10 @@ function buildAudioCanon(input: {
   };
 }
 
-function buildSoundBibleLines(canon: AudioCanon): string[] {
+function buildTokenSoundBibleLines(canon: AudioCanon): string[] {
   return [
     `Leitmotifs (keep present across scenes): ${canon.leitmotifs.join(", ")}.`,
-    "Audio format: continuous background music bed + sparse voiceover commentary only. No character dialogue.",
+    "Audio format: cinematic score and atmospheric sound design first. No narration or voice unless the user explicitly requests it.",
     "Act 1 stays intimate and minimal; Act 2 escalates in intensity without harshness; Act 3 resolves into a gentle, clear mix.",
     "No sound effects, no crowd noise, no alarms, no glitch/distortion, no clipping. Maintain one continuous sound world.",
   ];
@@ -619,26 +620,20 @@ function buildCreativeStoryPrompt(input: {
   });
   const tone =
     input.story.storyKind === "bedtime_story"
-      ? "Build a safe, gentle bedtime short with calm pacing, warm visuals, and reassuring narration."
+      ? "Build a safe, gentle bedtime short with calm pacing, warm visuals, and narration only when the user explicitly asks for it."
       : input.story.storyKind === "music_video"
         ? "Build a trailer-first music video. Let the beat, chorus, and performance language control the cut."
         : input.story.storyKind === "scene_recreation"
           ? "Build a trailer-grade scene recreation. Preserve dialogue cadence and blocking while remaking the skin."
           : "Build a cinematic short for a general topic or story, not a trading recap.";
-  const audioRule =
-    input.story.storyKind === "bedtime_story"
-      ? "Narration must stay on and the music bed should feel like very light classical accompaniment."
-      : input.story.storyKind === "music_video"
-        ? input.generateAudio
-          ? "Audio is enabled. Follow the lyrics, beat, chorus, and musical dynamics without inventing new song facts."
-          : "Audio is muted for now, but the visual rhythm should still read like a music video ready for sound."
-        : input.story.storyKind === "scene_recreation"
-          ? input.generateAudio
-            ? "Audio is enabled. Preserve the dialogue cadence and source-scene timing without inventing new quotes."
-            : "Audio is muted for now, but the reconstruction should still preserve dialogue timing and scene blocking."
-          : input.generateAudio
-            ? "Audio is enabled. Use sparse voiceover and a restrained score that follows the lyrics or dialogue notes when present."
-            : "No narration, no music, no sound effects. The visual edit carries the story alone.";
+  const audioRule = buildAudioDirectionLine({
+    requestKind: input.story.storyKind,
+    requestedPrompt: input.story.requestedPrompt,
+    subjectDescription: input.story.subjectDescription,
+    sourceTranscript: input.story.sourceTranscript,
+    narrativeSummary: input.story.narrativeSummary,
+    audioEnabled: input.generateAudio,
+  });
 
   const sceneLines = input.script.scenes
     .slice(0, MAX_SCENES_IN_PROMPT)
@@ -716,7 +711,7 @@ function buildPrompt(input: {
     "This is cinema, not analytics. Never mention balances, PnL, trade counts, percentages, package tiers, or scoreboard numbers in dialogue, captions, or commentary.",
     "Render rule: every shot must be derived from identity bible + state transition reel + scene realization. Never re-invent the protagonist mid-video.",
     "Visual rule: diversify locations beyond trading desks. Use symbolic environments and cinematic settings; at most one desk-style shot.",
-    "Sound rule: generate coherent trailer audio with a continuous background music bed and sparse voiceover commentary only. No character dialogue. No SFX, no crowd noise, no alarms, no distortion, no clipping.",
+    "Sound rule: generate a cinematic score and atmospheric sound design first. No narration or voice unless the user explicitly requests it. No character dialogue by default. No SFX, no crowd noise, no alarms, no distortion, no clipping.",
     ...buildCreativeAssemblyLines({
       storyKind: input.story.storyKind,
       source: input.story.sourceReference,
@@ -737,7 +732,7 @@ function buildPrompt(input: {
     "Identity bible:",
     ...buildIdentityBibleLines(input.coherence.identity),
     "Sound bible:",
-    ...buildSoundBibleLines(audioCanon),
+    ...buildTokenSoundBibleLines(audioCanon),
     "State transition reel:",
     ...buildStateTransitionLines({
       sceneMetadata: input.sceneMetadata,
@@ -823,7 +818,7 @@ export function buildGoogleVeoRenderPayload(input: {
             ? [
                 "bedtime",
                 "gentle",
-                "narration-led",
+                "cinematic-lullaby",
                 "classical-soft",
                 "text-free-by-default",
               ]

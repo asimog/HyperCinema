@@ -170,8 +170,8 @@ function buildSoundPrompt(input: {
 
   const header = [
     "SOUND DIRECTOR BRIEF — for attachment to the video generation prompt.",
-    "Audio format: continuous background music bed + sparse voiceover commentary only.",
-    "No character dialogue, no SFX, no crowd noise, no alarms, no distortion, no clipping.",
+    "Audio format: cinematic score + atmospheric sound design only unless speech is explicitly requested.",
+    "No narration by default, no character dialogue unless requested, no crowd noise, no alarms, no distortion, no clipping.",
     "Maintain one continuous sound world across all scenes; never switch genre or break leitmotif continuity.",
   ].join("\n");
 

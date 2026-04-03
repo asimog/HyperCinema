@@ -144,7 +144,7 @@ export const CINEMA_PAGE_CONFIGS: Record<CinemaPageId, CinemaPageConfig> = {
     title: "HyperM",
     eyebrow: "Create",
     summary:
-      "Autobiography generator. Paste an X profile link, pull the last 10 tweets, and turn the person's public voice into a full-bore cinematic biography.",
+      "Autobiography generator. Paste an X profile link, pull the last 10 tweets, and turn the person's public signals into a full-bore cinematic biography.",
     requestKind: "generic_cinema",
     pricingMode: "public",
     visibility: "public",
@@ -168,7 +168,7 @@ export const CINEMA_PAGE_CONFIGS: Record<CinemaPageId, CinemaPageConfig> = {
     defaultAudioEnabled: false,
     audioMode: "optional",
     supportsChain: false,
-    themeTone: "public voice, private truth, and autobiography with no airbrushing",
+    themeTone: "public signals, private truth, and autobiography with no airbrushing",
     heroChips: ["X profile", "last 10 tweets", "no holds barred"],
   },
   trenchcinema: {
@@ -246,8 +246,8 @@ export const CINEMA_PAGE_CONFIGS: Record<CinemaPageId, CinemaPageConfig> = {
     defaultAudioEnabled: true,
     audioMode: "required",
     supportsChain: false,
-    themeTone: "soft bedtime cinema with narration and gentle musical lift",
-    heroChips: ["public", "voice always on", "parent-paste story"],
+    themeTone: "soft bedtime cinema with narration only when requested and a gentle musical lift",
+    heroChips: ["public", "narration optional", "parent-paste story"],
   },
   musicvideo: {
     id: "musicvideo",

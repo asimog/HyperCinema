@@ -1,4 +1,5 @@
 import { buildContinuationPrompt, buildStoryCards } from "@/lib/cinema/storyCards";
+import { buildAudioDirectionLine, inferVoiceRequested } from "@/lib/cinema/audioPolicy";
 import {
   resolveSourceReferenceSummary,
   sourceReferenceLabel,
@@ -26,23 +27,13 @@ function requestKindLabel(requestKind: JobDocument["requestKind"]): string {
 }
 
 function audioDirection(job: JobDocument): string {
-  switch (job.requestKind) {
-    case "bedtime_story":
-      return "Audio direction: gentle narration with very light classical music.";
-    case "music_video":
-      return job.audioEnabled
-        ? "Audio direction: follow the lyrics, beat, and chorus structure with a music-video cadence."
-        : "Audio direction: visual-first music video grammar with the beat kept in mind for a later audio pass.";
-    case "scene_recreation":
-      return job.audioEnabled
-        ? "Audio direction: preserve dialogue cadence and scene timing while keeping the recreation legally and structurally grounded."
-        : "Audio direction: visual-first scene recreation with dialogue timing preserved as an invisible spine.";
-    default:
-      if (job.audioEnabled) {
-        return "Audio direction: sound is enabled and can follow lyrical or rhythmic notes if provided.";
-      }
-      return "Audio direction: silent visual-first cut with no narration and no music.";
-  }
+  return buildAudioDirectionLine({
+    requestKind: job.requestKind,
+    requestedPrompt: job.requestedPrompt,
+    subjectDescription: job.subjectDescription,
+    sourceTranscript: job.sourceTranscript,
+    audioEnabled: job.audioEnabled,
+  });
 }
 
 function buildStoryBeats(input: {
@@ -95,8 +86,8 @@ function buildBehaviorPatterns(
 ): string[] {
   if (job.requestKind === "bedtime_story") {
     return [
-      "Narration-first pacing built for winding down instead of spiking attention.",
-      "Very soft classical underscore with warm visual continuity across scenes.",
+      "Speech only appears when explicitly requested; otherwise the pacing stays quiet and cinematic.",
+      "Very soft cinematic underscore with warm visual continuity across scenes.",
       sourceLabel
         ? `A cited source still feeds the visual world, but the bedtime tone stays calm and non-literal.`
         : null,
@@ -128,7 +119,15 @@ function buildBehaviorPatterns(
 
   return [
     "Prompt-driven cinematic generation rather than token-analytics storytelling.",
-    "Character references and story notes drive the shot design and narration arc.",
+    inferVoiceRequested({
+      requestKind: job.requestKind,
+      requestedPrompt: job.requestedPrompt,
+      subjectDescription: job.subjectDescription,
+      sourceTranscript: job.sourceTranscript,
+      audioEnabled: job.audioEnabled,
+    })
+      ? "Character references and story notes can include voice only when explicitly requested."
+      : "Character references and story notes drive the shot design while the mix stays speech-free by default.",
     sourceLabel
       ? `Source intake is active: ${sourceLabel} is a primary visual and emotional reference, not a discarded link.`
       : null,
@@ -141,7 +140,7 @@ function buildFunObservations(job: JobDocument, sourceLabel: string | null): str
     return [
       "The bedtime mode keeps the pacing soft enough for end-of-day viewing.",
       "Parents can paste a full story and let HyperMyths turn it into a narrated short.",
-      "Classical cues stay intentionally light so the narration remains the center of gravity.",
+      "Cinematic cues stay intentionally light so narration only leads when it is explicitly requested.",
     ];
   }
 
@@ -172,7 +171,7 @@ function buildFunObservations(job: JobDocument, sourceLabel: string | null): str
     sourceLabel
       ? `The source reference is explicitly carried into the scene plan instead of being ignored after job creation.`
       : null,
-    "The story can be visual-only by default, then opt into sound when the brief calls for it.",
+    "The story can be visual-only by default, then opt into sound or speech only when the brief calls for it.",
     "The generator is not locked to memecoins, wallets, or chain metadata.",
   ].filter((item): item is string => Boolean(item));
 }

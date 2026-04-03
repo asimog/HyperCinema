@@ -744,14 +744,14 @@ function buildSoundDesign(phase: StoryBeatPhase, emotionVector: SceneEmotionVect
   const motif = VIDEO_MOTIFS[phase];
   const base = pick(motif.sound, seed);
   const policy =
-    "background music bed + sparse voiceover commentary only; no character dialogue, no SFX, no distortion or clipping";
+    "cinematic score + atmospheric sound design only; no narration or voice unless explicitly requested, no character dialogue, no SFX, no distortion or clipping";
   if (emotionVector.chaos >= 0.65) {
     return `${base}, with the mix slightly out of breath but still readable; ${policy}`;
   }
   if (emotionVector.discipline >= 0.65) {
     return `${base}, with cleaner cadence and precise transitions; ${policy}`;
   }
-  return `${base}, balanced for cinematic momentum and narration clarity; ${policy}`;
+  return `${base}, balanced for cinematic momentum and mix clarity; ${policy}`;
 }
 
 function buildProviderPrompt(input: {

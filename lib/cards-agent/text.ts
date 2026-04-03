@@ -283,7 +283,7 @@ export function buildStoryCards(input: {
   const transcriptLines = splitTranscript(input.sourceTranscript);
   const beats = input.storyBeats?.filter(Boolean) ?? [];
   const audioNote = input.audioEnabled
-    ? "Narration or score may push the momentum."
+    ? "A cinematic score may push the momentum; voice only if the brief explicitly asks for it."
     : "The visual edit must carry the momentum.";
   const tone = modeTone(input.requestKind);
 

@@ -1,4 +1,6 @@
 import { randomUUID } from "crypto";
+import { createHmac } from "crypto";
+import { getEnv } from "@/lib/env";
 
 export type XTweet = {
   id: string;
@@ -30,6 +32,90 @@ function trimOrNull(value: string | null | undefined): string | null {
 function normalizeBaseUrl(rawBaseUrl: string): string {
   const trimmed = rawBaseUrl.replace(/\/+$/, "");
   return trimmed.endsWith("/2") ? trimmed : `${trimmed}/2`;
+}
+
+function percentEncode(value: string): string {
+  return encodeURIComponent(value)
+    .replace(/[!'()*]/g, (char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`);
+}
+
+function buildOAuth1Header(input: {
+  method: string;
+  url: string;
+  query: Record<string, string | number | boolean | undefined>;
+}): string | null {
+  const env = getEnv();
+  const consumerKey = env.X_API_CONSUMER_KEY;
+  const consumerSecret = env.X_API_CONSUMER_SECRET;
+  const accessToken = env.X_API_ACCESS_TOKEN;
+  const accessTokenSecret = env.X_API_ACCESS_TOKEN_SECRET;
+
+  if (!consumerKey || !consumerSecret || !accessToken || !accessTokenSecret) {
+    return null;
+  }
+
+  const oauthParams: Record<string, string> = {
+    oauth_consumer_key: consumerKey,
+    oauth_nonce: randomUUID().replace(/-/g, ""),
+    oauth_signature_method: "HMAC-SHA1",
+    oauth_timestamp: Math.floor(Date.now() / 1000).toString(),
+    oauth_token: accessToken,
+    oauth_version: "1.0",
+  };
+
+  const normalizedParams = [
+    ...Object.entries(input.query)
+      .filter(([, value]) => value !== undefined && value !== null)
+      .map(([key, value]) => [percentEncode(key), percentEncode(String(value))] as const),
+    ...Object.entries(oauthParams).map(([key, value]) => [percentEncode(key), percentEncode(value)] as const),
+  ].sort(([leftKey, leftValue], [rightKey, rightValue]) =>
+    leftKey === rightKey ? leftValue.localeCompare(rightValue) : leftKey.localeCompare(rightKey),
+  );
+
+  const parameterString = normalizedParams.map(([key, value]) => `${key}=${value}`).join("&");
+  const baseString = [
+    input.method.toUpperCase(),
+    percentEncode(input.url),
+    percentEncode(parameterString),
+  ].join("&");
+
+  const signingKey = `${percentEncode(consumerSecret)}&${percentEncode(accessTokenSecret)}`;
+  const signature = createHmac("sha1", signingKey).update(baseString).digest("base64");
+
+  const headerParams = {
+    ...oauthParams,
+    oauth_signature: signature,
+  };
+
+  return `OAuth ${Object.entries(headerParams)
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([key, value]) => `${percentEncode(key)}="${percentEncode(value)}"`)
+    .join(", ")}`;
+}
+
+function buildXAuthHeaders(input: {
+  method: string;
+  url: string;
+  query: Record<string, string | number | boolean | undefined>;
+}): Headers {
+  const env = getEnv();
+  const headers: Record<string, string> = {
+    Accept: "application/json",
+    "User-Agent": "HyperMythsX/1.0",
+  };
+
+  if (env.X_API_BEARER_TOKEN) {
+    headers.Authorization = `Bearer ${env.X_API_BEARER_TOKEN}`;
+    return new Headers(headers);
+  }
+
+  const oauthHeader = buildOAuth1Header(input);
+  if (oauthHeader) {
+    headers.Authorization = oauthHeader;
+    return new Headers(headers);
+  }
+
+  throw new Error("X API credentials are not configured yet.");
 }
 
 function decodeHandleSegment(value: string): string {
@@ -95,12 +181,7 @@ export async function fetchXProfileTweets(input: {
   profileInput: string;
   maxTweets?: number;
 }): Promise<XProfileTweetsResult> {
-  const bearerToken = process.env.X_API_BEARER_TOKEN?.trim();
   const baseUrl = process.env.X_API_BASE_URL?.trim() || "https://api.x.com/2";
-
-  if (!bearerToken) {
-    throw new Error("X API bearer token is not configured yet.");
-  }
 
   const normalized = normalizeXProfileInput(input.profileInput);
   if (!normalized.username || !normalized.profileUrl) {
@@ -109,14 +190,18 @@ export async function fetchXProfileTweets(input: {
 
   const normalizedBaseUrl = normalizeBaseUrl(baseUrl);
   const maxTweets = Math.max(1, Math.min(10, input.maxTweets ?? 10));
-  const headers = {
-    Authorization: `Bearer ${bearerToken}`,
-    Accept: "application/json",
-    "User-Agent": "HyperMythsX/1.0",
-  };
+  const userUrl = `${normalizedBaseUrl}/users/by/username/${encodeURIComponent(normalized.username)}`;
+  const userQuery = {
+    "user.fields": "description,profile_image_url,name,username",
+  } as const;
+  const headers = buildXAuthHeaders({
+    method: "GET",
+    url: userUrl,
+    query: userQuery,
+  });
 
   const userResponse = await fetch(
-    `${normalizedBaseUrl}/users/by/username/${encodeURIComponent(normalized.username)}?user.fields=description,profile_image_url,name,username`,
+    `${userUrl}?user.fields=description,profile_image_url,name,username`,
     {
       headers,
       cache: "no-store",
@@ -143,10 +228,20 @@ export async function fetchXProfileTweets(input: {
     throw new Error("The X profile could not be resolved.");
   }
 
+  const tweetsUrl = `${normalizedBaseUrl}/users/${encodeURIComponent(user.id)}/tweets`;
+  const tweetsHeaders = buildXAuthHeaders({
+    method: "GET",
+    url: tweetsUrl,
+    query: {
+      max_results: maxTweets,
+      "tweet.fields": "created_at",
+    },
+  });
+
   const tweetsResponse = await fetch(
-    `${normalizedBaseUrl}/users/${encodeURIComponent(user.id)}/tweets?max_results=${maxTweets}&tweet.fields=created_at`,
+    `${tweetsUrl}?max_results=${maxTweets}&tweet.fields=created_at`,
     {
-      headers,
+      headers: tweetsHeaders,
       cache: "no-store",
     },
   );

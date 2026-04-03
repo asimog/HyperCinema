@@ -27,7 +27,7 @@ export const HYPERMYTHS_HERO_CATEGORIES: HyperMythsCategory[] = [
   {
     id: "hyperm",
     title: "HyperM",
-    summary: "Paste an X profile link, pull the last 10 tweets, and turn a public voice into an autobiography cut.",
+    summary: "Paste an X profile link, pull the last 10 tweets, and turn a public signal trail into an autobiography cut.",
     href: "/HyperM",
   },
   {
@@ -139,9 +139,9 @@ export const TRENDING_SPOTLIGHTS: TrendingSpotlight[] = [
   },
   {
     title: "Kids Story",
-    promise: "Gentle bedtime pacing with soft visuals and narration.",
+    promise: "Gentle bedtime pacing with soft visuals and narration only when requested.",
     category: "Family",
-    tags: ["kids", "voice", "safe"],
+    tags: ["kids", "narration-optional", "safe"],
     startingPrice: "1 USDC",
     href: "/FamilyCinema",
   },

@@ -32,6 +32,7 @@ import { publishCompletedJobToGoonBook } from "../lib/social/goonbook-publisher"
 import { resolveMemecoinMetadata } from "../lib/memecoins/metadata";
 import { buildTokenVideoArtifacts } from "../lib/memecoins/story";
 import { buildPromptVideoArtifacts } from "../lib/generators/story";
+import { fetchXProfileTweets, normalizeXProfileInput } from "../lib/x/api";
 
 type AnalyticsEngineMode = ReturnType<typeof getEnv>["ANALYTICS_ENGINE_MODE"];
 const ANALYTICS_STAGE_TIMEOUT_MS = 4 * 60_000;
@@ -356,9 +357,64 @@ async function processPromptVideoJob(input: {
     wallet: input.job.wallet,
   };
 
-  await updateJobProgress(input.job.jobId, "generating_report");
+  let job = input.job;
+  if (job.requestKind === "mythx") {
+    const profileInput =
+      job.sourceMediaUrl?.trim() ||
+      job.subjectName?.trim() ||
+      "";
+
+    if (profileInput) {
+      try {
+        const profile = await fetchXProfileTweets({
+          profileInput,
+          maxTweets: 42,
+        });
+
+        const normalized = normalizeXProfileInput(profileInput);
+        const subjectName =
+          profile.profile.displayName ||
+          (normalized.username ? `@${normalized.username}` : job.subjectName ?? "X profile");
+        const sourceMediaUrl = profile.profile.profileUrl;
+        const sourceTranscript = profile.transcript;
+        const sourceMediaProvider = "x";
+
+        await updateJob(job.jobId, {
+          subjectName,
+          sourceMediaUrl,
+          sourceMediaProvider,
+          sourceTranscript,
+          subjectDescription:
+            job.subjectDescription?.trim() ||
+            `Autobiography built from @${profile.profile.username}'s last 42 tweets.`,
+        });
+
+        job = {
+          ...job,
+          subjectName,
+          sourceMediaUrl,
+          sourceMediaProvider,
+          sourceTranscript,
+          subjectDescription:
+            job.subjectDescription?.trim() ||
+            `Autobiography built from @${profile.profile.username}'s last 42 tweets.`,
+        };
+      } catch (error) {
+        logger.warn("mythx_profile_hydration_failed", {
+          component: "worker",
+          stage: "hydrate_mythx_profile",
+          jobId: job.jobId,
+          wallet: job.wallet,
+          errorCode: "mythx_profile_hydration_failed",
+          errorMessage: errorMessage(error),
+        });
+      }
+    }
+  }
+
+  await updateJobProgress(job.jobId, "generating_report");
   const computed = await buildPromptVideoArtifacts({
-    job: input.job,
+    job,
   });
 
   const summary = await timedStage(context, "generate_report_summary", async () =>
@@ -373,30 +429,30 @@ async function processPromptVideoJob(input: {
 
   await upsertReport(report);
 
-  await updateJobProgress(input.job.jobId, "generating_script");
-  await updateJobProgress(input.job.jobId, "generating_video");
+  await updateJobProgress(job.jobId, "generating_script");
+  await updateJobProgress(job.jobId, "generating_video");
   await upsertVideo({
-    jobId: input.job.jobId,
+    jobId: job.jobId,
     videoUrl: null,
     thumbnailUrl: null,
-    duration: input.job.videoSeconds,
+    duration: job.videoSeconds,
     renderStatus: "queued",
   });
 
   const rendered = await withProgressHeartbeat({
-    jobId: input.job.jobId,
+    jobId: job.jobId,
     progress: "generating_video",
     operation: async () =>
       timedStage(context, "build_and_render_video", async () =>
         buildAndRenderVideo({
-          jobId: input.job.jobId,
+          jobId: job.jobId,
           walletStory: computed.story,
         }),
       ),
   });
 
   const { storedVideoUrl, reportUrl, thumbnailUrl } = await uploadRenderedAssets({
-    jobId: input.job.jobId,
+    jobId: job.jobId,
     context,
     rendered,
     report,
@@ -408,13 +464,13 @@ async function processPromptVideoJob(input: {
       downloadUrl: reportUrl,
     }),
     upsertVideo({
-      jobId: input.job.jobId,
+      jobId: job.jobId,
       videoUrl: storedVideoUrl,
       thumbnailUrl,
-      duration: input.job.videoSeconds,
+      duration: job.videoSeconds,
       renderStatus: "ready",
     }),
-    updateJobStatus(input.job.jobId, "complete", {
+    updateJobStatus(job.jobId, "complete", {
       progress: "complete",
       errorCode: null,
       errorMessage: null,
@@ -484,6 +540,7 @@ export async function processJob(jobId: string): Promise<void> {
 
     if (
       job.requestKind === "generic_cinema" ||
+      job.requestKind === "mythx" ||
       job.requestKind === "bedtime_story" ||
       job.requestKind === "music_video" ||
       job.requestKind === "scene_recreation"

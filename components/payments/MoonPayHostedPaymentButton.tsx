@@ -11,13 +11,34 @@ declare global {
   }
 }
 
-async function requestMoonpayStart(jobId: string): Promise<void> {
-  await fetch(`/api/jobs/${jobId}/moonpay/start`, {
+async function requestMoonpayStart(jobId: string): Promise<{
+  ok: boolean;
+  status: number;
+  message: string | null;
+}> {
+  const response = await fetch(`/api/jobs/${jobId}/moonpay/start`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
   });
+
+  let message: string | null = null;
+  try {
+    const payload = (await response.json()) as {
+      message?: string;
+      error?: string;
+    };
+    message = payload.message ?? payload.error ?? null;
+  } catch {
+    message = null;
+  }
+
+  return {
+    ok: response.ok,
+    status: response.status,
+    message,
+  };
 }
 
 export function MoonPayHostedPaymentButton(input: {
@@ -40,10 +61,21 @@ export function MoonPayHostedPaymentButton(input: {
         themeMode: input.themeMode,
         onSuccess: (event) => {
           console.log(event);
-          setStatusText("Payment received. Starting job...");
-          void requestMoonpayStart(input.jobId).catch(() => {
-            setStatusText("Payment received. Waiting for confirmation...");
-          });
+          setStatusText("Payment received. Finalizing job dispatch...");
+          void requestMoonpayStart(input.jobId)
+            .then((result) => {
+              if (result.ok) {
+                setStatusText("Payment confirmed. Dispatching your job now.");
+                return;
+              }
+
+              setStatusText(
+                result.message ?? "Payment received. Waiting for confirmation...",
+              );
+            })
+            .catch(() => {
+              setStatusText("Payment received. Waiting for confirmation...");
+            });
         },
         onError: (event) => {
           console.log(event);

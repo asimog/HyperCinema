@@ -33,33 +33,22 @@ export function PackageSelector({
               type="button"
               disabled={disabled}
               onClick={() => onChange(item.packageType)}
-              className={`rounded-[1.4rem] border px-4 py-4 text-left transition ${
-                selected
-                  ? "border-[rgba(255,197,97,0.44)] bg-[linear-gradient(180deg,rgba(255,197,97,0.16),rgba(255,116,71,0.08))] text-[#fff5e5] shadow-[0_18px_30px_rgba(255,116,71,0.12)]"
-                  : "border-white/10 bg-[#120f11]/78 text-[#f1e2ca] hover:border-[rgba(255,197,97,0.28)] hover:bg-[#171214]"
-              } disabled:cursor-not-allowed disabled:opacity-60`}
+              className={`selector-card ${selected ? "selector-card--selected" : ""} disabled:cursor-not-allowed disabled:opacity-60`}
             >
-              <div className="flex items-start justify-between gap-3">
-                <div className="space-y-2">
+              <div className="selector-card-top">
+                <div>
                   <ClockIcon className="selector-card-icon" aria-hidden="true" />
-                  <p className="text-xs uppercase tracking-[0.18em] text-[#a9998d]">
-                    {item.label ?? `${item.videoSeconds}s`}
-                  </p>
-                  <p className="mt-2 text-sm text-[#dbcbbd]">{item.subtitle}</p>
+                  <p className="eyebrow">{item.label ?? `${item.videoSeconds}s`}</p>
+                  <p className="font-display text-3xl leading-none">{item.priceSol} SOL</p>
                 </div>
-                <span className="rounded-full border border-white/10 bg-white/5 px-2 py-1 text-[0.62rem] uppercase tracking-[0.18em] text-[#b7a898]">
-                  {item.videoSeconds}s
+                <span className="status-badge">
+                  {selected ? "Selected" : `${item.videoSeconds}s`}
                 </span>
               </div>
-              <p className="font-display mt-4 text-3xl leading-none">{item.priceSol} SOL</p>
-              <p className="mt-2 text-xs uppercase tracking-[0.18em] text-[#b7a898]">
+              <p className="route-summary compact">{item.subtitle}</p>
+              <p className="route-summary compact">
                 Agent x402: ${item.priceUsdc} USDC
               </p>
-              {selected ? (
-                <p className="mt-3 text-[0.72rem] uppercase tracking-[0.22em] text-[#ffe4b0]">
-                  selected
-                </p>
-              ) : null}
             </button>
           );
         })}

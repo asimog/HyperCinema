@@ -35,11 +35,11 @@ export default function HomePage() {
             );
           })}
         </section>
-
-        <section className="home-concierge-home">
-          <CinemaConciergeChat />
-        </section>
       </div>
+
+      <section className="home-concierge-home home-concierge-home--full">
+        <CinemaConciergeChat />
+      </section>
     </div>
   );
 }

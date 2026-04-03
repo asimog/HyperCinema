@@ -90,25 +90,29 @@ export function DiscountCodePanel({
           code and save it to Firestore.
         </p>
 
-        <div className="mt-4 grid gap-3 md:grid-cols-[1fr,1fr,auto]">
-          <input
-            value={code}
-            onChange={(event) => setCode(event.target.value)}
-            placeholder="Custom code or leave blank"
-            className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-[#fff4e0] outline-none transition placeholder:text-[var(--muted)] focus:border-[var(--accent-soft)]"
-            disabled={pending}
-          />
-          <input
-            value={label}
-            onChange={(event) => setLabel(event.target.value)}
-            placeholder="Label / note"
-            className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-[#fff4e0] outline-none transition placeholder:text-[var(--muted)] focus:border-[var(--accent-soft)]"
-            disabled={pending}
-          />
+        <div className="mt-4 grid gap-3 md:grid-cols-[1fr,1fr,auto] md:items-end">
+          <label className="field">
+            <span>Custom code</span>
+            <input
+              value={code}
+              onChange={(event) => setCode(event.target.value)}
+              placeholder="Leave blank to generate"
+              disabled={pending}
+            />
+          </label>
+          <label className="field">
+            <span>Label / note</span>
+            <input
+              value={label}
+              onChange={(event) => setLabel(event.target.value)}
+              placeholder="Optional label"
+              disabled={pending}
+            />
+          </label>
           <button
             type="button"
             onClick={() => void issueCode()}
-            className="button button-secondary whitespace-nowrap"
+            className="button button-secondary whitespace-nowrap md:self-end"
             disabled={pending}
           >
             {pending ? "Issuing..." : "Issue code"}
@@ -116,9 +120,9 @@ export function DiscountCodePanel({
         </div>
 
         <div className="mt-3 flex flex-wrap gap-2">
-          {success ? <p className="inline-success">{success}</p> : null}
+          {success ? <p className="inline-note">{success}</p> : null}
           {error ? <p className="inline-error">{error}</p> : null}
-          {copiedCode ? <p className="inline-success">Copied {copiedCode}.</p> : null}
+          {copiedCode ? <p className="inline-note">Copied {copiedCode}.</p> : null}
         </div>
       </section>
 

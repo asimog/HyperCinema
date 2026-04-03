@@ -1,4 +1,5 @@
 import { JobRequestKind, SourceReferenceSummary } from "@/lib/types/domain";
+import { normalizeXProfileInput } from "@/lib/x/api";
 
 function trimOrNull(value: string | null | undefined): string | null {
   const trimmed = value?.trim();
@@ -36,6 +37,16 @@ function isYouTubeUrl(url: string): boolean {
   }
 }
 
+function isXUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname.toLowerCase().replace(/^www\./, "");
+    return host.includes("x.com") || host.includes("twitter.com");
+  } catch {
+    return false;
+  }
+}
+
 function normalizeProvider(rawProvider?: string | null, url?: string | null): string {
   const provider = trimOrNull(rawProvider)?.toLowerCase();
   if (provider) {
@@ -44,6 +55,10 @@ function normalizeProvider(rawProvider?: string | null, url?: string | null): st
 
   if (url && isYouTubeUrl(url)) {
     return "youtube";
+  }
+
+  if (url && isXUrl(url)) {
+    return "x";
   }
 
   return "web";
@@ -174,6 +189,21 @@ export function sourceReferenceLabel(
   const author = trimOrNull(source.authorName);
   const provider = source.provider.toUpperCase();
 
+  if (source.provider === "x") {
+    const normalized = source.url ? normalizeXProfileInput(source.url) : null;
+    const handle = normalized?.username ? `@${normalized.username}` : null;
+
+    if (handle) {
+      return `X: ${handle}`;
+    }
+
+    if (source.url) {
+      return `X: ${source.url}`;
+    }
+
+    return "X source reference";
+  }
+
   if (title && author) {
     return `${provider}: ${title} by ${author}`;
   }
@@ -200,6 +230,9 @@ export function buildSourceReferencePrompt(
     sourceReferenceLabel(source),
     source.transcriptExcerpt
       ? `Use this transcript only as a beat/mood guide: ${source.transcriptExcerpt}`
+      : null,
+    source.provider === "x"
+      ? "Treat the source as a public X profile and preserve tweet cadence, contradictions, and recurring obsessions instead of flattening the voice into generic brand copy."
       : null,
     source.referenceMode === "music_reference"
       ? "Treat the source as a music or nursery-rhyme reference. Echo its rhythm, innocence, and iconography without turning the video into karaoke captions."

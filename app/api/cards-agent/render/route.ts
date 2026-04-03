@@ -8,6 +8,7 @@ export const runtime = "nodejs";
 const requestKindSchema = z.enum([
   "token_video",
   "generic_cinema",
+  "mythx",
   "bedtime_story",
   "music_video",
   "scene_recreation",

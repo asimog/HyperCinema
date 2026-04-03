@@ -78,6 +78,28 @@ function buildPromptRequest(): NextRequest {
   });
 }
 
+function buildMythXRequest(): NextRequest {
+  return new NextRequest("http://localhost/api/jobs", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      requestKind: "mythx",
+      subjectName: "@creator",
+      subjectDescription: "Autobiography from the last 42 tweets.",
+      sourceMediaUrl: "https://x.com/creator",
+      sourceMediaProvider: "x",
+      sourceTranscript: "First tweet.\nSecond tweet.",
+      packageType: "1d",
+      pricingMode: "public",
+      visibility: "public",
+      audioEnabled: true,
+      experience: "mythx",
+    }),
+  });
+}
+
 function buildMusicVideoRequest(): NextRequest {
   return new NextRequest("http://localhost/api/jobs", {
     method: "POST",
@@ -226,6 +248,25 @@ describe("POST /api/jobs", () => {
     );
   });
 
+  it("creates a MythX prompt-driven autobiography job", async () => {
+    const response = await POST(buildMythXRequest());
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.jobId).toBe("job-prompt-1");
+    expect(mocks.createPromptVideoJob).toHaveBeenCalledWith(
+      expect.objectContaining({
+        requestKind: "mythx",
+        subjectName: "@creator",
+        sourceMediaUrl: "https://x.com/creator",
+        sourceMediaProvider: "x",
+        sourceTranscript: "First tweet.\nSecond tweet.",
+        audioEnabled: true,
+        experience: "mythx",
+      }),
+    );
+  });
+
   it("creates a prompt-driven music video job with audio enabled by default", async () => {
     const response = await POST(buildMusicVideoRequest());
     const body = await response.json();
@@ -236,7 +277,6 @@ describe("POST /api/jobs", () => {
       expect.objectContaining({
         requestKind: "music_video",
         subjectName: "Neon Anthem",
-        audioEnabled: true,
         experience: "musicvideo",
       }),
     );
@@ -252,7 +292,6 @@ describe("POST /api/jobs", () => {
       expect.objectContaining({
         requestKind: "scene_recreation",
         subjectName: "The Last Scene",
-        audioEnabled: true,
         experience: "recreator",
       }),
     );

@@ -60,24 +60,18 @@ export function ChainSelector({ value, onChange, disabled }: ChainSelectorProps)
               type="button"
               disabled={disabled}
               onClick={() => onChange(option.value)}
-              className={`rounded-[1.2rem] border px-3 py-3 text-left transition ${
-                selected
-                  ? "border-[rgba(152,200,191,0.55)] bg-[linear-gradient(180deg,rgba(152,200,191,0.18),rgba(135,219,255,0.08))] text-[#f0fffb]"
-                  : "border-white/10 bg-[#120f11]/78 text-[#f1e2ca] hover:border-[rgba(152,200,191,0.28)] hover:bg-[#171214]"
-              } disabled:cursor-not-allowed disabled:opacity-60`}
+              className={`selector-card ${selected ? "selector-card--selected" : ""} disabled:cursor-not-allowed disabled:opacity-60`}
             >
-              <div className="flex items-start justify-between gap-3">
-                <div className="space-y-2">
-                  <ChainIcon
-                    className="selector-card-icon"
-                    aria-hidden="true"
-                  />
-                  <p className="text-xs uppercase tracking-[0.18em] text-[#a9998d]">
-                    {option.label}
-                  </p>
+              <div className="selector-card-top">
+                <div>
+                  <ChainIcon className="selector-card-icon" aria-hidden="true" />
+                  <p className="eyebrow">{option.label}</p>
                 </div>
+                <span className="status-badge">
+                  {selected ? "Selected" : option.label}
+                </span>
               </div>
-              <p className="mt-2 text-xs leading-relaxed text-[#cbbcad]">
+              <p className="route-summary compact">
                 {option.description}
               </p>
             </button>

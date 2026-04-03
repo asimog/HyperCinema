@@ -51,11 +51,15 @@ const sharedCinemaSchema = z.object({
     .enum([
       "legacy",
       "hypercinema",
+      "hyperm",
+      "mythx",
       "trenchcinema",
       "funcinema",
       "familycinema",
       "musicvideo",
       "recreator",
+      "hashmyth",
+      "lovex",
     ])
     .optional(),
 });
@@ -70,6 +74,7 @@ const tokenVideoSchema = sharedCinemaSchema.extend({
 const promptVideoSchema = sharedCinemaSchema.extend({
   requestKind: z.enum([
     "generic_cinema",
+    "mythx",
     "bedtime_story",
     "music_video",
     "scene_recreation",
@@ -112,6 +117,7 @@ interface CreateJobResponse {
 function isPromptPayload(payload: CreateJobPayload): payload is z.infer<typeof promptVideoSchema> {
   return (
     payload.requestKind === "generic_cinema" ||
+    payload.requestKind === "mythx" ||
     payload.requestKind === "bedtime_story" ||
     payload.requestKind === "music_video" ||
     payload.requestKind === "scene_recreation"
@@ -154,18 +160,27 @@ function normalizeExperience(input: {
   visibility: CinemaVisibility;
 }): CinemaExperience {
   if (
+    input.experience === "legacy" ||
     input.experience === "hypercinema" ||
+    input.experience === "hyperm" ||
+    input.experience === "mythx" ||
     input.experience === "trenchcinema" ||
     input.experience === "funcinema" ||
     input.experience === "familycinema" ||
     input.experience === "musicvideo" ||
-    input.experience === "recreator"
+    input.experience === "recreator" ||
+    input.experience === "hashmyth" ||
+    input.experience === "lovex"
   ) {
     return input.experience;
   }
 
   if (input.requestKind === "token_video") {
-    return "trenchcinema";
+    return "hashmyth";
+  }
+
+  if (input.requestKind === "mythx") {
+    return "mythx";
   }
 
   if (input.requestKind === "bedtime_story") {
@@ -180,7 +195,7 @@ function normalizeExperience(input: {
     return "recreator";
   }
 
-  return input.visibility === "private" ? "funcinema" : "hypercinema";
+  return input.visibility === "private" ? "funcinema" : "hyperm";
 }
 
 function createJobResponse(input: {
@@ -303,7 +318,7 @@ export async function POST(request: NextRequest) {
             resolved.description,
           stylePreset: (payload.stylePreset ?? "hyperflow_assembly") as VideoStyleId,
           requestedPrompt: payload.requestedPrompt?.trim() || null,
-          audioEnabled: payload.audioEnabled ?? false,
+          audioEnabled: payload.audioEnabled,
           pricingMode,
           visibility,
           experience,
@@ -361,7 +376,7 @@ export async function POST(request: NextRequest) {
           resolved.description,
         stylePreset: (payload.stylePreset ?? "hyperflow_assembly") as VideoStyleId,
         requestedPrompt: payload.requestedPrompt?.trim() || null,
-        audioEnabled: payload.audioEnabled ?? false,
+        audioEnabled: payload.audioEnabled,
         pricingMode,
         visibility,
         experience,
@@ -421,12 +436,7 @@ export async function POST(request: NextRequest) {
           payload.stylePreset ??
           (payload.requestKind === "bedtime_story" ? "mythic_poster" : "hyperflow_assembly"),
         requestedPrompt: payload.requestedPrompt?.trim() || null,
-        audioEnabled:
-          payload.requestKind === "bedtime_story" ||
-          payload.requestKind === "music_video" ||
-          payload.requestKind === "scene_recreation"
-            ? payload.audioEnabled ?? true
-            : payload.audioEnabled ?? false,
+        audioEnabled: payload.audioEnabled,
         pricingMode,
         visibility,
         experience,
@@ -459,12 +469,7 @@ export async function POST(request: NextRequest) {
         payload.stylePreset ??
         (payload.requestKind === "bedtime_story" ? "mythic_poster" : "hyperflow_assembly"),
       requestedPrompt: payload.requestedPrompt?.trim() || null,
-      audioEnabled:
-        payload.requestKind === "bedtime_story" ||
-        payload.requestKind === "music_video" ||
-        payload.requestKind === "scene_recreation"
-          ? payload.audioEnabled ?? true
-          : payload.audioEnabled ?? false,
+      audioEnabled: payload.audioEnabled,
       pricingMode,
       visibility,
       experience,

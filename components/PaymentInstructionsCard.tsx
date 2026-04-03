@@ -171,19 +171,19 @@ export function PaymentInstructionsCard(props: PaymentInstructionsCardProps) {
   }
 
   return (
-    <section className="cinema-panel grid gap-6 rounded-[2rem] p-6 md:grid-cols-[1fr,300px] md:p-7">
+    <section className="cinema-panel payment-instructions-panel grid gap-6 md:grid-cols-[1fr,300px]">
       <div className="space-y-4">
         <div>
           <p className="cinema-kicker text-[0.68rem] font-semibold">Payment Lock-In</p>
-          <h2 className="font-display mt-2 text-3xl text-[#fff0da]">Manual send. Exact amount.</h2>
+          <h2 className="font-display mt-2 text-3xl text-[var(--foreground)]">Manual send. Exact amount.</h2>
         </div>
 
-        <p className="text-sm leading-relaxed text-[var(--muted)]">
-          Copy the dedicated address and the exact amount below, then send from your
-          wallet app. Once the chain confirms it, the job continues on its own.
+        <p className="route-summary">
+          Copy the dedicated address and the exact amount below, then send from your wallet app.
+          Once the chain confirms it, the job continues on its own.
         </p>
 
-        <p className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-[#f4dfc2]">
+        <p className="inline-note">
           Required amount:{" "}
           <span className="font-semibold text-[var(--accent-soft)]">
             {formatSol(props.amountSol)} SOL
@@ -191,7 +191,7 @@ export function PaymentInstructionsCard(props: PaymentInstructionsCardProps) {
           {typeof props.receivedSol === "number" ? (
             <>
               {" | "}Received:{" "}
-              <span className="font-semibold text-[#fff5e3]">
+              <span className="font-semibold text-[var(--accent-soft)]">
                 {formatSol(props.receivedSol)} SOL
               </span>
             </>
@@ -206,37 +206,37 @@ export function PaymentInstructionsCard(props: PaymentInstructionsCardProps) {
           ) : null}
         </p>
 
-        <div className="rounded-[1.4rem] border border-white/10 bg-[#0d0a0c]/78 p-4">
-          <p className="cinema-kicker text-[0.62rem] font-semibold">Payment Address</p>
-          <p className="mt-2 break-all text-sm text-[#fff3dd]">{props.paymentAddress}</p>
+        <article className="surface-card grid gap-3">
+          <p className="eyebrow">Payment Address</p>
+          <p className="route-summary compact break-all">{props.paymentAddress}</p>
           <button
             type="button"
             onClick={() => void copy("Address", props.paymentAddress)}
-            className="cinema-secondary-button mt-3 rounded-xl px-3 py-2 text-xs font-medium transition"
+            className="button button-secondary w-full sm:w-auto"
           >
             <CopyIcon className="button-icon" aria-hidden="true" />
             Copy address
           </button>
-        </div>
+        </article>
 
-        <div className="rounded-[1.4rem] border border-white/10 bg-[#0d0a0c]/78 p-4">
-          <p className="cinema-kicker text-[0.62rem] font-semibold">Amount (SOL)</p>
-          <p className="mt-2 break-all font-display text-3xl text-[#fff1dc]">{payableAmount}</p>
+        <article className="surface-card grid gap-3">
+          <p className="eyebrow">Amount (SOL)</p>
+          <p className="font-display text-3xl leading-none text-[var(--foreground)]">{payableAmount}</p>
           <button
             type="button"
             onClick={() => void copy("Amount", payableAmount)}
-            className="cinema-secondary-button mt-3 rounded-xl px-3 py-2 text-xs font-medium transition"
+            className="button button-secondary w-full sm:w-auto"
           >
             <CopyIcon className="button-icon" aria-hidden="true" />
             Copy amount
           </button>
-        </div>
+        </article>
 
-        <div className="flex flex-wrap gap-3">
+        <div className="button-row">
           <button
             type="button"
             onClick={() => void copy("Payment payload", copyPayload)}
-            className="cinema-secondary-button inline-flex rounded-2xl px-4 py-3 text-sm font-medium transition"
+            className="button button-secondary"
           >
             <WalletIcon className="button-icon" aria-hidden="true" />
             Copy full payment instructions
@@ -244,72 +244,59 @@ export function PaymentInstructionsCard(props: PaymentInstructionsCardProps) {
         </div>
 
         {props.jobId ? (
-          <div className="rounded-[1.4rem] border border-white/10 bg-[#0d0a0c]/78 p-4">
-            <p className="cinema-kicker text-[0.62rem] font-semibold">Discount Code</p>
-            <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
-              Enter a one-time code to waive payment and trigger this job immediately.
-            </p>
-            <div className="mt-3 flex flex-col gap-3 sm:flex-row">
-              <input
-                value={discountCode}
-                onChange={(event) => setDiscountCode(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") {
-                    event.preventDefault();
-                    void applyDiscountCode();
-                  }
-                }}
-                placeholder="Enter discount code"
-                className="min-w-0 flex-1 rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-[#fff4e0] outline-none transition placeholder:text-[var(--muted)] focus:border-[var(--accent-soft)]"
-                disabled={discountLoading}
-                aria-label="Discount code"
-              />
+          <article className="surface-card grid gap-3">
+            <div>
+              <p className="eyebrow">Discount Code</p>
+              <p className="route-summary compact">
+                Enter a one-time code to waive payment and trigger this job immediately.
+              </p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-[1fr,auto] sm:items-end">
+              <label className="field">
+                <span>Discount code</span>
+                <input
+                  value={discountCode}
+                  onChange={(event) => setDiscountCode(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      void applyDiscountCode();
+                    }
+                  }}
+                  placeholder="Enter discount code"
+                  disabled={discountLoading}
+                  aria-label="Discount code"
+                />
+              </label>
               <button
                 type="button"
                 onClick={() => void applyDiscountCode()}
-                className="cinema-secondary-button inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-medium transition"
+                className="button button-secondary w-full sm:w-auto"
                 disabled={discountLoading}
               >
                 <SparkIcon className="button-icon" aria-hidden="true" />
                 {discountLoading ? "Applying..." : "Apply code"}
               </button>
             </div>
-            <div className="mt-3 flex flex-col gap-2">
-              {discountSuccess ? (
-                <p className="rounded-2xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
-                  {discountSuccess}
-                </p>
-              ) : null}
-              {discountError ? (
-                <p className="rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm text-red-100">
-                  {discountError}
-                </p>
-              ) : null}
+            <div className="flex flex-col gap-2">
+              {discountSuccess ? <p className="inline-note">{discountSuccess}</p> : null}
+              {discountError ? <p className="inline-error">{discountError}</p> : null}
             </div>
-          </div>
+          </article>
         ) : null}
 
         {props.statusText ? (
-          <p className="text-sm text-[var(--muted)]">
-            Status: <span className="font-semibold text-[var(--accent-cool)]">{props.statusText}</span>
+          <p className="route-summary compact">
+            Status: <span className="font-semibold text-[var(--accent-soft)]">{props.statusText}</span>
           </p>
         ) : null}
 
-        {copySuccess ? (
-          <p className="rounded-2xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
-            {copySuccess}
-          </p>
-        ) : null}
-
-        {copyError ? (
-          <p className="rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm text-red-100">
-            {copyError}
-          </p>
-        ) : null}
+        {copySuccess ? <p className="inline-note">{copySuccess}</p> : null}
+        {copyError ? <p className="inline-error">{copyError}</p> : null}
       </div>
 
-      <div className="rounded-[1.6rem] border border-white/10 bg-[#0d0a0c]/78 p-4">
-        <p className="cinema-kicker mb-3 text-[0.62rem] font-semibold">QR</p>
+      <article className="surface-card grid gap-3">
+        <p className="eyebrow">QR</p>
         {qrDataUrl ? (
           <div className="space-y-3">
             <Image
@@ -318,19 +305,19 @@ export function PaymentInstructionsCard(props: PaymentInstructionsCardProps) {
               width={224}
               height={224}
               unoptimized
-              className="mx-auto h-56 w-56 rounded-2xl border border-white/10 bg-white p-3"
+              className="mx-auto h-56 w-56 rounded-[1.1rem] border border-white/10 bg-white p-3"
             />
-            <p className="text-xs leading-relaxed text-[var(--muted)]">
-              Scan in your Solana wallet app and verify both address and amount before
-              sending anything.
+            <p className="route-summary compact">
+              Scan in your Solana wallet app and verify both address and amount before sending
+              anything.
             </p>
           </div>
         ) : qrError ? (
-          <p className="text-sm leading-relaxed text-red-100">QR unavailable: {qrError}</p>
+          <p className="route-summary compact text-red-100">QR unavailable: {qrError}</p>
         ) : (
-          <p className="text-sm leading-relaxed text-[var(--muted)]">Generating QR code...</p>
+          <p className="route-summary compact">Generating QR code...</p>
         )}
-      </div>
+      </article>
     </section>
   );
 }

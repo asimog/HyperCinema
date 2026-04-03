@@ -24,6 +24,7 @@ import {
   getCinemaPackageConfig,
 } from "@/lib/cinema/config";
 import { buildDirectorPrompt } from "@/lib/cinema/directorPrompt";
+import { normalizeXProfileInput } from "@/lib/x/api";
 import type {
   JobDocument,
   PackageType,
@@ -113,6 +114,18 @@ const DEFAULT_PERSONA: AgentPersona = {
 };
 
 const AGENT_PERSONAS: Partial<Record<CinemaPageId, AgentPersona>> = {
+  hyperm: {
+    director: "HyperMythsX",
+    sound: "HyperMythsX",
+    editor: "HyperMythsX",
+    greeting: "HyperMythsX loaded. Build a no-holds-barred creator cut and I’ll keep the prompt sharp.",
+  },
+  mythx: {
+    director: "HyperMythsX",
+    sound: "HyperMythsX",
+    editor: "HyperMythsX",
+    greeting: "HyperMythsX here. Drop an X profile link or @handle and I’ll turn the last 42 tweets into autobiography.",
+  },
   hashmyth: {
     director: "HashIntern",
     sound: "HashIntern",
@@ -165,10 +178,10 @@ function getPersona(experienceId: CinemaPageId | null): AgentPersona {
 /* ── Concierge experiences shown as quick choices ────────────────── */
 
 const CONCIERGE_EXPERIENCES = [
-  { ...CINEMA_PAGE_CONFIGS.hashmyth, label: "HashMyth" },
-  { ...CINEMA_PAGE_CONFIGS.hypercinema, label: "MythX" },
+  { ...CINEMA_PAGE_CONFIGS.hyperm, label: "HyperM" },
+  { ...CINEMA_PAGE_CONFIGS.mythx, label: "MythX" },
   { ...CINEMA_PAGE_CONFIGS.lovex, label: "LoveX" },
-  { ...CINEMA_PAGE_CONFIGS.trenchcinema, label: "Trending" },
+  { ...CINEMA_PAGE_CONFIGS.hashmyth, label: "HashMyth" },
 ] as const;
 
 const INITIAL_MESSAGES: ChatMessage[] = [
@@ -225,7 +238,9 @@ function buildInitialConversationState(initialExperienceId?: CinemaPageId | null
         text:
           config.requestKind === "token_video"
             ? "Paste the token contract or mint address."
-            : "What should we call this video?",
+            : config.id === "mythx"
+              ? "Paste an X profile link or @handle."
+              : "What should we call this video?",
         agentName: persona.director,
       },
     ] satisfies ChatMessage[],
@@ -236,7 +251,7 @@ function buildInitialConversationState(initialExperienceId?: CinemaPageId | null
       chain: "auto" as RequestedTokenChain,
       description: "",
       packageType: "1d" as PackageType,
-      audioEnabled: config.audioMode === "required",
+      audioEnabled: config.defaultAudioEnabled,
       stylePreset: null,
       discountCode: "",
     },
@@ -334,6 +349,7 @@ function parseChain(input: string): RequestedTokenChain | null {
 function summaryText(input: {
   configTitle: string;
   draft: ConciergeDraft;
+  experienceId: CinemaPageId;
   tokenFlow: boolean;
   pricingMode: "public" | "private";
 }): string {
@@ -346,7 +362,11 @@ function summaryText(input: {
     `Category: ${input.configTitle}`,
     input.tokenFlow
       ? `Token address: ${input.draft.tokenAddress}`
-      : `Title: ${input.draft.subjectName}`,
+      : input.experienceId === "mythx"
+        ? `X profile: ${input.draft.subjectName}`
+        : input.experienceId === "lovex"
+          ? `Moment: ${input.draft.subjectName}`
+          : `Title: ${input.draft.subjectName}`,
     input.tokenFlow ? `Chain: ${input.draft.chain}` : null,
     `Description: ${input.draft.description}`,
     input.draft.stylePreset ? `Style: ${input.draft.stylePreset}` : null,
@@ -529,6 +549,10 @@ export function CinemaConciergeChat(input: CinemaConciergeChatProps) {
   function quickChoiceIcon(value: string) {
     if (step === "choose_experience") {
       switch (value) {
+        case "hyperm":
+          return SparkIcon;
+        case "mythx":
+          return FilmIcon;
         case "hashmyth":
           return HashIcon;
         case "hypercinema":
@@ -572,7 +596,13 @@ export function CinemaConciergeChat(input: CinemaConciergeChatProps) {
     setStep("description");
     setMessages((current) => [
       ...current,
-      agentMsg("Now describe the visual direction and key beats."),
+      agentMsg(
+        selectedConfig?.id === "mythx"
+          ? "Now describe the biography angle."
+          : selectedConfig?.id === "lovex"
+            ? "Now describe the family moment."
+            : "Now describe the visual direction and key beats.",
+      ),
     ]);
   }
 
@@ -618,6 +648,7 @@ export function CinemaConciergeChat(input: CinemaConciergeChatProps) {
         summaryText({
           configTitle: input.configTitle,
           draft: input.nextDraft,
+          experienceId: input.nextDraft.experienceId ?? draft.experienceId ?? "hyperm",
           tokenFlow: input.tokenFlow,
           pricingMode: input.pricingMode,
         }),
@@ -636,7 +667,7 @@ export function CinemaConciergeChat(input: CinemaConciergeChatProps) {
       chain: "auto",
       description: "",
       packageType: "1d",
-      audioEnabled: config.audioMode === "required",
+      audioEnabled: config.defaultAudioEnabled,
       stylePreset: null,
       discountCode: "",
     };
@@ -664,7 +695,13 @@ export function CinemaConciergeChat(input: CinemaConciergeChatProps) {
     setStep("subject");
     setMessages((current) => [
       ...current,
-      createMessage("assistant", "What should we call this video?", nextPersona.director),
+      createMessage(
+        "assistant",
+        config.id === "mythx"
+          ? "Paste an X profile link or @handle."
+          : "What should we call this video?",
+        nextPersona.director,
+      ),
     ]);
   }
 
@@ -684,12 +721,21 @@ export function CinemaConciergeChat(input: CinemaConciergeChatProps) {
     if (!selectedConfig) return;
 
     const tokenFlow = selectedConfig.requestKind === "token_video";
+    const isMythX = selectedConfig.id === "mythx";
+    const normalizedProfile = isMythX
+      ? normalizeXProfileInput(draft.subjectName.trim())
+      : { username: null, profileUrl: null };
     if (tokenFlow && draft.tokenAddress.trim().length < 20) {
       setError("Please provide a valid token address.");
       return;
     }
 
-    if (!tokenFlow && draft.subjectName.trim().length < 2) {
+    if (!tokenFlow && isMythX && !normalizedProfile.profileUrl) {
+      setError("Please provide a valid X profile link or @handle.");
+      return;
+    }
+
+    if (!tokenFlow && !isMythX && draft.subjectName.trim().length < 2) {
       setError("Please provide a valid title.");
       return;
     }
@@ -698,6 +744,15 @@ export function CinemaConciergeChat(input: CinemaConciergeChatProps) {
     setIsCreating(true);
 
     try {
+      const resolvedProfileInput = draft.subjectName.trim();
+      const resolvedSubjectName = isMythX
+        ? normalizedProfile.username
+          ? `@${normalizedProfile.username}`
+          : resolvedProfileInput
+        : resolvedProfileInput;
+      const resolvedSourceMediaUrl = isMythX
+        ? normalizedProfile.profileUrl ?? resolvedProfileInput
+        : null;
       const body =
         selectedConfig.requestKind === "token_video"
           ? {
@@ -713,8 +768,7 @@ export function CinemaConciergeChat(input: CinemaConciergeChatProps) {
                 tokenFlow: true,
                 requestKind: "token_video",
               }),
-              audioEnabled:
-                selectedConfig.audioMode === "required" ? true : draft.audioEnabled,
+              audioEnabled: draft.audioEnabled,
               pricingMode: selectedConfig.pricingMode,
               visibility: selectedConfig.visibility,
               experience: selectedConfig.id,
@@ -725,8 +779,10 @@ export function CinemaConciergeChat(input: CinemaConciergeChatProps) {
             }
           : {
               requestKind: selectedConfig.requestKind,
-              subjectName: draft.subjectName.trim(),
+              subjectName: resolvedSubjectName,
               subjectDescription: draft.description.trim() || undefined,
+              sourceMediaUrl: resolvedSourceMediaUrl ?? undefined,
+              sourceMediaProvider: isMythX ? "x" : undefined,
               packageType: draft.packageType,
               stylePreset: draft.stylePreset ?? selectedConfig.defaultStyle,
               requestedPrompt: buildForwardedPrompt({
@@ -735,8 +791,7 @@ export function CinemaConciergeChat(input: CinemaConciergeChatProps) {
                 tokenFlow: false,
                 requestKind: selectedConfig.requestKind,
               }),
-              audioEnabled:
-                selectedConfig.audioMode === "required" ? true : draft.audioEnabled,
+              audioEnabled: draft.audioEnabled,
               pricingMode: selectedConfig.pricingMode,
               visibility: selectedConfig.visibility,
               experience: selectedConfig.id,
@@ -1025,11 +1080,11 @@ export function CinemaConciergeChat(input: CinemaConciergeChatProps) {
     step === "choose_experience"
       ? "Type category name..."
       : step === "subject"
-        ? "Video title..."
+        ? selectedConfig?.subjectPlaceholder ?? "Video title..."
         : step === "token_address"
-          ? "Token or wallet address..."
+          ? selectedConfig?.subjectPlaceholder ?? "Token or wallet address..."
           : step === "description"
-            ? "Describe the visual and story..."
+            ? selectedConfig?.subjectDescriptionPlaceholder ?? "Describe the visual and story..."
             : step === "style"
               ? "Pick a style..."
               : step === "chain"

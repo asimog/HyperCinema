@@ -68,7 +68,7 @@ function statusLabel(status?: string, progress?: string): string {
   if (status === "awaiting_payment") return "Awaiting payment";
   if (status === "payment_detected") return "Payment detected";
   if (status === "payment_confirmed") return "Payment confirmed";
-  if (progress === "generating_report") return "Building biography";
+  if (progress === "generating_report") return "Building autobiography";
   if (progress === "generating_video") return "Rendering cut";
   if (status === "processing") return "In render pipeline";
   if (status === "complete") return "Ready";
@@ -86,21 +86,21 @@ function buildAutobiographyPrompt(input: {
   audioEnabled: boolean;
 }) {
   const prompt = buildDirectorPrompt({
-    categoryTitle: "HyperM",
+    categoryTitle: "MythX",
     subjectName: input.displayName,
     subjectDescription: input.subjectDescription,
     sourceMediaUrl: input.profileUrl,
     sourceTranscript: input.sourceTranscript,
     packageType: input.packageType,
     audioEnabled: input.audioEnabled,
-    requestKind: "generic_cinema",
+    requestKind: "mythx",
   });
 
   return [
     prompt,
     "",
-    "HyperM directives:",
-    "- Build a no-holds-barred autobiography from the last 10 tweets.",
+    "MythX directives:",
+    "- Build a public autobiography from the last 42 tweets.",
     "- Treat the tweets as chronology, evidence, rhythm, and contradiction.",
     "- Preserve the subject's actual voice instead of sanding it down into brand copy.",
     "- Surface obsession loops, pivots, bragging rights, insecurities, jokes, and reversals.",
@@ -144,18 +144,27 @@ export function HyperMGeneratorClient() {
   }, [manualTranscript, tweets]);
 
   const sourcePrompt = useMemo(() => {
-    const displayName = subjectName.trim() || profileDisplayName.trim() || profileHandle.trim() || "X profile";
-    const handle = profileHandle.trim() || normalizeXProfileInput(profileInput).username || displayName;
+    const normalized = normalizeXProfileInput(profileInput);
+    const displayName =
+      subjectName.trim() ||
+      profileDisplayName.trim() ||
+      (profileHandle.trim() ? `@${profileHandle.trim().replace(/^@+/, "")}` : "") ||
+      (normalized.username ? `@${normalized.username}` : "") ||
+      "X profile";
+    const handle =
+      profileHandle.trim() ||
+      normalized.username ||
+      displayName.replace(/^@+/, "");
     const description =
       subjectDescription.trim() ||
       (profileBio.trim()
-        ? `Autobiography built from ${displayName}'s public bio and latest tweets.`
-        : `Autobiography built from the last 10 tweets on ${profileUrl || profileInput}.`);
+        ? `Autobiography built from ${displayName}'s public bio and last 42 tweets.`
+        : `Autobiography built from the last 42 tweets on ${profileUrl || profileInput}.`);
 
     return buildAutobiographyPrompt({
       displayName,
       username: handle,
-      profileUrl: profileUrl || normalizeXProfileInput(profileInput).profileUrl || profileInput,
+      profileUrl: profileUrl || normalized.profileUrl || profileInput,
       subjectDescription: description,
       sourceTranscript: resolvedTranscript || "No transcript available yet.",
       packageType,
@@ -246,7 +255,7 @@ export function HyperMGeneratorClient() {
       setProfileBio(payload.profile.description ?? "");
       setSubjectName(payload.profile.displayName);
       setSubjectDescription(
-        `Autobiography from @${payload.profile.username}'s last 10 tweets.`,
+        `Autobiography from @${payload.profile.username}'s last 42 tweets.`,
       );
       setTweets(payload.tweets);
       setManualTranscript(payload.transcript);
@@ -277,11 +286,6 @@ export function HyperMGeneratorClient() {
       return;
     }
 
-    if (!resolvedTranscript.trim()) {
-      setError("Load the last 10 tweets or paste them manually before generating.");
-      return;
-    }
-
     setIsSubmitting(true);
 
     try {
@@ -289,13 +293,14 @@ export function HyperMGeneratorClient() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          requestKind: "generic_cinema" as const,
+          requestKind: "mythx" as const,
           subjectName: resolvedDisplayName,
           subjectDescription:
             subjectDescription.trim() ||
-            `Autobiography built from @${resolvedHandle || normalized.username} using the last 10 tweets.`,
+            `Autobiography built from @${resolvedHandle || normalized.username} using the last 42 tweets.`,
           sourceMediaUrl: resolvedProfileUrl,
-          sourceTranscript: resolvedTranscript.trim(),
+          sourceMediaProvider: "x",
+          sourceTranscript: resolvedTranscript.trim() || undefined,
           packageType,
           stylePreset,
           requestedPrompt: sourcePrompt,
@@ -337,16 +342,16 @@ export function HyperMGeneratorClient() {
           <div className="rail-stack">
             <section className="panel rail-panel">
               <div className="panel-header">
-                <div>
-                  <p className="eyebrow">HyperM</p>
+              <div>
+                  <p className="eyebrow">MythX</p>
                   <h2>Source feed</h2>
                 </div>
               </div>
               <p className="route-summary">
-                Drop in an X profile link, fetch the last 10 tweets, and build the autobiography from the public voice itself.
+                Drop in an X profile link, fetch the last 42 tweets, and build the autobiography from the public voice itself.
               </p>
               <div className="route-badges">
-                <span className="status-badge">{tweetCount || 10} tweets</span>
+                <span className="status-badge">{tweetCount || 42} tweets</span>
                 <span className="status-badge">X API</span>
                 <span className="status-badge">manual fallback</span>
               </div>
@@ -387,7 +392,7 @@ export function HyperMGeneratorClient() {
             <section className="panel rail-panel">
               <div className="panel-header">
                 <div>
-                  <p className="eyebrow">HyperM rules</p>
+                  <p className="eyebrow">MythX rules</p>
                   <h2>No holds barred</h2>
                 </div>
               </div>
@@ -427,12 +432,12 @@ export function HyperMGeneratorClient() {
       >
         <section className="panel home-hero-panel">
           <div className="home-hero-copy">
-            <p className="eyebrow">{CINEMA_PAGE_CONFIGS.hyperm.eyebrow}</p>
-            <h1>{CINEMA_PAGE_CONFIGS.hyperm.title}</h1>
-            <p className="route-summary">{CINEMA_PAGE_CONFIGS.hyperm.summary}</p>
+            <p className="eyebrow">{CINEMA_PAGE_CONFIGS.mythx.eyebrow}</p>
+            <h1>{CINEMA_PAGE_CONFIGS.mythx.title}</h1>
+            <p className="route-summary">{CINEMA_PAGE_CONFIGS.mythx.summary}</p>
             <div className="route-badges">
               <span className="status-badge">{packageConfig.priceSol} SOL</span>
-              <span className="status-badge">last 10 tweets</span>
+              <span className="status-badge">last 42 tweets</span>
               <span className="status-badge">autobiography engine</span>
             </div>
           </div>
@@ -451,7 +456,7 @@ export function HyperMGeneratorClient() {
                 onClick={loadTweets}
                 disabled={isLoadingTweets || !profileInput.trim()}
               >
-                {isLoadingTweets ? "Loading tweets..." : "Load last 10 tweets"}
+                {isLoadingTweets ? "Loading tweets..." : "Load last 42 tweets"}
               </button>
             </div>
           </div>
@@ -469,16 +474,16 @@ export function HyperMGeneratorClient() {
 
             <div className="form-row-grid">
               <div className="field">
-                <span>Subject name</span>
-                <input
-                  value={subjectName}
-                  onChange={(event) => setSubjectName(event.target.value)}
-                  placeholder="Auto-filled from X, but editable"
-                  disabled={isSubmitting}
-                />
-              </div>
-              <div className="field">
-                <span>Profile handle</span>
+              <span>Display name (optional)</span>
+              <input
+                value={subjectName}
+                onChange={(event) => setSubjectName(event.target.value)}
+                placeholder="Auto-filled from X, but editable"
+                disabled={isSubmitting}
+              />
+            </div>
+            <div className="field">
+                <span>Handle (optional)</span>
                 <input
                   value={profileHandle}
                   onChange={(event) => setProfileHandle(event.target.value)}
@@ -548,12 +553,12 @@ export function HyperMGeneratorClient() {
             </label>
 
             <div className="field">
-              <span>Last 10 tweets / fallback transcript</span>
+              <span>Last 42 tweets / fallback transcript</span>
               <textarea
                 rows={10}
                 value={manualTranscript}
                 onChange={(event) => setManualTranscript(event.target.value)}
-                placeholder="If the X API is not ready yet, paste the last 10 tweets here."
+                placeholder="If the X API is not ready yet, paste the last 42 tweets here."
                 disabled={isSubmitting}
               />
             </div>
@@ -584,7 +589,7 @@ export function HyperMGeneratorClient() {
             <div className="panel-header">
               <div>
                 <p className="eyebrow">Payment Adapter</p>
-                <h2>{jobPayment.subjectName ?? subjectName ?? "HyperM job"} is queued</h2>
+                <h2>{jobPayment.subjectName ?? subjectName ?? "MythX job"} is queued</h2>
               </div>
               <div className="button-row">
                 <Link className="button button-secondary" href={`/job/${jobPayment.jobId}`}>

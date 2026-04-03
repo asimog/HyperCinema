@@ -37,32 +37,22 @@ export function StylePresetSelector({
               type="button"
               disabled={disabled}
               onClick={() => onChange(preset.id)}
-              className={`rounded-[1.35rem] border px-4 py-4 text-left transition ${
-                selected
-                  ? "border-[rgba(152,200,191,0.55)] bg-[linear-gradient(180deg,rgba(152,200,191,0.18),rgba(135,219,255,0.08))] text-[#f0fffb]"
-                  : "border-white/10 bg-[#120f11]/78 text-[#f1e2ca] hover:border-[rgba(152,200,191,0.28)] hover:bg-[#171214]"
-              } disabled:cursor-not-allowed disabled:opacity-60`}
+              className={`selector-card ${selected ? "selector-card--selected" : ""} disabled:cursor-not-allowed disabled:opacity-60`}
             >
-              <div className="flex items-start justify-between gap-3">
-                <div className="space-y-2">
+              <div className="selector-card-top">
+                <div>
                   <PaletteIcon className="selector-card-icon" aria-hidden="true" />
-                  <p className="text-xs uppercase tracking-[0.18em] text-[#a9998d]">
-                    {preset.shortLabel}
-                  </p>
-                  <p className="mt-2 font-display text-2xl leading-none">
-                    {preset.label}
-                  </p>
+                  <p className="eyebrow">{preset.shortLabel}</p>
+                  <p className="font-display text-2xl leading-none">{preset.label}</p>
                 </div>
-                {isSuggested ? (
-                  <span className="rounded-full border border-[#98c8bf]/30 bg-[#98c8bf]/10 px-2 py-1 text-[0.6rem] uppercase tracking-[0.18em] text-[#d8f6ef]">
-                    suggested
-                  </span>
-                ) : null}
+                <span className="status-badge">
+                  {selected ? "Selected" : isSuggested ? "Suggested" : "Style"}
+                </span>
               </div>
-              <p className="mt-3 text-sm leading-relaxed text-[#d3c4b6]">
+              <p className="route-summary compact">
                 {preset.summary}
               </p>
-              <p className="mt-3 text-xs leading-relaxed text-[#aa9a8d]">
+              <p className="route-summary compact">
                 {preset.directorNote}
               </p>
             </button>

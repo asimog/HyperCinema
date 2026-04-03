@@ -94,38 +94,37 @@ export function InferenceConfigPanel({
           This controls the text-only model path used for summaries, scripts, and other LLM calls.
           API keys stay in env vars. This page only changes the active provider and model.
         </p>
-        <label className="block mb-3">
-          <span className="block text-sm font-medium mb-2">Provider</span>
-          <select
-            className="w-full rounded-md border border-white/15 bg-black/25 px-3 py-2 text-white"
-            value={textProvider}
-            onChange={(event) => setTextProvider(event.target.value as TextInferenceProviderId)}
-          >
-            {textOptions.map((option) => (
-              <option key={option.id} value={option.id}>
-                {providerSummary(option)}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="block mb-3">
-          <span className="block text-sm font-medium mb-2">Model</span>
-          <input
-            className="w-full rounded-md border border-white/15 bg-black/25 px-3 py-2 text-white"
-            value={textModel}
-            onChange={(event) => setTextModel(event.target.value)}
-            placeholder={selectedTextOption?.defaultModel ?? "Model id"}
-          />
-        </label>
-        <label className="block">
-          <span className="block text-sm font-medium mb-2">Custom base URL</span>
-          <input
-            className="w-full rounded-md border border-white/15 bg-black/25 px-3 py-2 text-white"
-            value={textBaseUrl}
-            onChange={(event) => setTextBaseUrl(event.target.value)}
-            placeholder={selectedTextOption?.envHint ?? "Optional"}
-          />
-        </label>
+        <div className="form-stack">
+          <label className="field">
+            <span>Provider</span>
+            <select
+              value={textProvider}
+              onChange={(event) => setTextProvider(event.target.value as TextInferenceProviderId)}
+            >
+              {textOptions.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {providerSummary(option)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="field">
+            <span>Model</span>
+            <input
+              value={textModel}
+              onChange={(event) => setTextModel(event.target.value)}
+              placeholder={selectedTextOption?.defaultModel ?? "Model id"}
+            />
+          </label>
+          <label className="field">
+            <span>Custom base URL</span>
+            <input
+              value={textBaseUrl}
+              onChange={(event) => setTextBaseUrl(event.target.value)}
+              placeholder={selectedTextOption?.envHint ?? "Optional"}
+            />
+          </label>
+        </div>
       </section>
 
       <section className="panel rail-panel">
@@ -139,38 +138,37 @@ export function InferenceConfigPanel({
           This controls the video API target. Built-in support stays on Google Veo, while custom
           backends can be wired in through your own endpoint.
         </p>
-        <label className="block mb-3">
-          <span className="block text-sm font-medium mb-2">Provider</span>
-          <select
-            className="w-full rounded-md border border-white/15 bg-black/25 px-3 py-2 text-white"
-            value={videoProvider}
-            onChange={(event) => setVideoProvider(event.target.value as VideoInferenceProviderId)}
-          >
-            {videoOptions.map((option) => (
-              <option key={option.id} value={option.id}>
-                {providerSummary(option)}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="block mb-3">
-          <span className="block text-sm font-medium mb-2">Model</span>
-          <input
-            className="w-full rounded-md border border-white/15 bg-black/25 px-3 py-2 text-white"
-            value={videoModel}
-            onChange={(event) => setVideoModel(event.target.value)}
-            placeholder={selectedVideoOption?.defaultModel ?? "Model id"}
-          />
-        </label>
-        <label className="block">
-          <span className="block text-sm font-medium mb-2">Video API base URL</span>
-          <input
-            className="w-full rounded-md border border-white/15 bg-black/25 px-3 py-2 text-white"
-            value={videoBaseUrl}
-            onChange={(event) => setVideoBaseUrl(event.target.value)}
-            placeholder={selectedVideoOption?.envHint ?? "Optional"}
-          />
-        </label>
+        <div className="form-stack">
+          <label className="field">
+            <span>Provider</span>
+            <select
+              value={videoProvider}
+              onChange={(event) => setVideoProvider(event.target.value as VideoInferenceProviderId)}
+            >
+              {videoOptions.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {providerSummary(option)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="field">
+            <span>Model</span>
+            <input
+              value={videoModel}
+              onChange={(event) => setVideoModel(event.target.value)}
+              placeholder={selectedVideoOption?.defaultModel ?? "Model id"}
+            />
+          </label>
+          <label className="field">
+            <span>Video API base URL</span>
+            <input
+              value={videoBaseUrl}
+              onChange={(event) => setVideoBaseUrl(event.target.value)}
+              placeholder={selectedVideoOption?.envHint ?? "Optional"}
+            />
+          </label>
+        </div>
       </section>
 
       <section className="panel rail-panel">
@@ -183,18 +181,18 @@ export function InferenceConfigPanel({
           >
             {saving ? "Saving..." : "Save inference config"}
           </button>
-          <div className="surface-card" style={{ padding: "0.9rem 1rem" }}>
+          <div className="surface-card grid gap-1">
             <strong>Current text</strong>
             <div>{selectedTextOption?.label ?? textProvider}</div>
-            <div className="text-sm opacity-70">{selectedTextOption?.description}</div>
+            <div className="route-summary compact">{selectedTextOption?.description}</div>
           </div>
-          <div className="surface-card" style={{ padding: "0.9rem 1rem" }}>
+          <div className="surface-card grid gap-1">
             <strong>Current video</strong>
             <div>{selectedVideoOption?.label ?? videoProvider}</div>
-            <div className="text-sm opacity-70">{selectedVideoOption?.description}</div>
+            <div className="route-summary compact">{selectedVideoOption?.description}</div>
           </div>
         </div>
-        {message ? <p className="text-emerald-300 mt-3">{message}</p> : null}
+        {message ? <p className="inline-note mt-3">{message}</p> : null}
         {error ? <p className="inline-error mt-3">{error}</p> : null}
       </section>
     </div>

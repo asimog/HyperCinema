@@ -19,56 +19,56 @@ export type TrendingSpotlight = {
 /** Primary 4 hero categories shown on the homepage 2x2 grid. */
 export const HYPERMYTHS_HERO_CATEGORIES: HyperMythsCategory[] = [
   {
-    id: "hashmyth",
-    title: "HashMyth",
-    summary: "All-chain wallet trading report generator. Any token, any wallet. Turn your trades into cinema.",
-    href: "/HashMyth",
-  },
-  {
     id: "hyperm",
     title: "HyperM",
-    summary: "Paste an X profile link, pull the last 10 tweets, and turn a public signal trail into an autobiography cut.",
+    summary: "Full-fledged creator for polished concept cuts, brand stories, and tightly controlled outputs.",
     href: "/HyperM",
+  },
+  {
+    id: "mythx",
+    title: "MythX",
+    summary: "Autobiography from the last 42 tweets of an X profile. No title required, just a handle or bio link.",
+    href: "/MythX",
   },
   {
     id: "lovex",
     title: "LoveX",
-    summary: "Slow, classy shots with classical music. No words unless you ask. Pure visual romance.",
+    summary: "Family occasions, reunion reels, birthdays, and keepsakes cut like cinema.",
     href: "/LoveX",
   },
   {
-    id: "trenchcinema",
-    title: "Trending",
-    summary: "Trending ideas, gallery archive, and new generators. Everything that is moving right now lives here.",
-    href: "/trending",
+    id: "hashmyth",
+    title: "HashMyth",
+    summary: "Wallet and memecoin generator. Any token, any wallet. Turn the on-chain story into cinema.",
+    href: "/HashMyth",
   },
 ];
 
 /** All categories including legacy/deprecated ones surfaced in Trending. */
 export const HYPERMYTHS_CATEGORIES: HyperMythsCategory[] = [
   {
-    id: "hashmyth",
-    title: "HashMyth",
-    summary: "All-chain wallet trading report generator. Any token, any wallet. Turn your trades into cinema.",
-    href: "/HashMyth",
-  },
-  {
-    id: "hypercinema",
-    title: "MythX",
-    summary: "42 cinematic styles. Full cinematography control for polished, directed outputs.",
-    href: "/HyperCinema",
-  },
-  {
     id: "hyperm",
     title: "HyperM",
-    summary: "Autobiography creator from the last 10 tweets on an X profile link.",
+    summary: "Full-fledged creator for polished concept cuts, brand stories, and tightly controlled outputs.",
     href: "/HyperM",
+  },
+  {
+    id: "mythx",
+    title: "MythX",
+    summary: "Autobiography from the last 42 tweets of an X profile. No title required, just a handle or bio link.",
+    href: "/MythX",
   },
   {
     id: "lovex",
     title: "LoveX",
-    summary: "Slow, classy shots with classical music. Pure visual romance.",
+    summary: "Family occasions, reunion reels, birthdays, and keepsakes cut like cinema.",
     href: "/LoveX",
+  },
+  {
+    id: "hashmyth",
+    title: "HashMyth",
+    summary: "Wallet and memecoin generator. Any token, any wallet. Turn the on-chain story into cinema.",
+    href: "/HashMyth",
   },
   {
     id: "funcinema",

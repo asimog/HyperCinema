@@ -77,6 +77,11 @@ function normalizeDispatchOutboxDocument(
 
 function normalizeJobDocument(raw: JobDocument): JobDocument {
   const packageConfig = getPackageConfig(raw.packageType);
+  const experience = resolveExperience({
+    experience: raw.experience,
+    requestKind: raw.requestKind,
+    visibility: raw.visibility,
+  });
   return {
     ...raw,
     pricingMode:
@@ -84,25 +89,18 @@ function normalizeJobDocument(raw: JobDocument): JobDocument {
         ? raw.pricingMode
         : "legacy",
     visibility: raw.visibility === "private" ? "private" : "public",
-    experience:
-      raw.experience === "hypercinema" ||
-      raw.experience === "trenchcinema" ||
-      raw.experience === "funcinema" ||
-      raw.experience === "familycinema" ||
-      raw.experience === "musicvideo" ||
-      raw.experience === "recreator"
-        ? raw.experience
-        : "legacy",
+    experience,
     moderationStatus:
       raw.moderationStatus === "flagged" || raw.moderationStatus === "hidden"
         ? raw.moderationStatus
         : "visible",
     creatorId: raw.creatorId ?? null,
     creatorEmail: raw.creatorEmail ?? null,
-    audioEnabled:
-      typeof raw.audioEnabled === "boolean"
-        ? raw.audioEnabled
-        : raw.requestKind === "bedtime_story",
+    audioEnabled: resolveAudioEnabled({
+      audioEnabled: raw.audioEnabled,
+      requestKind: raw.requestKind,
+      experience,
+    }),
     priceUsdc: raw.priceUsdc ?? packageConfig.priceUsdc,
     paymentMethod:
       raw.paymentMethod === "x402_usdc" || raw.paymentMethod === "discount_code"
@@ -156,6 +154,105 @@ function resolvePackagePricing(input: {
     priceUsdc: input.priceUsdc ?? pkg.priceUsdc,
     videoSeconds: input.videoSeconds ?? pkg.videoSeconds,
   };
+}
+
+const VALID_CINEMA_EXPERIENCES = new Set<NonNullable<JobDocument["experience"]>>([
+  "legacy",
+  "hypercinema",
+  "hyperm",
+  "mythx",
+  "trenchcinema",
+  "funcinema",
+  "familycinema",
+  "musicvideo",
+  "recreator",
+  "hashmyth",
+  "lovex",
+]);
+
+const EXPERIENCE_AUDIO_DEFAULTS: Partial<Record<NonNullable<JobDocument["experience"]>, boolean>> = {
+  legacy: false,
+  hypercinema: false,
+  hyperm: true,
+  mythx: true,
+  trenchcinema: true,
+  funcinema: true,
+  familycinema: true,
+  musicvideo: true,
+  recreator: true,
+  hashmyth: true,
+  lovex: true,
+};
+
+function isCinemaExperience(value: unknown): value is NonNullable<JobDocument["experience"]> {
+  return typeof value === "string" && VALID_CINEMA_EXPERIENCES.has(value as NonNullable<JobDocument["experience"]>);
+}
+
+function resolveExperience(input: {
+  experience?: JobDocument["experience"];
+  requestKind?: JobDocument["requestKind"];
+  visibility?: JobDocument["visibility"];
+}): JobDocument["experience"] {
+  if (isCinemaExperience(input.experience)) {
+    return input.experience;
+  }
+
+  if (input.requestKind === "token_video") {
+    return "hashmyth";
+  }
+
+  if (input.requestKind === "mythx") {
+    return "mythx";
+  }
+
+  if (input.requestKind === "bedtime_story") {
+    return "familycinema";
+  }
+
+  if (input.requestKind === "music_video") {
+    return "musicvideo";
+  }
+
+  if (input.requestKind === "scene_recreation") {
+    return "recreator";
+  }
+
+  if (input.requestKind === "generic_cinema") {
+    return input.visibility === "private" ? "funcinema" : "hyperm";
+  }
+
+  return "legacy";
+}
+
+function resolveAudioEnabled(input: {
+  audioEnabled?: boolean | null;
+  requestKind?: JobDocument["requestKind"];
+  experience?: JobDocument["experience"];
+}): boolean {
+  if (typeof input.audioEnabled === "boolean") {
+    return input.audioEnabled;
+  }
+
+  if (isCinemaExperience(input.experience)) {
+    const byExperience = EXPERIENCE_AUDIO_DEFAULTS[input.experience];
+    if (typeof byExperience === "boolean") {
+      return byExperience;
+    }
+  }
+
+  if (input.requestKind === "token_video" || input.requestKind === "mythx") {
+    return true;
+  }
+
+  if (
+    input.requestKind === "bedtime_story" ||
+    input.requestKind === "music_video" ||
+    input.requestKind === "scene_recreation"
+  ) {
+    return true;
+  }
+
+  return false;
 }
 
 export function isSweepEligibleStatus(status: JobStatus): boolean {
@@ -564,6 +661,11 @@ export async function createTokenVideoJob(input: {
 }): Promise<JobDocument> {
   const pkg = resolvePackagePricing(input);
   const jobId = randomUUID();
+  const experience = resolveExperience({
+    experience: input.experience,
+    requestKind: "token_video",
+    visibility: input.visibility ?? "public",
+  });
 
   return getDb().runTransaction(async (tx) => {
     const createdAt = nowIso();
@@ -594,7 +696,7 @@ export async function createTokenVideoJob(input: {
       requestKind: "token_video",
       pricingMode: input.pricingMode ?? "legacy",
       visibility: input.visibility ?? "public",
-      experience: input.experience ?? "legacy",
+      experience,
       moderationStatus: "visible",
       creatorId: input.creatorId ?? null,
       creatorEmail: input.creatorEmail ?? null,
@@ -606,7 +708,11 @@ export async function createTokenVideoJob(input: {
       subjectDescription: input.subjectDescription ?? null,
       stylePreset: input.stylePreset ?? null,
       requestedPrompt: input.requestedPrompt ?? null,
-      audioEnabled: input.audioEnabled ?? false,
+      audioEnabled: resolveAudioEnabled({
+        audioEnabled: input.audioEnabled,
+        requestKind: "token_video",
+        experience,
+      }),
       packageType: pkg.packageType,
       rangeDays: pkg.rangeDays,
       priceSol: pkg.priceSol,
@@ -670,6 +776,11 @@ export async function createX402PaidTokenVideoJob(input: {
   const jobId = randomUUID();
   const createdAt = nowIso();
   const paymentAddress = getRevenueWalletAddress();
+  const experience = resolveExperience({
+    experience: input.experience,
+    requestKind: "token_video",
+    visibility: input.visibility ?? "public",
+  });
 
   const job: JobDocument = {
     jobId,
@@ -677,7 +788,7 @@ export async function createX402PaidTokenVideoJob(input: {
     requestKind: "token_video",
     pricingMode: input.pricingMode ?? "legacy",
     visibility: input.visibility ?? "public",
-    experience: input.experience ?? "legacy",
+    experience,
     moderationStatus: "visible",
     creatorId: input.creatorId ?? null,
     creatorEmail: input.creatorEmail ?? null,
@@ -689,7 +800,11 @@ export async function createX402PaidTokenVideoJob(input: {
     subjectDescription: input.subjectDescription ?? null,
     stylePreset: input.stylePreset ?? null,
     requestedPrompt: input.requestedPrompt ?? null,
-    audioEnabled: input.audioEnabled ?? false,
+    audioEnabled: resolveAudioEnabled({
+      audioEnabled: input.audioEnabled,
+      requestKind: "token_video",
+      experience,
+    }),
     packageType: pkg.packageType,
     rangeDays: pkg.rangeDays,
     priceSol: pkg.priceSol,
@@ -730,6 +845,7 @@ export async function createX402PaidTokenVideoJob(input: {
 export async function createPromptVideoJob(input: {
   requestKind:
     | "generic_cinema"
+    | "mythx"
     | "bedtime_story"
     | "music_video"
     | "scene_recreation";
@@ -755,6 +871,11 @@ export async function createPromptVideoJob(input: {
 }): Promise<JobDocument> {
   const pkg = resolvePackagePricing(input);
   const jobId = randomUUID();
+  const experience = resolveExperience({
+    experience: input.experience,
+    requestKind: input.requestKind,
+    visibility: input.visibility ?? "public",
+  });
 
   return getDb().runTransaction(async (tx) => {
     const createdAt = nowIso();
@@ -785,7 +906,7 @@ export async function createPromptVideoJob(input: {
       requestKind: input.requestKind,
       pricingMode: input.pricingMode ?? "public",
       visibility: input.visibility ?? "public",
-      experience: input.experience ?? "hypercinema",
+      experience,
       moderationStatus: "visible",
       creatorId: input.creatorId ?? null,
       creatorEmail: input.creatorEmail ?? null,
@@ -797,12 +918,11 @@ export async function createPromptVideoJob(input: {
       sourceTranscript: input.sourceTranscript?.trim() || null,
       stylePreset: input.stylePreset ?? null,
       requestedPrompt: input.requestedPrompt?.trim() || null,
-      audioEnabled:
-        typeof input.audioEnabled === "boolean"
-          ? input.audioEnabled
-          : input.requestKind === "bedtime_story" ||
-              input.requestKind === "music_video" ||
-              input.requestKind === "scene_recreation",
+      audioEnabled: resolveAudioEnabled({
+        audioEnabled: input.audioEnabled,
+        requestKind: input.requestKind,
+        experience,
+      }),
       packageType: pkg.packageType,
       rangeDays: pkg.rangeDays,
       priceSol: pkg.priceSol,
@@ -870,13 +990,18 @@ function createDiscountWaivedJobRecord(input: {
   discountCode: DiscountCode;
 }): JobDocument {
   const createdAt = nowIso();
+  const experience = resolveExperience({
+    experience: input.experience,
+    requestKind: input.requestKind,
+    visibility: input.visibility ?? "public",
+  });
   return {
     jobId: input.jobId,
     wallet: input.wallet,
     requestKind: input.requestKind,
     pricingMode: input.pricingMode ?? "public",
     visibility: input.visibility ?? "public",
-    experience: input.experience ?? "hypercinema",
+    experience,
     moderationStatus: "visible",
     creatorId: input.creatorId ?? null,
     creatorEmail: input.creatorEmail ?? null,
@@ -892,7 +1017,11 @@ function createDiscountWaivedJobRecord(input: {
     sourceTranscript: input.sourceTranscript ?? null,
     stylePreset: input.stylePreset ?? null,
     requestedPrompt: input.requestedPrompt ?? null,
-    audioEnabled: input.audioEnabled ?? false,
+    audioEnabled: resolveAudioEnabled({
+      audioEnabled: input.audioEnabled,
+      requestKind: input.requestKind,
+      experience,
+    }),
     packageType: input.packageType,
     rangeDays: input.rangeDays,
     priceSol: input.priceSol,
@@ -950,6 +1079,11 @@ export async function createDiscountWaivedTokenVideoJob(input: {
 }): Promise<JobDocument> {
   const pkg = resolvePackagePricing(input);
   const jobId = randomUUID();
+  const experience = resolveExperience({
+    experience: input.experience,
+    requestKind: "token_video",
+    visibility: input.visibility ?? "public",
+  });
 
   return getDb().runTransaction(async (tx) => {
     const code = await claimDiscountCodeInTransaction({
@@ -970,7 +1104,7 @@ export async function createDiscountWaivedTokenVideoJob(input: {
       videoSeconds: pkg.videoSeconds,
       pricingMode: input.pricingMode ?? "legacy",
       visibility: input.visibility ?? "public",
-      experience: input.experience ?? "legacy",
+      experience,
       creatorId: input.creatorId ?? null,
       creatorEmail: input.creatorEmail ?? null,
       subjectAddress: input.tokenAddress,
@@ -981,7 +1115,11 @@ export async function createDiscountWaivedTokenVideoJob(input: {
       subjectDescription: input.subjectDescription ?? null,
       stylePreset: input.stylePreset ?? null,
       requestedPrompt: input.requestedPrompt ?? null,
-      audioEnabled: input.audioEnabled ?? false,
+      audioEnabled: resolveAudioEnabled({
+        audioEnabled: input.audioEnabled,
+        requestKind: "token_video",
+        experience,
+      }),
       discountCode: code,
     });
 
@@ -1007,6 +1145,7 @@ export async function createDiscountWaivedTokenVideoJob(input: {
 export async function createDiscountWaivedPromptVideoJob(input: {
   requestKind:
     | "generic_cinema"
+    | "mythx"
     | "bedtime_story"
     | "music_video"
     | "scene_recreation";
@@ -1033,6 +1172,11 @@ export async function createDiscountWaivedPromptVideoJob(input: {
 }): Promise<JobDocument> {
   const pkg = resolvePackagePricing(input);
   const jobId = randomUUID();
+  const experience = resolveExperience({
+    experience: input.experience,
+    requestKind: input.requestKind,
+    visibility: input.visibility ?? "public",
+  });
 
   return getDb().runTransaction(async (tx) => {
     const code = await claimDiscountCodeInTransaction({
@@ -1053,7 +1197,7 @@ export async function createDiscountWaivedPromptVideoJob(input: {
       videoSeconds: pkg.videoSeconds,
       pricingMode: input.pricingMode ?? "public",
       visibility: input.visibility ?? "public",
-      experience: input.experience ?? "hypercinema",
+      experience,
       creatorId: input.creatorId ?? null,
       creatorEmail: input.creatorEmail ?? null,
       subjectName: input.subjectName.trim(),
@@ -1064,12 +1208,11 @@ export async function createDiscountWaivedPromptVideoJob(input: {
       sourceTranscript: input.sourceTranscript?.trim() || null,
       stylePreset: input.stylePreset ?? null,
       requestedPrompt: input.requestedPrompt?.trim() || null,
-      audioEnabled:
-        typeof input.audioEnabled === "boolean"
-          ? input.audioEnabled
-          : input.requestKind === "bedtime_story" ||
-            input.requestKind === "music_video" ||
-            input.requestKind === "scene_recreation",
+      audioEnabled: resolveAudioEnabled({
+        audioEnabled: input.audioEnabled,
+        requestKind: input.requestKind,
+        experience,
+      }),
       discountCode: code,
     });
 

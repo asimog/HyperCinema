@@ -4,6 +4,7 @@ import { JobPackage, PackageType, VideoStyleId } from "@/lib/types/domain";
 export type CinemaPageId =
   | "hypercinema"
   | "hyperm"
+  | "mythx"
   | "trenchcinema"
   | "funcinema"
   | "familycinema"
@@ -20,6 +21,7 @@ export interface CinemaPageConfig {
   summary: string;
   requestKind:
     | "generic_cinema"
+    | "mythx"
     | "token_video"
     | "bedtime_story"
     | "music_video"
@@ -144,16 +146,16 @@ export const CINEMA_PAGE_CONFIGS: Record<CinemaPageId, CinemaPageConfig> = {
     title: "HyperM",
     eyebrow: "Create",
     summary:
-      "Autobiography generator. Paste an X profile link, pull the last 10 tweets, and turn the person's public signals into a full-bore cinematic biography.",
+      "Full-fledged creator for polished concept cuts, brand stories, and tightly controlled outputs.",
     requestKind: "generic_cinema",
     pricingMode: "public",
     visibility: "public",
     requiresAuth: false,
-    subjectLabel: "X profile link",
-    subjectPlaceholder: "https://x.com/username or @username",
-    subjectDescriptionLabel: "Biography angle",
+    subjectLabel: "Project title",
+    subjectPlaceholder: "Launch short, concept trailer, or creator cut",
+    subjectDescriptionLabel: "Core idea",
     subjectDescriptionPlaceholder:
-      "What should this autobiography reveal: origin, contradiction, obsession, comeback, or myth?",
+      "What is this piece about in one or two sentences?",
     defaultStyle: "hyperflow_assembly",
     styleOptions: [
       "hyperflow_assembly",
@@ -165,11 +167,44 @@ export const CINEMA_PAGE_CONFIGS: Record<CinemaPageId, CinemaPageConfig> = {
       "split_screen_diptych",
       "film_grain_70s",
     ],
-    defaultAudioEnabled: false,
+    defaultAudioEnabled: true,
+    audioMode: "optional",
+    supportsChain: false,
+    themeTone: "no-holds-barred creator for concept cuts, brand stories, and anything else",
+    heroChips: ["full creator", "audio on by default", "no holds barred"],
+  },
+  mythx: {
+    id: "mythx",
+    route: "/MythX",
+    title: "MythX",
+    eyebrow: "Create",
+    summary:
+      "Autobiography from the last 42 tweets of an X profile. No title required, just a handle or bio link.",
+    requestKind: "mythx",
+    pricingMode: "public",
+    visibility: "public",
+    requiresAuth: false,
+    subjectLabel: "X profile link or @handle",
+    subjectPlaceholder: "https://x.com/username or @username",
+    subjectDescriptionLabel: "Biography angle",
+    subjectDescriptionPlaceholder:
+      "What should the autobiography expose: origin, contradiction, obsession, comeback, or myth?",
+    defaultStyle: "hyperflow_assembly",
+    styleOptions: [
+      "hyperflow_assembly",
+      "vhs_cinema",
+      "black_and_white_noir",
+      "double_exposure",
+      "glitch_digital",
+      "found_footage_raw",
+      "split_screen_diptych",
+      "film_grain_70s",
+    ],
+    defaultAudioEnabled: true,
     audioMode: "optional",
     supportsChain: false,
     themeTone: "public signals, private truth, and autobiography with no airbrushing",
-    heroChips: ["X profile", "last 10 tweets", "no holds barred"],
+    heroChips: ["X profile", "42 tweets", "no title required"],
   },
   trenchcinema: {
     id: "trenchcinema",
@@ -177,7 +212,7 @@ export const CINEMA_PAGE_CONFIGS: Record<CinemaPageId, CinemaPageConfig> = {
     title: "TrenchMyths",
     eyebrow: "Create",
     summary:
-      "Memecoin stories, wallet-led trailers, and token mythology for Solana, Ethereum, BNB Chain, and Base.",
+      "Wallet-led trailers, memecoin mythology, and on-chain stories for Solana, Ethereum, BNB Chain, and Base.",
     requestKind: "token_video",
     pricingMode: "public",
     visibility: "public",
@@ -195,10 +230,10 @@ export const CINEMA_PAGE_CONFIGS: Record<CinemaPageId, CinemaPageConfig> = {
       "glass_signal",
       "mythic_poster",
     ],
-    defaultAudioEnabled: false,
+    defaultAudioEnabled: true,
     audioMode: "optional",
     supportsChain: true,
-    themeTone: "memecoin trenches, chart glow, and token mythology",
+    themeTone: "memecoin trenches, chart glow, and token mythology with sound on by default",
     heroChips: ["public", "multichain", "metadata-first"],
   },
   funcinema: {
@@ -219,7 +254,7 @@ export const CINEMA_PAGE_CONFIGS: Record<CinemaPageId, CinemaPageConfig> = {
       "Describe the topic, tone, or internal joke to preserve.",
     defaultStyle: "glass_signal",
     styleOptions: ["glass_signal", "hyperflow_assembly", "mythic_poster"],
-    defaultAudioEnabled: false,
+    defaultAudioEnabled: true,
     audioMode: "optional",
     supportsChain: false,
     themeTone: "private sandbox for sharper, weirder creative loops",
@@ -303,7 +338,7 @@ export const CINEMA_PAGE_CONFIGS: Record<CinemaPageId, CinemaPageConfig> = {
     title: "HashMyth",
     eyebrow: "Create",
     summary:
-      "All-chain wallet trading report generator. Paste any token or wallet address and turn your trading story into cinema.",
+      "Wallet and memecoin generator. Paste any token or wallet address and turn your on-chain story into cinema.",
     requestKind: "token_video",
     pricingMode: "public",
     visibility: "public",
@@ -326,11 +361,11 @@ export const CINEMA_PAGE_CONFIGS: Record<CinemaPageId, CinemaPageConfig> = {
       "neon_tokyo_night",
       "infrared_thermal",
     ],
-    defaultAudioEnabled: false,
+    defaultAudioEnabled: true,
     audioMode: "optional",
     supportsChain: true,
-    themeTone: "trading floor adrenaline, numbers, profits, losses made real through cinema",
-    heroChips: ["all chains", "wallet reports", "token stories"],
+    themeTone: "wallets, memes, and trading-floor adrenaline made cinematic",
+    heroChips: ["all chains", "wallet stories", "memecoin drops"],
   },
   lovex: {
     id: "lovex",
@@ -338,27 +373,27 @@ export const CINEMA_PAGE_CONFIGS: Record<CinemaPageId, CinemaPageConfig> = {
     title: "LoveX",
     eyebrow: "Create",
     summary:
-      "Slow, classy cinematic shots with classical music. No words unless you ask. Pure visual romance.",
+      "Family occasions, reunion reels, birthdays, and keepsakes cut like cinema.",
     requestKind: "generic_cinema",
     pricingMode: "public",
     visibility: "public",
     requiresAuth: false,
-    subjectLabel: "Love story title",
-    subjectPlaceholder: "A name, a moment, a memory",
-    subjectDescriptionLabel: "The feeling",
+    subjectLabel: "Family moment",
+    subjectPlaceholder: "Birthday dinner, graduation, reunion, wedding toast",
+    subjectDescriptionLabel: "Moment details",
     subjectDescriptionPlaceholder:
-      "Describe the emotion, the person, or the moment you want to capture.",
-    defaultStyle: "love_slow_waltz",
+      "Who is there, what happened, and what emotional beat should land?",
+    defaultStyle: "mythic_poster",
     styleOptions: [
-      "love_slow_waltz",
-      "love_golden_cinema",
-      "love_moonlit_garden",
-      "love_timeless_portrait",
+      "mythic_poster",
+      "glass_signal",
+      "hyperflow_assembly",
+      "film_grain_70s",
     ],
     defaultAudioEnabled: true,
-    audioMode: "required",
+    audioMode: "optional",
     supportsChain: false,
-    themeTone: "slow, classy, classical music, visual romance at its finest",
-    heroChips: ["classical music", "no words", "slow & classy"],
+    themeTone: "family occasions, memory reels, and keepsakes with a warm finish",
+    heroChips: ["family moments", "no narration", "memory-first"],
   },
 };

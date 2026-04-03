@@ -89,4 +89,3 @@ export function ModerationTable({ items }: { items: ModerationItem[] }) {
     </div>
   );
 }
-

@@ -21,51 +21,56 @@ export function LoginPageClient({ next }: { next: string }) {
   const inProgress = auth?.status === "in-progress" || auth?.status === "initializing";
 
   return (
-    <div className="cinema-shell cinema-noise min-h-dvh overflow-hidden px-4 py-6 text-[#fff1dc] md:px-8 md:py-8">
-      <section className="panel gate-panel">
-        <div className="panel-header">
-          <div>
-            <p className="eyebrow">Private Cinema</p>
-            <h2>Sign in to HyperMyths</h2>
-          </div>
-        </div>
-        <p className="route-summary">
-          Login is optional. Sign in if you want your renders kept private and out of the public
-          gallery.
-        </p>
-        <div className="mini-list">
-          <article className="mini-item-card">
-            <div>
-              <span>Without login</span>
-              <strong>Videos go to public gallery</strong>
+    <div className="cinema-shell cinema-noise min-h-[100dvh] overflow-hidden px-4 py-6 text-[#f4efe8] md:px-8 md:py-8">
+      <div className="home-stage">
+        <div className="home-stage-backdrop" aria-hidden="true" />
+        <div className="relative z-10 mx-auto w-full max-w-2xl">
+          <section className="panel gate-panel grid gap-5">
+            <div className="panel-header">
+              <div>
+                <p className="eyebrow">Private Cinema</p>
+                <h2>Sign in to HyperMyths</h2>
+              </div>
             </div>
-            <p className="route-summary compact">
-              All tools are freely usable. Completed renders appear in the shared gallery.
+            <p className="route-summary">
+              Login is optional. Sign in if you want your renders kept private and out of the public
+              gallery.
             </p>
-          </article>
-          <article className="mini-item-card">
-            <div>
-              <span>With login</span>
-              <strong>Videos stay private</strong>
+            <div className="mini-list">
+              <article className="mini-item-card">
+                <div>
+                  <span>Without login</span>
+                  <strong>Videos go to public gallery</strong>
+                </div>
+                <p className="route-summary compact">
+                  All tools are freely usable. Completed renders appear in the shared gallery.
+                </p>
+              </article>
+              <article className="mini-item-card">
+                <div>
+                  <span>With login</span>
+                  <strong>Videos stay private</strong>
+                </div>
+                <p className="route-summary compact">
+                  Family and music projects stay private by default.
+                </p>
+              </article>
             </div>
-            <p className="route-summary compact">
-              Family and music projects stay private by default.
-            </p>
-          </article>
+            <div className="button-row">
+              {isLoggedIn ? (
+                <p className="route-summary compact">You&apos;re signed in, redirecting...</p>
+              ) : (
+                <CrossmintAuthButton />
+              )}
+              {!inProgress && !isLoggedIn && (
+                <Link href="/" className="button button-secondary">
+                  Continue without login
+                </Link>
+              )}
+            </div>
+          </section>
         </div>
-        <div className="button-row">
-          {isLoggedIn ? (
-            <p className="route-summary compact">You&apos;re signed in, redirecting...</p>
-          ) : (
-            <CrossmintAuthButton />
-          )}
-          {!inProgress && !isLoggedIn && (
-            <Link href="/" className="button button-secondary">
-              Continue without login
-            </Link>
-          )}
-        </div>
-      </section>
+      </div>
     </div>
   );
 }

@@ -131,7 +131,10 @@ export function normalizeXProfileInput(input: string): {
     return { username: null, profileUrl: null };
   }
 
-  if (!trimmed.includes("://") && !trimmed.includes("x.com") && !trimmed.includes("twitter.com")) {
+  const isProfileUrl =
+    /^(?:https?:\/\/)?(?:www\.)?(?:x\.com|twitter\.com)\//i.test(trimmed);
+
+  if (!trimmed.includes("://") && !isProfileUrl) {
     const handle = decodeHandleSegment(trimmed);
     if (!handle) {
       return { username: null, profileUrl: null };
@@ -143,7 +146,9 @@ export function normalizeXProfileInput(input: string): {
   }
 
   try {
-    const parsed = new URL(trimmed);
+    const parsed = new URL(
+      trimmed.includes("://") ? trimmed : `https://${trimmed.replace(/^\/+/, "")}`,
+    );
     const host = parsed.hostname.toLowerCase().replace(/^www\./, "");
     if (!host.includes("x.com") && !host.includes("twitter.com")) {
       return { username: null, profileUrl: null };
@@ -189,7 +194,7 @@ export async function fetchXProfileTweets(input: {
   }
 
   const normalizedBaseUrl = normalizeBaseUrl(baseUrl);
-  const maxTweets = Math.max(1, Math.min(10, input.maxTweets ?? 10));
+  const maxTweets = Math.max(1, Math.min(42, input.maxTweets ?? 42));
   const userUrl = `${normalizedBaseUrl}/users/by/username/${encodeURIComponent(normalized.username)}`;
   const userQuery = {
     "user.fields": "description,profile_image_url,name,username",

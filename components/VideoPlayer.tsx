@@ -7,14 +7,14 @@ interface VideoPlayerProps {
 
 export function VideoPlayer({ src, poster }: VideoPlayerProps) {
   return (
-    <div className="overflow-hidden rounded-[1.8rem] border border-white/10 bg-black shadow-[0_22px_60px_rgba(0,0,0,0.35)]">
+    <div className="surface-card video-frame">
       <video
         src={src}
         poster={poster ?? undefined}
         controls
         playsInline
         preload="metadata"
-        className="aspect-video w-full"
+        className="aspect-video w-full rounded-[1.15rem]"
       />
     </div>
   );

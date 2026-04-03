@@ -9,7 +9,7 @@ export function CrossmintLoginCard(input: {
   const enabled = Boolean(process.env.NEXT_PUBLIC_CROSSMINT_API_KEY);
 
   return (
-    <section className="panel gate-panel">
+    <section className="panel gate-panel grid gap-5">
       <div className="panel-header">
         <div>
           <p className="eyebrow">Private Gate</p>

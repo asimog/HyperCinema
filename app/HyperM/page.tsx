@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
 
-import { HyperMGeneratorClient } from "@/components/hyperm/HyperMGeneratorClient";
+import { CinemaGeneratorClient } from "@/components/cinema/CinemaGeneratorClient";
+import { CINEMA_PAGE_CONFIGS } from "@/lib/cinema/config";
 
 export const metadata: Metadata = {
   title: "HyperM",
   description:
-    "Autobiography generator that turns the last 10 tweets from an X profile into a full-bore cinematic cut.",
+    "Full-fledged creator for polished concept cuts, brand stories, and tightly controlled outputs.",
 };
 
 export default function HyperMPage() {
-  return <HyperMGeneratorClient />;
+  return <CinemaGeneratorClient config={CINEMA_PAGE_CONFIGS.hyperm} viewer={null} />;
 }

@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
 
     const result = await fetchXProfileTweets({
       profileInput: parsed.data.profileInput,
-      maxTweets: 10,
+      maxTweets: 42,
     });
 
     return NextResponse.json(result);

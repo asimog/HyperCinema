@@ -11,6 +11,7 @@ export type JobRequestKind =
   | "wallet_recap"
   | "token_video"
   | "generic_cinema"
+  | "mythx"
   | "bedtime_story"
   | "music_video"
   | "scene_recreation";
@@ -23,11 +24,14 @@ export type CinemaExperience =
   | "legacy"
   | "hypercinema"
   | "hyperm"
+  | "mythx"
   | "trenchcinema"
   | "funcinema"
   | "familycinema"
   | "musicvideo"
-  | "recreator";
+  | "recreator"
+  | "hashmyth"
+  | "lovex";
 
 export type ModerationStatus = "visible" | "flagged" | "hidden";
 

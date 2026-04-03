@@ -17,10 +17,13 @@ export function HyperflowAssemblyScaffold(input: {
 
   return (
     <div className="hyperflow-shell">
-      <div className={layoutClassName}>
-        {hasLeftRail ? <aside className="hyperflow-left-rail">{input.leftRail}</aside> : null}
-        <main className="hyperflow-main">{input.children}</main>
-        {hasRightRail ? <aside className="hyperflow-right-rail">{input.rightRail}</aside> : null}
+      <div className="home-stage">
+        <div className="home-stage-backdrop" aria-hidden="true" />
+        <div className={`${layoutClassName} relative z-10`}>
+          {hasLeftRail ? <aside className="hyperflow-left-rail">{input.leftRail}</aside> : null}
+          <main className="hyperflow-main">{input.children}</main>
+          {hasRightRail ? <aside className="hyperflow-right-rail">{input.rightRail}</aside> : null}
+        </div>
       </div>
     </div>
   );

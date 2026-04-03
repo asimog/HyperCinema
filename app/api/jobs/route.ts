@@ -1,4 +1,6 @@
 import {
+  createDiscountWaivedPromptVideoJob,
+  createDiscountWaivedTokenVideoJob,
   createPromptVideoJob,
   createTokenVideoJob,
   findRecentReusableTokenJob,
@@ -8,6 +10,7 @@ import { ensurePaymentAddressSubscribedToHeliusWebhook } from "@/lib/helius/webh
 import { logger } from "@/lib/logging/logger";
 import { resolveMemecoinMetadata } from "@/lib/memecoins/metadata";
 import { getPackageConfig } from "@/lib/packages";
+import { normalizeDiscountCode } from "@/lib/payments/discount-codes";
 import { lamportsToSol } from "@/lib/payments/solana-pay";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { getRequestIp } from "@/lib/security/request-ip";
@@ -41,6 +44,7 @@ const sharedCinemaSchema = z.object({
   stylePreset: styleSchema.optional(),
   requestedPrompt: z.string().max(4_000).optional(),
   audioEnabled: z.boolean().optional(),
+  discountCode: z.string().max(32).optional(),
   pricingMode: z.enum(["legacy", "public", "private"]).optional(),
   visibility: z.enum(["public", "private"]).optional(),
   experience: z
@@ -92,6 +96,7 @@ interface CreateJobResponse {
   priceSol: number;
   paymentAddress: string;
   amountSol: number;
+  paymentRequired: boolean;
   tokenAddress?: string | null;
   chain?: RequestedTokenChain | null;
   subjectName?: string | null;
@@ -101,6 +106,7 @@ interface CreateJobResponse {
   pricingMode?: CinemaPricingMode;
   visibility?: CinemaVisibility;
   experience?: CinemaExperience;
+  discountCode?: string | null;
 }
 
 function isPromptPayload(payload: CreateJobPayload): payload is z.infer<typeof promptVideoSchema> {
@@ -186,6 +192,7 @@ function createJobResponse(input: {
     priceSol: input.job.priceSol,
     paymentAddress: input.job.paymentAddress,
     amountSol: lamportsToSol(input.job.requiredLamports),
+    paymentRequired: !input.job.paymentWaived && input.job.requiredLamports > 0,
     tokenAddress: input.job.subjectAddress ?? null,
     chain: input.chain ?? (input.job.subjectChain ?? null),
     subjectName: input.job.subjectName ?? null,
@@ -195,6 +202,7 @@ function createJobResponse(input: {
     pricingMode: input.job.pricingMode ?? "legacy",
     visibility: input.job.visibility ?? "public",
     experience: input.job.experience ?? "legacy",
+    discountCode: input.job.discountCode ?? null,
   };
 }
 
@@ -274,12 +282,46 @@ export async function POST(request: NextRequest) {
       packageType: payload.packageType as PackageType,
       pricingMode,
     });
+    const discountCode = payload.discountCode?.trim() ? normalizeDiscountCode(payload.discountCode) : null;
 
     if (!isPromptPayload(payload)) {
       const resolved = await resolveMemecoinMetadata({
         address: payload.tokenAddress,
         chain: payload.chain,
       });
+
+      if (discountCode) {
+        const job = await createDiscountWaivedTokenVideoJob({
+          tokenAddress: payload.tokenAddress,
+          packageType: payload.packageType as PackageType,
+          subjectChain: resolved.chain,
+          subjectName: resolved.name,
+          subjectSymbol: resolved.symbol,
+          subjectImage: resolved.image,
+          subjectDescription:
+            payload.subjectDescription?.trim() ||
+            resolved.description,
+          stylePreset: (payload.stylePreset ?? "hyperflow_assembly") as VideoStyleId,
+          requestedPrompt: payload.requestedPrompt?.trim() || null,
+          audioEnabled: payload.audioEnabled ?? false,
+          pricingMode,
+          visibility,
+          experience,
+          creatorId,
+          priceSol: pkg.priceSol,
+          priceUsdc: pkg.priceUsdc,
+          videoSeconds: pkg.videoSeconds,
+          rangeDays: pkg.rangeDays,
+          discountCode,
+        });
+
+        return NextResponse.json(
+          createJobResponse({
+            job,
+            chain: job.subjectChain ?? resolved.chain,
+          }),
+        );
+      }
 
       const canReuseLegacy =
         pricingMode === "legacy" &&
@@ -361,6 +403,45 @@ export async function POST(request: NextRequest) {
         createJobResponse({
           job,
           chain: job.subjectChain ?? resolved.chain,
+        }),
+      );
+    }
+
+    if (discountCode) {
+      const job = await createDiscountWaivedPromptVideoJob({
+        requestKind: payload.requestKind,
+        packageType: payload.packageType as PackageType,
+        subjectName: payload.subjectName,
+        subjectDescription: payload.subjectDescription?.trim() || null,
+        sourceMediaUrl: payload.sourceMediaUrl?.trim() || null,
+        sourceEmbedUrl: payload.sourceEmbedUrl?.trim() || null,
+        sourceMediaProvider: payload.sourceMediaProvider?.trim() || null,
+        sourceTranscript: payload.sourceTranscript?.trim() || null,
+        stylePreset:
+          payload.stylePreset ??
+          (payload.requestKind === "bedtime_story" ? "mythic_poster" : "hyperflow_assembly"),
+        requestedPrompt: payload.requestedPrompt?.trim() || null,
+        audioEnabled:
+          payload.requestKind === "bedtime_story" ||
+          payload.requestKind === "music_video" ||
+          payload.requestKind === "scene_recreation"
+            ? payload.audioEnabled ?? true
+            : payload.audioEnabled ?? false,
+        pricingMode,
+        visibility,
+        experience,
+        creatorId,
+        priceSol: pkg.priceSol,
+        priceUsdc: pkg.priceUsdc,
+        videoSeconds: pkg.videoSeconds,
+        rangeDays: pkg.rangeDays,
+        discountCode,
+      });
+
+      return NextResponse.json(
+        createJobResponse({
+          job,
+          chain: null,
         }),
       );
     }

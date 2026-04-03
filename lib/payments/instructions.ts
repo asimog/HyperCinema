@@ -14,7 +14,11 @@ export interface PaymentInstructions {
   remainingSol: number;
 }
 
-export function buildPaymentInstructions(job: JobDocument): PaymentInstructions {
+export function buildPaymentInstructions(job: JobDocument): PaymentInstructions | null {
+  if (job.paymentWaived || job.paymentMethod === "discount_code" || job.requiredLamports <= 0) {
+    return null;
+  }
+
   const paymentAddress = job.paymentAddress;
   const requiredLamports = job.requiredLamports ?? solToLamports(job.priceSol);
   const receivedLamports = Math.max(0, job.receivedLamports ?? 0);

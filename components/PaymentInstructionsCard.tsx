@@ -6,11 +6,13 @@ import Image from "next/image";
 import {
   CopyIcon,
   WalletIcon,
+  SparkIcon,
 } from "@/components/ui/AppIcons";
 
 interface PaymentInstructionsCardProps {
   amountSol: number;
   paymentAddress: string;
+  jobId?: string;
   receivedSol?: number;
   remainingSol?: number;
   statusText?: string;
@@ -46,6 +48,10 @@ export function PaymentInstructionsCard(props: PaymentInstructionsCardProps) {
   const [copySuccess, setCopySuccess] = useState<string | null>(null);
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [qrError, setQrError] = useState<string | null>(null);
+  const [discountCode, setDiscountCode] = useState("");
+  const [discountError, setDiscountError] = useState<string | null>(null);
+  const [discountSuccess, setDiscountSuccess] = useState<string | null>(null);
+  const [discountLoading, setDiscountLoading] = useState(false);
 
   const payableSol = props.remainingSol ?? props.amountSol;
   const payableAmount = formatSol(payableSol);
@@ -120,6 +126,50 @@ export function PaymentInstructionsCard(props: PaymentInstructionsCardProps) {
     setCopyError("Clipboard copy failed. Please copy manually.");
   }
 
+  async function applyDiscountCode() {
+    if (!props.jobId) {
+      setDiscountError("Discount code redemption is only available after a job is created.");
+      return;
+    }
+
+    const normalized = discountCode.trim();
+    if (!normalized) {
+      setDiscountError("Enter a discount code or type skip.");
+      return;
+    }
+
+    setDiscountError(null);
+    setDiscountSuccess(null);
+    setDiscountLoading(true);
+
+    try {
+      const response = await fetch(`/api/jobs/${props.jobId}/discount`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ discountCode: normalized }),
+      });
+      const payload = (await response.json()) as {
+        ok?: boolean;
+        error?: string;
+        message?: string;
+      };
+
+      if (!response.ok || !payload.ok) {
+        throw new Error(payload.message ?? payload.error ?? "Failed to apply discount code.");
+      }
+
+      setDiscountCode("");
+      setDiscountSuccess(payload.message ?? "Discount code accepted.");
+      window.setTimeout(() => {
+        window.location.href = `/job/${props.jobId}`;
+      }, 700);
+    } catch (error) {
+      setDiscountError(error instanceof Error ? error.message : "Failed to apply discount code.");
+    } finally {
+      setDiscountLoading(false);
+    }
+  }
+
   return (
     <section className="cinema-panel grid gap-6 rounded-[2rem] p-6 md:grid-cols-[1fr,300px] md:p-7">
       <div className="space-y-4">
@@ -192,6 +242,52 @@ export function PaymentInstructionsCard(props: PaymentInstructionsCardProps) {
             Copy full payment instructions
           </button>
         </div>
+
+        {props.jobId ? (
+          <div className="rounded-[1.4rem] border border-white/10 bg-[#0d0a0c]/78 p-4">
+            <p className="cinema-kicker text-[0.62rem] font-semibold">Discount Code</p>
+            <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
+              Enter a one-time code to waive payment and trigger this job immediately.
+            </p>
+            <div className="mt-3 flex flex-col gap-3 sm:flex-row">
+              <input
+                value={discountCode}
+                onChange={(event) => setDiscountCode(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    void applyDiscountCode();
+                  }
+                }}
+                placeholder="Enter discount code"
+                className="min-w-0 flex-1 rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-[#fff4e0] outline-none transition placeholder:text-[var(--muted)] focus:border-[var(--accent-soft)]"
+                disabled={discountLoading}
+                aria-label="Discount code"
+              />
+              <button
+                type="button"
+                onClick={() => void applyDiscountCode()}
+                className="cinema-secondary-button inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-medium transition"
+                disabled={discountLoading}
+              >
+                <SparkIcon className="button-icon" aria-hidden="true" />
+                {discountLoading ? "Applying..." : "Apply code"}
+              </button>
+            </div>
+            <div className="mt-3 flex flex-col gap-2">
+              {discountSuccess ? (
+                <p className="rounded-2xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
+                  {discountSuccess}
+                </p>
+              ) : null}
+              {discountError ? (
+                <p className="rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm text-red-100">
+                  {discountError}
+                </p>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
 
         {props.statusText ? (
           <p className="text-sm text-[var(--muted)]">

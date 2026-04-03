@@ -95,7 +95,7 @@ export type VideoStyleId =
   | "love_moonlit_garden"
   | "love_timeless_portrait";
 
-export type PaymentMethod = "sol_dedicated_address" | "x402_usdc";
+export type PaymentMethod = "sol_dedicated_address" | "x402_usdc" | "discount_code";
 
 export type PaymentCurrency = "SOL" | "USDC";
 
@@ -204,9 +204,11 @@ export interface JobDocument {
   paymentCurrency?: PaymentCurrency;
   paymentNetwork?: "solana";
   x402Transaction?: string | null;
+  discountCode?: string | null;
+  paymentWaived?: boolean;
   paymentAddress: string;
   paymentIndex: number | null;
-  paymentRouting: "dedicated_address" | "legacy_memo" | "x402";
+  paymentRouting: "dedicated_address" | "legacy_memo" | "x402" | "discount_code";
   requiredLamports: number;
   receivedLamports: number;
   paymentSignatures: string[];

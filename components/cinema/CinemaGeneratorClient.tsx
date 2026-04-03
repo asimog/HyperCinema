@@ -32,6 +32,7 @@ interface CreateJobResponse {
   priceSol: number;
   paymentAddress: string;
   amountSol: number;
+  paymentRequired: boolean;
   tokenAddress?: string | null;
   chain?: RequestedTokenChain | null;
   subjectName?: string | null;
@@ -214,6 +215,11 @@ export function CinemaGeneratorClient(input: {
 
       if (!response.ok || !payload.jobId) {
         throw new Error(payload.message ?? payload.error ?? "Failed to create job.");
+      }
+
+      if (payload.paymentRequired === false) {
+        window.location.href = `/job/${payload.jobId}`;
+        return;
       }
 
       setJobPayment(payload);
@@ -580,6 +586,7 @@ export function CinemaGeneratorClient(input: {
             </div>
             <div className="stack-section">
               <PaymentInstructionsCard
+                jobId={jobPayment.jobId}
                 amountSol={jobStatus?.payment?.amountSol ?? jobPayment.amountSol}
                 paymentAddress={jobStatus?.payment?.paymentAddress ?? jobPayment.paymentAddress}
                 receivedSol={jobStatus?.payment?.receivedSol}

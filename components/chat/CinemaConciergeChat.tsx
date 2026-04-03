@@ -40,6 +40,7 @@ type ConciergeStep =
   | "style"
   | "package"
   | "audio"
+  | "discount_code"
   | "confirm"
   | "payment";
 
@@ -59,6 +60,7 @@ type ConciergeDraft = {
   packageType: PackageType;
   audioEnabled: boolean;
   stylePreset: VideoStyleId | null;
+  discountCode: string;
 };
 
 interface CinemaConciergeChatProps {
@@ -70,12 +72,14 @@ interface CreateJobResponse {
   priceSol: number;
   paymentAddress: string;
   amountSol: number;
+  paymentRequired: boolean;
   tokenAddress?: string | null;
   chain?: RequestedTokenChain | null;
   subjectName?: string | null;
   subjectSymbol?: string | null;
   subjectImage?: string | null;
   stylePreset?: VideoStyleId | null;
+  discountCode?: string | null;
 }
 
 interface JobStatusResponse {
@@ -196,6 +200,7 @@ function buildInitialConversationState(initialExperienceId?: CinemaPageId | null
         packageType: "1d" as PackageType,
         audioEnabled: false,
         stylePreset: null,
+        discountCode: "",
       },
     };
   }
@@ -233,6 +238,7 @@ function buildInitialConversationState(initialExperienceId?: CinemaPageId | null
       packageType: "1d" as PackageType,
       audioEnabled: config.audioMode === "required",
       stylePreset: null,
+      discountCode: "",
     },
   };
 }
@@ -534,6 +540,7 @@ export function CinemaConciergeChat(input: CinemaConciergeChatProps) {
 
     if (step === "confirm") {
       return [
+        { value: "discount_code", label: "Enter discount code" },
         { value: "create", label: "Generate paid job" },
         { value: "restart", label: "Start over" },
       ];
@@ -612,6 +619,14 @@ export function CinemaConciergeChat(input: CinemaConciergeChatProps) {
     ]);
   }
 
+  function askForDiscountCode() {
+    setStep("discount_code");
+    setMessages((current) => [
+      ...current,
+      agentMsg("Enter your one-time discount code or type skip to continue to payment."),
+    ]);
+  }
+
   function openConfirmation(input: {
     nextDraft: ConciergeDraft;
     configTitle: string;
@@ -630,7 +645,7 @@ export function CinemaConciergeChat(input: CinemaConciergeChatProps) {
           pricingMode: input.pricingMode,
         }),
       ),
-      agentMsg("If this looks right, press Generate paid job."),
+      agentMsg("If you have a discount code, enter it now. Otherwise press Generate paid job."),
     ]);
   }
 
@@ -646,6 +661,7 @@ export function CinemaConciergeChat(input: CinemaConciergeChatProps) {
       packageType: "1d",
       audioEnabled: config.audioMode === "required",
       stylePreset: null,
+      discountCode: "",
     };
 
     setDraft(nextDraft);
@@ -687,7 +703,7 @@ export function CinemaConciergeChat(input: CinemaConciergeChatProps) {
     lastPolledStatusRef.current = null;
   }
 
-  async function createJobFromDraft() {
+  async function createJobFromDraft(discountCode?: string | null) {
     if (!selectedConfig) return;
 
     const tokenFlow = selectedConfig.requestKind === "token_video";
@@ -725,6 +741,10 @@ export function CinemaConciergeChat(input: CinemaConciergeChatProps) {
               pricingMode: selectedConfig.pricingMode,
               visibility: selectedConfig.visibility,
               experience: selectedConfig.id,
+              discountCode:
+                discountCode?.trim() ||
+                draft.discountCode.trim() ||
+                undefined,
             }
           : {
               requestKind: selectedConfig.requestKind,
@@ -743,6 +763,10 @@ export function CinemaConciergeChat(input: CinemaConciergeChatProps) {
               pricingMode: selectedConfig.pricingMode,
               visibility: selectedConfig.visibility,
               experience: selectedConfig.id,
+              discountCode:
+                discountCode?.trim() ||
+                draft.discountCode.trim() ||
+                undefined,
             };
 
       const response = await fetch("/api/jobs", {
@@ -758,6 +782,15 @@ export function CinemaConciergeChat(input: CinemaConciergeChatProps) {
 
       if (!response.ok || !payload.jobId) {
         throw new Error(payload.message ?? payload.error ?? "Failed to create job.");
+      }
+
+      if (payload.paymentRequired === false) {
+        setMessages((current) => [
+          ...current,
+          agentMsg("Discount code accepted. Your job is live now."),
+        ]);
+        window.location.href = `/job/${payload.jobId}`;
+        return;
       }
 
       setJobPayment(payload);
@@ -931,20 +964,36 @@ export function CinemaConciergeChat(input: CinemaConciergeChatProps) {
     }
 
     if (step === "confirm") {
-      if (text.toLowerCase().includes("restart")) {
+      const lower = text.toLowerCase();
+
+      if (lower.includes("restart")) {
         resetConversation();
         return;
       }
 
-      if (text.toLowerCase().includes("generate") || text.toLowerCase().includes("yes")) {
+      if (lower.includes("generate") || lower.includes("pay") || lower === "skip") {
         void createJobFromDraft();
         return;
       }
 
-      setMessages((current) => [
-        ...current,
-        agentMsg("Use Generate paid job or Start over."),
-      ]);
+      if (lower.includes("discount") || lower.includes("code")) {
+        askForDiscountCode();
+        return;
+      }
+
+      void createJobFromDraft(text);
+      return;
+    }
+
+    if (step === "discount_code") {
+      const lower = text.toLowerCase();
+      if (lower === "skip" || lower === "no" || lower === "continue") {
+        void createJobFromDraft();
+        return;
+      }
+
+      setDraft((current) => ({ ...current, discountCode: text }));
+      void createJobFromDraft(text);
       return;
     }
   }
@@ -969,6 +1018,11 @@ export function CinemaConciergeChat(input: CinemaConciergeChatProps) {
     }
 
     if (step === "confirm") {
+      if (value === "discount_code") {
+        askForDiscountCode();
+        return;
+      }
+
       if (value === "create") {
         void createJobFromDraft();
         return;
@@ -1002,9 +1056,11 @@ export function CinemaConciergeChat(input: CinemaConciergeChatProps) {
             : step === "style"
               ? "Pick a style..."
               : step === "chain"
-                ? "Auto / Solana / Ethereum / BNB Chain / Base"
+              ? "Auto / Solana / Ethereum / BNB Chain / Base"
                 : step === "package"
                   ? "30 sec or 60 sec"
+                  : step === "discount_code"
+                    ? "Enter discount code or type skip"
                   : step === "audio"
                     ? "yes or no"
                     : "Message";
@@ -1116,6 +1172,7 @@ export function CinemaConciergeChat(input: CinemaConciergeChatProps) {
           </div>
 
           <PaymentInstructionsCard
+            jobId={jobPayment.jobId}
             amountSol={jobStatus?.payment?.amountSol ?? jobPayment.amountSol}
             paymentAddress={jobStatus?.payment?.paymentAddress ?? jobPayment.paymentAddress}
             receivedSol={jobStatus?.payment?.receivedSol}

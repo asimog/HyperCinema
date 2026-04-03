@@ -1,6 +1,7 @@
 import { getDb } from "@/lib/firebase/admin";
 import { assertTransition } from "@/lib/jobs/state-machine";
 import { getPackageConfig } from "@/lib/packages";
+import { type DiscountCode, resolveDiscountCode } from "@/lib/payments/discount-codes";
 import { derivePaymentAddress } from "@/lib/payments/dedicated-address";
 import { applyPaymentSettlement } from "@/lib/payments/settlement";
 import { getRevenueWalletAddress, solToLamports } from "@/lib/payments/solana-pay";
@@ -17,6 +18,7 @@ import {
   VideoDocument,
 } from "@/lib/types/domain";
 import { randomUUID } from "crypto";
+import type { Transaction } from "firebase-admin/firestore";
 
 function nowIso(): string {
   return new Date().toISOString();
@@ -95,10 +97,14 @@ function normalizeJobDocument(raw: JobDocument): JobDocument {
         : raw.requestKind === "bedtime_story",
     priceUsdc: raw.priceUsdc ?? packageConfig.priceUsdc,
     paymentMethod:
-      raw.paymentMethod === "x402_usdc" ? "x402_usdc" : "sol_dedicated_address",
+      raw.paymentMethod === "x402_usdc" || raw.paymentMethod === "discount_code"
+        ? raw.paymentMethod
+        : "sol_dedicated_address",
     paymentCurrency: raw.paymentCurrency === "USDC" ? "USDC" : "SOL",
     paymentNetwork: "solana",
     x402Transaction: raw.x402Transaction ?? null,
+    discountCode: raw.discountCode ?? null,
+    paymentWaived: raw.paymentWaived ?? false,
     paymentAddress: raw.paymentAddress ?? "",
     paymentIndex:
       typeof raw.paymentIndex === "number" && Number.isInteger(raw.paymentIndex)
@@ -106,7 +112,8 @@ function normalizeJobDocument(raw: JobDocument): JobDocument {
         : null,
     paymentRouting:
       raw.paymentRouting === "dedicated_address" ||
-      raw.paymentRouting === "x402"
+      raw.paymentRouting === "x402" ||
+      raw.paymentRouting === "discount_code"
         ? raw.paymentRouting
         : "legacy_memo",
     requiredLamports: raw.requiredLamports ?? solToLamports(raw.priceSol),
@@ -161,6 +168,10 @@ function paymentCounterCollection() {
   return getDb().collection("_meta");
 }
 
+function discountCodesCollection() {
+  return getDb().collection("discount_codes");
+}
+
 function reportsCollection() {
   return getDb().collection("reports");
 }
@@ -197,6 +208,75 @@ async function upsertDispatchOutboxPending(jobId: string): Promise<void> {
     } satisfies JobDispatchOutboxDocument,
     { merge: true },
   );
+}
+
+interface DiscountCodeUsageDocument {
+  code: DiscountCode;
+  createdAt: string;
+  usedAt: string | null;
+  usedByJobId: string | null;
+  usedByAction: "job_create" | "job_redeem" | null;
+}
+
+function normalizeDiscountCodeUsageDocument(
+  code: DiscountCode,
+  raw: Partial<DiscountCodeUsageDocument>,
+): DiscountCodeUsageDocument {
+  return {
+    code,
+    createdAt: raw.createdAt ?? nowIso(),
+    usedAt: raw.usedAt ?? null,
+    usedByJobId: raw.usedByJobId ?? null,
+    usedByAction:
+      raw.usedByAction === "job_create" || raw.usedByAction === "job_redeem"
+        ? raw.usedByAction
+        : null,
+  };
+}
+
+async function claimDiscountCodeInTransaction(input: {
+  tx: Transaction;
+  code: string;
+  jobId: string;
+  action: "job_create" | "job_redeem";
+}): Promise<DiscountCode> {
+  const resolved = resolveDiscountCode(input.code);
+  if (!resolved) {
+    throw new Error("Invalid discount code");
+  }
+
+  const ref = discountCodesCollection().doc(resolved);
+  const snap = await input.tx.get(ref);
+  const current = normalizeDiscountCodeUsageDocument(
+    resolved,
+    snap.exists ? (snap.data() as Partial<DiscountCodeUsageDocument>) : {},
+  );
+
+  if (current.usedAt) {
+    if (
+      current.usedByJobId === input.jobId &&
+      current.usedByAction === input.action
+    ) {
+      return resolved;
+    }
+
+    throw new Error("This discount code has already been used.");
+  }
+
+  const createdAt = current.createdAt ?? nowIso();
+  input.tx.set(
+    ref,
+    {
+      code: resolved,
+      createdAt,
+      usedAt: nowIso(),
+      usedByJobId: input.jobId,
+      usedByAction: input.action,
+    } satisfies DiscountCodeUsageDocument,
+    { merge: true },
+  );
+
+  return resolved;
 }
 
 export async function createJob(input: {
@@ -249,6 +329,8 @@ export async function createJob(input: {
       paymentCurrency: "SOL",
       paymentNetwork: "solana",
       x402Transaction: null,
+      discountCode: null,
+      paymentWaived: false,
       paymentAddress,
       paymentIndex,
       paymentRouting: "dedicated_address",
@@ -298,6 +380,8 @@ export async function createX402PaidJob(input: {
     paymentCurrency: "USDC",
     paymentNetwork: "solana",
     x402Transaction: input.transaction,
+    discountCode: null,
+    paymentWaived: false,
     paymentAddress,
     paymentIndex: null,
     paymentRouting: "x402",
@@ -399,6 +483,8 @@ export async function createTokenVideoJob(input: {
       paymentCurrency: "SOL",
       paymentNetwork: "solana",
       x402Transaction: null,
+      discountCode: null,
+      paymentWaived: false,
       paymentAddress,
       paymentIndex,
       paymentRouting: "dedicated_address",
@@ -480,6 +566,8 @@ export async function createX402PaidTokenVideoJob(input: {
     paymentCurrency: "USDC",
     paymentNetwork: "solana",
     x402Transaction: input.transaction,
+    discountCode: null,
+    paymentWaived: false,
     paymentAddress,
     paymentIndex: null,
     paymentRouting: "x402",
@@ -591,6 +679,8 @@ export async function createPromptVideoJob(input: {
       paymentCurrency: "SOL",
       paymentNetwork: "solana",
       x402Transaction: null,
+      discountCode: null,
+      paymentWaived: false,
       paymentAddress,
       paymentIndex,
       paymentRouting: "dedicated_address",
@@ -607,6 +697,332 @@ export async function createPromptVideoJob(input: {
 
     tx.set(jobsCollection().doc(jobId), job);
     return job;
+  });
+}
+
+function createDiscountWaivedJobRecord(input: {
+  jobId: string;
+  wallet: string;
+  requestKind: JobDocument["requestKind"];
+  packageType: PackageType;
+  rangeDays: number;
+  priceSol: number;
+  priceUsdc: number;
+  videoSeconds: number;
+  pricingMode?: JobDocument["pricingMode"];
+  visibility?: JobDocument["visibility"];
+  experience?: JobDocument["experience"];
+  creatorId?: string | null;
+  creatorEmail?: string | null;
+  subjectAddress?: string | null;
+  subjectChain?: SupportedTokenChain | null;
+  subjectName?: string | null;
+  subjectSymbol?: string | null;
+  subjectImage?: string | null;
+  subjectDescription?: string | null;
+  sourceMediaUrl?: string | null;
+  sourceEmbedUrl?: string | null;
+  sourceMediaProvider?: string | null;
+  sourceTranscript?: string | null;
+  stylePreset?: VideoStyleId | null;
+  requestedPrompt?: string | null;
+  audioEnabled?: boolean | null;
+  discountCode: DiscountCode;
+}): JobDocument {
+  const createdAt = nowIso();
+  return {
+    jobId: input.jobId,
+    wallet: input.wallet,
+    requestKind: input.requestKind,
+    pricingMode: input.pricingMode ?? "public",
+    visibility: input.visibility ?? "public",
+    experience: input.experience ?? "hypercinema",
+    moderationStatus: "visible",
+    creatorId: input.creatorId ?? null,
+    creatorEmail: input.creatorEmail ?? null,
+    subjectAddress: input.subjectAddress ?? undefined,
+    subjectChain: input.subjectChain ?? null,
+    subjectName: input.subjectName ?? null,
+    subjectSymbol: input.subjectSymbol ?? null,
+    subjectImage: input.subjectImage ?? null,
+    subjectDescription: input.subjectDescription ?? null,
+    sourceMediaUrl: input.sourceMediaUrl ?? null,
+    sourceEmbedUrl: input.sourceEmbedUrl ?? null,
+    sourceMediaProvider: input.sourceMediaProvider ?? null,
+    sourceTranscript: input.sourceTranscript ?? null,
+    stylePreset: input.stylePreset ?? null,
+    requestedPrompt: input.requestedPrompt ?? null,
+    audioEnabled: input.audioEnabled ?? false,
+    packageType: input.packageType,
+    rangeDays: input.rangeDays,
+    priceSol: input.priceSol,
+    priceUsdc: input.priceUsdc,
+    videoSeconds: input.videoSeconds,
+    status: "payment_confirmed",
+    progress: "payment_confirmed",
+    txSignature: null,
+    createdAt,
+    updatedAt: createdAt,
+    errorCode: null,
+    errorMessage: null,
+    paymentMethod: "discount_code",
+    paymentCurrency: "SOL",
+    paymentNetwork: "solana",
+    x402Transaction: null,
+    discountCode: input.discountCode,
+    paymentWaived: true,
+    paymentAddress: "",
+    paymentIndex: null,
+    paymentRouting: "discount_code",
+    requiredLamports: 0,
+    receivedLamports: 0,
+    paymentSignatures: [],
+    lastPaymentAt: createdAt,
+    sweepStatus: "swept",
+    sweepSignature: null,
+    sweptLamports: 0,
+    lastSweepAt: createdAt,
+    sweepError: null,
+  };
+}
+
+export async function createDiscountWaivedTokenVideoJob(input: {
+  tokenAddress: string;
+  packageType: PackageType;
+  subjectChain: SupportedTokenChain;
+  subjectName?: string | null;
+  subjectSymbol?: string | null;
+  subjectImage?: string | null;
+  subjectDescription?: string | null;
+  stylePreset?: VideoStyleId | null;
+  requestedPrompt?: string | null;
+  audioEnabled?: boolean | null;
+  pricingMode?: JobDocument["pricingMode"];
+  visibility?: JobDocument["visibility"];
+  experience?: JobDocument["experience"];
+  creatorId?: string | null;
+  creatorEmail?: string | null;
+  priceSol?: number;
+  priceUsdc?: number;
+  videoSeconds?: number;
+  rangeDays?: number;
+  discountCode: string;
+}): Promise<JobDocument> {
+  const pkg = resolvePackagePricing(input);
+  const jobId = randomUUID();
+
+  return getDb().runTransaction(async (tx) => {
+    const code = await claimDiscountCodeInTransaction({
+      tx,
+      code: input.discountCode,
+      jobId,
+      action: "job_create",
+    });
+
+    const job = createDiscountWaivedJobRecord({
+      jobId,
+      wallet: input.tokenAddress,
+      requestKind: "token_video",
+      packageType: pkg.packageType,
+      rangeDays: pkg.rangeDays,
+      priceSol: pkg.priceSol,
+      priceUsdc: pkg.priceUsdc,
+      videoSeconds: pkg.videoSeconds,
+      pricingMode: input.pricingMode ?? "legacy",
+      visibility: input.visibility ?? "public",
+      experience: input.experience ?? "legacy",
+      creatorId: input.creatorId ?? null,
+      creatorEmail: input.creatorEmail ?? null,
+      subjectAddress: input.tokenAddress,
+      subjectChain: input.subjectChain,
+      subjectName: input.subjectName ?? null,
+      subjectSymbol: input.subjectSymbol ?? null,
+      subjectImage: input.subjectImage ?? null,
+      subjectDescription: input.subjectDescription ?? null,
+      stylePreset: input.stylePreset ?? null,
+      requestedPrompt: input.requestedPrompt ?? null,
+      audioEnabled: input.audioEnabled ?? false,
+      discountCode: code,
+    });
+
+    tx.set(jobsCollection().doc(jobId), job);
+    tx.set(
+      dispatchOutboxCollection().doc(jobId),
+      {
+        jobId,
+        status: "pending",
+        attempts: 0,
+        nextAttemptAt: job.createdAt,
+        lockUntil: null,
+        lastError: null,
+        createdAt: job.createdAt,
+        updatedAt: job.createdAt,
+        dispatchedAt: null,
+      } satisfies JobDispatchOutboxDocument,
+    );
+    return job;
+  });
+}
+
+export async function createDiscountWaivedPromptVideoJob(input: {
+  requestKind:
+    | "generic_cinema"
+    | "bedtime_story"
+    | "music_video"
+    | "scene_recreation";
+  packageType: PackageType;
+  subjectName: string;
+  subjectDescription?: string | null;
+  sourceMediaUrl?: string | null;
+  sourceEmbedUrl?: string | null;
+  sourceMediaProvider?: string | null;
+  sourceTranscript?: string | null;
+  stylePreset?: VideoStyleId | null;
+  requestedPrompt?: string | null;
+  audioEnabled?: boolean | null;
+  pricingMode?: JobDocument["pricingMode"];
+  visibility?: JobDocument["visibility"];
+  experience?: JobDocument["experience"];
+  creatorId?: string | null;
+  creatorEmail?: string | null;
+  priceSol?: number;
+  priceUsdc?: number;
+  videoSeconds?: number;
+  rangeDays?: number;
+  discountCode: string;
+}): Promise<JobDocument> {
+  const pkg = resolvePackagePricing(input);
+  const jobId = randomUUID();
+
+  return getDb().runTransaction(async (tx) => {
+    const code = await claimDiscountCodeInTransaction({
+      tx,
+      code: input.discountCode,
+      jobId,
+      action: "job_create",
+    });
+
+    const job = createDiscountWaivedJobRecord({
+      jobId,
+      wallet: `${input.requestKind}:${jobId}`,
+      requestKind: input.requestKind,
+      packageType: pkg.packageType,
+      rangeDays: pkg.rangeDays,
+      priceSol: pkg.priceSol,
+      priceUsdc: pkg.priceUsdc,
+      videoSeconds: pkg.videoSeconds,
+      pricingMode: input.pricingMode ?? "public",
+      visibility: input.visibility ?? "public",
+      experience: input.experience ?? "hypercinema",
+      creatorId: input.creatorId ?? null,
+      creatorEmail: input.creatorEmail ?? null,
+      subjectName: input.subjectName.trim(),
+      subjectDescription: input.subjectDescription?.trim() || null,
+      sourceMediaUrl: input.sourceMediaUrl?.trim() || null,
+      sourceEmbedUrl: input.sourceEmbedUrl?.trim() || null,
+      sourceMediaProvider: input.sourceMediaProvider?.trim() || null,
+      sourceTranscript: input.sourceTranscript?.trim() || null,
+      stylePreset: input.stylePreset ?? null,
+      requestedPrompt: input.requestedPrompt?.trim() || null,
+      audioEnabled:
+        typeof input.audioEnabled === "boolean"
+          ? input.audioEnabled
+          : input.requestKind === "bedtime_story" ||
+            input.requestKind === "music_video" ||
+            input.requestKind === "scene_recreation",
+      discountCode: code,
+    });
+
+    tx.set(jobsCollection().doc(jobId), job);
+    tx.set(
+      dispatchOutboxCollection().doc(jobId),
+      {
+        jobId,
+        status: "pending",
+        attempts: 0,
+        nextAttemptAt: job.createdAt,
+        lockUntil: null,
+        lastError: null,
+        createdAt: job.createdAt,
+        updatedAt: job.createdAt,
+        dispatchedAt: null,
+      } satisfies JobDispatchOutboxDocument,
+    );
+    return job;
+  });
+}
+
+export async function applyDiscountCodeToJob(input: {
+  jobId: string;
+  discountCode: string;
+}): Promise<JobDocument> {
+  return getDb().runTransaction(async (tx) => {
+    const ref = jobsCollection().doc(input.jobId);
+    const snap = await tx.get(ref);
+    if (!snap.exists) {
+      throw new Error(`Job ${input.jobId} not found`);
+    }
+
+    const current = normalizeJobDocument(snap.data() as JobDocument);
+    if (current.paymentWaived || current.paymentMethod === "discount_code") {
+      return current;
+    }
+
+    if (current.status !== "awaiting_payment" && current.status !== "payment_detected") {
+      throw new Error("Discount codes can only be applied before payment is confirmed.");
+    }
+
+    const code = await claimDiscountCodeInTransaction({
+      tx,
+      code: input.discountCode,
+      jobId: input.jobId,
+      action: "job_redeem",
+    });
+
+    const now = nowIso();
+    const updated: JobDocument = {
+      ...current,
+      status: "payment_confirmed",
+      progress: "payment_confirmed",
+      txSignature: null,
+      paymentMethod: "discount_code",
+      paymentCurrency: "SOL",
+      paymentNetwork: "solana",
+      x402Transaction: null,
+      discountCode: code,
+      paymentWaived: true,
+      paymentRouting: "discount_code",
+      requiredLamports: 0,
+      receivedLamports: 0,
+      paymentSignatures: [],
+      lastPaymentAt: now,
+      sweepStatus: "swept",
+      sweepSignature: null,
+      sweptLamports: 0,
+      lastSweepAt: now,
+      sweepError: null,
+      errorCode: null,
+      errorMessage: null,
+      updatedAt: now,
+    };
+
+    tx.set(ref, updated, { merge: true });
+    tx.set(
+      dispatchOutboxCollection().doc(input.jobId),
+      {
+        jobId: input.jobId,
+        status: "pending",
+        attempts: 0,
+        nextAttemptAt: now,
+        lockUntil: null,
+        lastError: null,
+        createdAt: now,
+        updatedAt: now,
+        dispatchedAt: null,
+      } satisfies JobDispatchOutboxDocument,
+    );
+
+    return updated;
   });
 }
 

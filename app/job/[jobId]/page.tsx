@@ -66,6 +66,9 @@ function nextPollDelay(job: JobDocument | null, elapsedMs: number): number {
 }
 
 function priceLabel(job: JobDocument): string {
+  if (job.paymentWaived || job.paymentMethod === "discount_code") {
+    return "Discount code";
+  }
   if (job.paymentMethod === "x402_usdc") {
     return `$${job.priceUsdc ?? 0} USDC`;
   }
@@ -250,7 +253,11 @@ export default function JobPage() {
             <div>
               <span>Checkout</span>
               <strong>
-                {job?.paymentMethod === "x402_usdc" ? "x402 / USDC" : "Manual SOL"}
+                {job?.paymentMethod === "x402_usdc"
+                  ? "x402 / USDC"
+                  : job?.paymentWaived || job?.paymentMethod === "discount_code"
+                    ? "Discount code"
+                    : "Manual SOL"}
               </strong>
             </div>
           </article>
@@ -310,10 +317,12 @@ export default function JobPage() {
 
         {job &&
         payment &&
+        !job.paymentWaived &&
         (job.status === "awaiting_payment" ||
           job.status === "payment_detected" ||
           job.status === "payment_confirmed") ? (
           <PaymentInstructionsCard
+            jobId={job.jobId}
             amountSol={payment.amountSol}
             paymentAddress={payment.paymentAddress}
             receivedSol={payment.receivedSol}

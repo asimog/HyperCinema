@@ -3,6 +3,7 @@ import { JobPackage, PackageType, VideoStyleId } from "@/lib/types/domain";
 
 export type CinemaPageId =
   | "hypercinema"
+  | "hyperm"
   | "trenchcinema"
   | "funcinema"
   | "familycinema"
@@ -136,6 +137,39 @@ export const CINEMA_PAGE_CONFIGS: Record<CinemaPageId, CinemaPageConfig> = {
     supportsChain: false,
     themeTone: "clean control-room cinema for general stories",
     heroChips: ["public", "no sound by default", "lyrics optional"],
+  },
+  hyperm: {
+    id: "hyperm",
+    route: "/HyperM",
+    title: "HyperM",
+    eyebrow: "Create",
+    summary:
+      "Autobiography generator. Paste an X profile link, pull the last 10 tweets, and turn the person's public voice into a full-bore cinematic biography.",
+    requestKind: "generic_cinema",
+    pricingMode: "public",
+    visibility: "public",
+    requiresAuth: false,
+    subjectLabel: "X profile link",
+    subjectPlaceholder: "https://x.com/username or @username",
+    subjectDescriptionLabel: "Biography angle",
+    subjectDescriptionPlaceholder:
+      "What should this autobiography reveal: origin, contradiction, obsession, comeback, or myth?",
+    defaultStyle: "hyperflow_assembly",
+    styleOptions: [
+      "hyperflow_assembly",
+      "vhs_cinema",
+      "black_and_white_noir",
+      "double_exposure",
+      "glitch_digital",
+      "found_footage_raw",
+      "split_screen_diptych",
+      "film_grain_70s",
+    ],
+    defaultAudioEnabled: false,
+    audioMode: "optional",
+    supportsChain: false,
+    themeTone: "public voice, private truth, and autobiography with no airbrushing",
+    heroChips: ["X profile", "last 10 tweets", "no holds barred"],
   },
   trenchcinema: {
     id: "trenchcinema",

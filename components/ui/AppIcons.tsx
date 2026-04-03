@@ -186,6 +186,8 @@ export function GetPageIcon(id: CinemaPageId) {
       return HashIcon;
     case "hypercinema":
       return PaletteIcon;
+    case "hyperm":
+      return SparkIcon;
     case "lovex":
       return HeartIcon;
     case "trenchcinema":

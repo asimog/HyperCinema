@@ -25,10 +25,10 @@ export const HYPERMYTHS_HERO_CATEGORIES: HyperMythsCategory[] = [
     href: "/HashMyth",
   },
   {
-    id: "hypercinema",
-    title: "MythX",
-    summary: "42 cinematic styles. VHS, anime, cyberpunk, noir, Ghibli, and more. Pick your look, direct your myth.",
-    href: "/HyperCinema",
+    id: "hyperm",
+    title: "HyperM",
+    summary: "Paste an X profile link, pull the last 10 tweets, and turn a public voice into an autobiography cut.",
+    href: "/HyperM",
   },
   {
     id: "lovex",
@@ -39,7 +39,7 @@ export const HYPERMYTHS_HERO_CATEGORIES: HyperMythsCategory[] = [
   {
     id: "trenchcinema",
     title: "Trending",
-    summary: "Gallery, new generators, and everything not on the homepage. Explore what is cooking.",
+    summary: "Trending ideas, gallery archive, and new generators. Everything that is moving right now lives here.",
     href: "/trending",
   },
 ];
@@ -57,6 +57,12 @@ export const HYPERMYTHS_CATEGORIES: HyperMythsCategory[] = [
     title: "MythX",
     summary: "42 cinematic styles. Full cinematography control for polished, directed outputs.",
     href: "/HyperCinema",
+  },
+  {
+    id: "hyperm",
+    title: "HyperM",
+    summary: "Autobiography creator from the last 10 tweets on an X profile link.",
+    href: "/HyperM",
   },
   {
     id: "lovex",

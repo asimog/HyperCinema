@@ -24,7 +24,7 @@ const displayFont = Syne({
 export const metadata: Metadata = {
   title: "HyperMythsX",
   description:
-    "Cinematic creation studio for weird ideas, polished briefs, family keepsakes, music-led edits, and token stories.",
+    "Cinematic creation studio for weird ideas, autobiography cuts from X profiles, family keepsakes, music-led edits, and token stories.",
 };
 
 export const viewport: Viewport = {

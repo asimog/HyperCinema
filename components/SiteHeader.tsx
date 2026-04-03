@@ -4,7 +4,6 @@ import {
   FilmIcon,
   HomeIcon,
   GetPageIcon,
-  TrendingIcon,
 } from "@/components/ui/AppIcons";
 import { HYPERMYTHS_HERO_CATEGORIES } from "@/lib/hypermyths/content";
 
@@ -16,7 +15,6 @@ export function SiteHeader() {
       label: category.title,
       icon: GetPageIcon(category.id),
     })),
-    { href: "/gallery", label: "Gallery", icon: TrendingIcon },
   ];
 
   return (

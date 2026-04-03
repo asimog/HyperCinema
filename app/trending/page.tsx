@@ -1,7 +1,10 @@
 import Link from "next/link";
 
 import { TRENDING_SPOTLIGHTS } from "@/lib/hypermyths/content";
-import { listCompletedJobArtifacts } from "@/lib/jobs/repository";
+import {
+  listCompletedJobArtifacts,
+  listCompletedJobArtifactsByWallet,
+} from "@/lib/jobs/repository";
 
 export const dynamic = "force-dynamic";
 
@@ -23,8 +26,26 @@ function buildDescription(report?: {
   return truncate(base, 150);
 }
 
-export default async function TrendingPage() {
-  const jobs = await listCompletedJobArtifacts(4);
+export default async function TrendingPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ token?: string }> | { token?: string };
+}) {
+  const params = (await Promise.resolve(searchParams)) ?? {};
+  const tokenQuery = params.token?.trim() ?? "";
+  let jobs: Awaited<ReturnType<typeof listCompletedJobArtifacts>> = [];
+  let archiveError: string | null = null;
+
+  try {
+    jobs = tokenQuery
+      ? await listCompletedJobArtifactsByWallet(tokenQuery, 12)
+      : await listCompletedJobArtifacts(12);
+  } catch (error) {
+    archiveError =
+      error instanceof Error
+        ? error.message
+        : "Trending archive is temporarily unavailable.";
+  }
 
   return (
     <div className="cinema-shell cinema-noise min-h-[100dvh] overflow-hidden px-4 py-6 text-[#f4efe8] md:px-8 md:py-8">
@@ -32,7 +53,9 @@ export default async function TrendingPage() {
         <section className="panel trend-hero trend-hero--sleek">
           <p className="eyebrow">Trending</p>
           <h1 className="font-display">Current cuts.</h1>
-          <p className="route-summary">A sharper rail for the ideas people are opening now.</p>
+          <p className="route-summary">
+            A sharper rail for what is moving now, plus the gallery archive folded into the same page.
+          </p>
         </section>
 
         <section className="trend-grid trend-grid--sleek">
@@ -52,22 +75,49 @@ export default async function TrendingPage() {
         <section className="panel trend-recent-panel">
           <div className="panel-header">
             <div>
-              <p className="eyebrow">Gallery</p>
-              <h2>Last 4 generations</h2>
+              <p className="eyebrow">Gallery archive</p>
+              <h2>Recent generations</h2>
             </div>
-            <Link href="/gallery" className="button button-primary">
-              View complete gallery
+            <Link href="/trending" className="button button-secondary">
+              Clear search
             </Link>
           </div>
 
-          {jobs.length ? (
+          <form method="GET" className="form-stack">
+            <div className="field">
+              <span>Mint or contract</span>
+              <input
+                name="token"
+                defaultValue={tokenQuery}
+                placeholder="Paste token address"
+              />
+            </div>
+            <div className="button-row">
+              <button type="submit" className="button button-primary">
+                Search archive
+              </button>
+              <Link href="/" className="button button-secondary">
+                Home
+              </Link>
+            </div>
+          </form>
+
+          {archiveError ? (
+            <p className="route-summary">{archiveError}</p>
+          ) : jobs.length ? (
             <section className="module-grid-3x2">
               {jobs.map(({ job, report }) => {
                 const description = buildDescription(report ?? undefined);
                 const title =
-                  report?.subjectName ?? report?.subjectSymbol ?? report?.walletPersonality ?? "HyperMyths";
+                  report?.subjectName ??
+                  report?.subjectSymbol ??
+                  report?.walletPersonality ??
+                  "HyperMyths";
                 const subline =
-                  report?.subjectSymbol ?? report?.subjectAddress ?? report?.wallet ?? job.wallet;
+                  report?.subjectSymbol ??
+                  report?.subjectAddress ??
+                  report?.wallet ??
+                  job.wallet;
 
                 return (
                   <Link
@@ -87,7 +137,11 @@ export default async function TrendingPage() {
               })}
             </section>
           ) : (
-            <p className="route-summary">No completed videos yet. Generate the first one and it will appear here.</p>
+            <p className="route-summary">
+              {tokenQuery
+                ? `No completed jobs found for ${tokenQuery}.`
+                : "No completed token videos yet. Generate the first one and it will show up here."}
+            </p>
           )}
         </section>
       </div>

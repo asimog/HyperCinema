@@ -22,6 +22,7 @@ export type CinemaVisibility = "public" | "private";
 export type CinemaExperience =
   | "legacy"
   | "hypercinema"
+  | "hyperm"
   | "trenchcinema"
   | "funcinema"
   | "familycinema"

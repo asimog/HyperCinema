@@ -8,6 +8,7 @@ import {
 } from "@/lib/network/retry";
 import { GeneratedCinematicScript } from "@/lib/types/domain";
 import { GoogleVeoRenderPayload } from "@/lib/video/veo";
+import { XAiVideoRenderPayload } from "@/lib/video/xai";
 
 interface StartRenderResponse {
   id?: string;
@@ -35,6 +36,7 @@ export async function renderCinematicVideo(params: {
   durationSeconds: number;
   script: GeneratedCinematicScript;
   googleVeo?: GoogleVeoRenderPayload;
+  xai?: XAiVideoRenderPayload;
 }): Promise<{ videoUrl: string; thumbnailUrl: string | null }> {
   const env = getEnv();
   const inferenceConfig = await getInferenceRuntimeConfig();
@@ -49,22 +51,35 @@ export async function renderCinematicVideo(params: {
     ...scene,
     includeAudio: params.googleVeo?.generateAudio ?? false,
   }));
+  const isXaiProvider = Boolean(params.xai);
   const withSound = params.googleVeo?.generateAudio ?? false;
-  const isVeoProvider = inferenceConfig.video.provider === "google_veo";
+  const provider = isXaiProvider ? "xai" : inferenceConfig.video.provider;
+  const videoEngine = isXaiProvider ? "xai" : env.VIDEO_ENGINE;
   const baseRequestPayload = {
     jobId: params.jobId,
     wallet: params.wallet,
     durationSeconds: params.durationSeconds,
     withSound,
-    resolution: params.googleVeo?.resolution ?? env.VIDEO_RESOLUTION,
+    resolution: params.xai?.resolution ?? params.googleVeo?.resolution ?? env.VIDEO_RESOLUTION,
     hookLine: params.script.hookLine,
     scenes: scenePayload,
-    videoEngine: env.VIDEO_ENGINE,
-    provider: inferenceConfig.video.provider,
-    model: inferenceConfig.video.model ?? params.googleVeo?.model ?? env.VIDEO_VEO_MODEL,
+    videoEngine,
+    provider,
+    model:
+      params.xai?.model ??
+      inferenceConfig.video.model ??
+      params.googleVeo?.model ??
+      env.VIDEO_VEO_MODEL,
   };
-  const renderRequestPayload =
-    isVeoProvider
+  const renderRequestPayload = isXaiProvider
+    ? {
+        ...baseRequestPayload,
+        provider: "xai",
+        videoEngine: "xai",
+        prompt: params.xai?.prompt ?? params.script.hookLine,
+        xai: params.xai,
+      }
+    : provider === "google_veo"
       ? {
           ...baseRequestPayload,
           provider: "google_veo",

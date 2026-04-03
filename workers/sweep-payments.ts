@@ -79,6 +79,14 @@ async function sweepSingleJob(params: {
   const expectedAddress = keypair.publicKey.toBase58();
   if (expectedAddress !== params.paymentAddress) {
     const reason = "derived_address_mismatch";
+    logger.warn("sweep_derived_address_mismatch", {
+      component: "worker",
+      stage: "sweep",
+      jobId: params.jobId,
+      paymentIndex: params.paymentIndex,
+      expectedAddress,
+      paymentAddress: params.paymentAddress,
+    });
     await markSweepResult({
       jobId: params.jobId,
       status: "failed",
@@ -224,7 +232,7 @@ export async function sweepDedicatedPaymentAddressForJob(
     };
   }
 
-  if (!job.paymentIndex || !job.paymentAddress) {
+  if (job.paymentIndex == null || !job.paymentAddress) {
     return {
       jobId,
       status: "failed",
@@ -267,7 +275,7 @@ export async function sweepDedicatedPaymentAddresses(
 
   const results: SweepJobResult[] = [];
   for (const job of candidates) {
-    if (!job.paymentIndex || !job.paymentAddress) {
+    if (job.paymentIndex == null || !job.paymentAddress) {
       continue;
     }
 

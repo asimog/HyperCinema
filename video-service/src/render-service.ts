@@ -20,6 +20,7 @@ import {
   uploadLocalFile,
 } from "./pipeline/media";
 import { GenerateClipInput, VertexVeoClient } from "./providers/vertex-veo";
+import { GenerateXAiClipInput, XAiVideoClient } from "./providers/xai-video";
 
 export interface RenderServiceResultSync {
   mode: "sync";
@@ -82,7 +83,10 @@ export function resolveRenderConfig(input: {
 export class RenderService {
   private readonly activeRenders = new Set<string>();
 
-  constructor(private readonly clipGenerator: ClipGenerator = new VertexVeoClient()) {}
+  constructor(
+    private readonly clipGenerator: ClipGenerator = new VertexVeoClient(),
+    private readonly xaiClipGenerator: XAiVideoClient = new XAiVideoClient(),
+  ) {}
 
   async startOrGet(request: NormalizedRenderRequest): Promise<RenderServiceStartResult> {
     const normalizedRequest: NormalizedRenderRequest = {
@@ -192,15 +196,22 @@ export class RenderService {
 
   private async processRender(record: RenderJobRecord): Promise<void> {
     const env = getVideoServiceEnv();
+    const provider = record.request.provider === "xai" ? "xai" : "google_veo";
 
     const metadata = record.request.metadata ?? record.request.googleVeo;
-    const { model, resolution } = resolveRenderConfig({
+    const xaiMetadata = record.request.xai;
+    const veoConfig = resolveRenderConfig({
       metadata,
       requestResolution: record.request.resolution,
       envModel: env.VERTEX_VEO_MODEL,
       envResolution: env.VEO_OUTPUT_RESOLUTION,
     });
-    const styleHints = metadata?.styleHints ?? [];
+    const xaiModel = xaiMetadata?.model ?? env.XAI_VIDEO_MODEL;
+    const xaiResolution = (xaiMetadata?.resolution ?? "720p") as "480p" | "720p";
+    const veoModel = veoConfig.model;
+    const veoResolution = veoConfig.resolution;
+    const styleHints =
+      provider === "xai" ? (xaiMetadata?.styleHints ?? []) : (metadata?.styleHints ?? []);
     const generateAudio = metadata?.generateAudio ?? record.request.withSound;
     const chunks = buildSceneChunks({
       request: record.request,
@@ -213,17 +224,28 @@ export class RenderService {
 
     const clipUris: string[] = [];
     for (const chunk of chunks) {
-      const clip = await this.clipGenerator.generateClip({
-        model,
-        resolution,
-        prompt: chunk.prompt,
-        durationSeconds: chunk.durationSeconds,
-        imageUrl: chunk.imageUrl,
-        styleHints,
-        generateAudio,
-        storageUri: `gs://${env.FIREBASE_STORAGE_BUCKET}/video-renders/${record.jobId}/clips/${chunk.chunkId}`,
-        onProgress: () => touchRenderJob(record.id),
-      });
+      const clip =
+        provider === "xai"
+          ? await this.xaiClipGenerator.generateClip({
+              model: xaiModel,
+              resolution: xaiResolution,
+              prompt: chunk.prompt,
+              durationSeconds: chunk.durationSeconds,
+              imageUrl: chunk.imageUrl,
+              aspectRatio: xaiMetadata?.aspectRatio ?? "16:9",
+              onProgress: () => touchRenderJob(record.id),
+            } satisfies GenerateXAiClipInput)
+          : await this.clipGenerator.generateClip({
+              model: veoModel as GenerateClipInput["model"],
+              resolution: veoResolution,
+              prompt: chunk.prompt,
+              durationSeconds: chunk.durationSeconds,
+              imageUrl: chunk.imageUrl,
+              styleHints,
+              generateAudio,
+              storageUri: `gs://${env.FIREBASE_STORAGE_BUCKET}/video-renders/${record.jobId}/clips/${chunk.chunkId}`,
+              onProgress: () => touchRenderJob(record.id),
+            });
       const uri = clip.videoUris[0];
       const inlineVideo = clip.videoBytesBase64[0];
       if (uri) {

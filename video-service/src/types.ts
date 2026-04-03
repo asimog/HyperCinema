@@ -2,6 +2,7 @@ import { z } from "zod";
 
 const ALLOWED_VEO_MODEL = "veo-3.1-fast-generate-001" as const;
 const resolutionSchema = z.enum(["720p", "1080p"]);
+const xaiResolutionSchema = z.enum(["480p", "720p"]);
 
 const sceneSchema = z.object({
   sceneNumber: z.number().int().positive(),
@@ -131,6 +132,17 @@ const googleVeoMetadataSchema = z.object({
     .optional(),
 });
 
+const xaiMetadataSchema = z.object({
+  provider: z.literal("xai"),
+  model: z.string().min(1),
+  resolution: xaiResolutionSchema.default("720p"),
+  aspectRatio: z.literal("16:9").default("16:9"),
+  prompt: z.string().min(1),
+  styleHints: z.array(z.string()).default([]),
+  sceneMetadata: z.array(sceneMetadataSchema).min(1),
+  storyMetadata: storyMetadataSchema,
+});
+
 export const renderRequestSchema = z.object({
   jobId: z.string().min(1),
   wallet: z.string().min(1),
@@ -139,21 +151,25 @@ export const renderRequestSchema = z.object({
   resolution: resolutionSchema.optional(),
   hookLine: z.string().min(1),
   scenes: z.array(sceneSchema).min(1),
-  videoEngine: z.literal("google_veo"),
+  videoEngine: z.enum(["google_veo", "xai"]),
   provider: z.string().optional(),
   prompt: z.string().optional(),
   metadata: googleVeoMetadataSchema.optional(),
   googleVeo: googleVeoMetadataSchema.optional(),
+  xai: xaiMetadataSchema.optional(),
 });
 
 export type RenderRequest = z.infer<typeof renderRequestSchema>;
 export type RenderScene = z.infer<typeof sceneSchema>;
 export type GoogleVeoMetadata = z.infer<typeof googleVeoMetadataSchema>;
+export type XAiMetadata = z.infer<typeof xaiMetadataSchema>;
 
 export interface NormalizedRenderRequest
-  extends Omit<RenderRequest, "metadata" | "googleVeo"> {
+  extends Omit<RenderRequest, "metadata" | "googleVeo" | "xai" | "resolution"> {
+  resolution?: "480p" | "720p" | "1080p";
   metadata?: GoogleVeoMetadata;
   googleVeo?: GoogleVeoMetadata;
+  xai?: XAiMetadata;
 }
 
 export type RenderStatus = "queued" | "processing" | "ready" | "failed";
@@ -175,6 +191,37 @@ export interface RenderJobRecord {
 
 export function parseRenderRequest(payload: unknown): NormalizedRenderRequest {
   const parsed = renderRequestSchema.parse(payload);
+
+  if (parsed.videoEngine === "xai") {
+    if (parsed.provider !== "xai") {
+      throw new Error("provider must be 'xai' when videoEngine=xai");
+    }
+
+    const metadata = parsed.xai;
+    if (!metadata) {
+      throw new Error("xai metadata is required when videoEngine=xai");
+    }
+
+    if (!metadata.model || !metadata.sceneMetadata?.length || !metadata.storyMetadata) {
+      throw new Error(
+        "xai.model, xai.sceneMetadata, and xai.storyMetadata are required for xAI renders",
+      );
+    }
+
+    const requestedResolution = metadata.resolution ?? "720p";
+    if (parsed.resolution && parsed.resolution !== requestedResolution) {
+      throw new Error("resolution mismatch between request.resolution and xai.resolution.");
+    }
+
+    return {
+      ...parsed,
+      resolution: requestedResolution,
+      xai: {
+        ...metadata,
+        resolution: requestedResolution,
+      },
+    };
+  }
 
   if (parsed.provider !== "google_veo") {
     throw new Error("provider must be 'google_veo' when videoEngine=google_veo");

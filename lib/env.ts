@@ -18,11 +18,14 @@ const envSchema = z.object({
     .url()
     .default("https://api.mainnet-beta.solana.com"),
   TEXT_INFERENCE_PROVIDER: z
-    .enum(["openrouter", "openai", "claude", "replicate", "huggingface", "ollama", "others"])
+    .enum(["xai", "openrouter", "openai", "claude", "replicate", "huggingface", "ollama", "others"])
     .default("openrouter"),
   TEXT_INFERENCE_MODEL: z.string().min(1).optional(),
   TEXT_INFERENCE_BASE_URL: z.string().url().optional(),
   TEXT_INFERENCE_API_KEY: z.string().min(1).optional(),
+  XAI_API_KEY: z.string().min(1).optional(),
+  XAI_BASE_URL: z.string().url().default("https://api.x.ai/v1"),
+  XAI_VIDEO_MODEL: z.string().min(1).default("grok-imagine-video"),
   OPENROUTER_API_KEY: z.string().min(1).optional(),
   VIDEO_API_KEY: z.string().min(1),
   X_API_BEARER_TOKEN: z.string().min(1).optional(),
@@ -72,7 +75,7 @@ const envSchema = z.object({
     .default("https://openrouter.ai/api/v1"),
   OPENROUTER_MODEL: z.string().min(1).optional(),
   VIDEO_INFERENCE_PROVIDER: z
-    .enum(["google_veo", "openai", "replicate", "huggingface", "ollama", "others"])
+    .enum(["google_veo", "xai", "openai", "replicate", "huggingface", "ollama", "others"])
     .default("google_veo"),
   VIDEO_INFERENCE_MODEL: z.string().min(1).optional(),
   OPENROUTER_APP_NAME: z.string().default("HYPERCINEMA"),
@@ -125,6 +128,9 @@ export function getEnv(): AppEnv {
     TEXT_INFERENCE_MODEL: trimOptionalEnvValue(process.env.TEXT_INFERENCE_MODEL),
     TEXT_INFERENCE_BASE_URL: trimOptionalEnvValue(process.env.TEXT_INFERENCE_BASE_URL),
     TEXT_INFERENCE_API_KEY: trimOptionalEnvValue(process.env.TEXT_INFERENCE_API_KEY),
+    XAI_API_KEY: trimOptionalEnvValue(process.env.XAI_API_KEY),
+    XAI_BASE_URL: trimEnvValue(process.env.XAI_BASE_URL),
+    XAI_VIDEO_MODEL: trimOptionalEnvValue(process.env.XAI_VIDEO_MODEL),
     VIDEO_ENGINE: trimEnvValue(process.env.VIDEO_ENGINE),
     VIDEO_VEO_MODEL: trimEnvValue(process.env.VIDEO_VEO_MODEL),
     VIDEO_RESOLUTION: trimEnvValue(process.env.VIDEO_RESOLUTION),

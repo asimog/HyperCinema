@@ -1,6 +1,8 @@
 import { getEnv } from "@/lib/env";
 import { Connection } from "@solana/web3.js";
 
+const PUBLIC_SOLANA_RPC_URL = "https://api.mainnet-beta.solana.com";
+
 let cachedPrimaryConnection: Connection | null = null;
 let cachedFallbackConnection: Connection | null = null;
 
@@ -19,11 +21,7 @@ export function getSolanaFallbackConnection(): Connection {
     return cachedFallbackConnection;
   }
 
-  const env = getEnv();
-  cachedFallbackConnection = new Connection(
-    env.SOLANA_RPC_FALLBACK_URL,
-    "confirmed",
-  );
+  cachedFallbackConnection = new Connection(PUBLIC_SOLANA_RPC_URL, "confirmed");
   return cachedFallbackConnection;
 }
 
@@ -37,8 +35,8 @@ export async function withSolanaRpcFallback<T>(
   } catch (primaryError) {
     const env = getEnv();
 
-    // Avoid duplicate retry when both URLs are the same.
-    if (env.SOLANA_RPC_URL === env.SOLANA_RPC_FALLBACK_URL) {
+    // Avoid duplicate retry when the primary already points at the public RPC.
+    if (env.SOLANA_RPC_URL === PUBLIC_SOLANA_RPC_URL) {
       throw primaryError;
     }
 

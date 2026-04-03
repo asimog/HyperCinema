@@ -17,7 +17,7 @@ export function HyperflowAssemblyScaffold(input: {
 
   return (
     <div className="hyperflow-shell">
-      <div className="home-stage">
+      <div className="home-stage home-stage--workspace">
         <div className="home-stage-backdrop" aria-hidden="true" />
         <div className={`${layoutClassName} relative z-10`}>
           {hasLeftRail ? <aside className="hyperflow-left-rail">{input.leftRail}</aside> : null}

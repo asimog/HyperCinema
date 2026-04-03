@@ -18,6 +18,32 @@ function resolveProviderModel(provider: TextInferenceProviderId, explicitModel?:
   return explicitModel?.trim() || option?.defaultModel || "default";
 }
 
+function collectXaiOutputText(payload: unknown): string {
+  if (!payload || typeof payload !== "object") {
+    return "";
+  }
+
+  const response = payload as {
+    output_text?: string;
+    output?: Array<{
+      type?: string;
+      content?: Array<{ type?: string; text?: string }>;
+    }>;
+  };
+
+  if (typeof response.output_text === "string" && response.output_text.trim()) {
+    return response.output_text.trim();
+  }
+
+  const chunks = response.output
+    ?.flatMap((item) => item.content ?? [])
+    .filter((item) => item.type === "output_text" || item.type === "text")
+    .map((item) => item.text?.trim() ?? "")
+    .filter(Boolean);
+
+  return chunks?.join("\n").trim() ?? "";
+}
+
 async function callOpenAICompatible(input: {
   providerLabel: string;
   baseUrl: string;
@@ -68,6 +94,60 @@ async function callOpenAICompatible(input: {
   const content = payload.choices?.[0]?.message?.content?.trim();
   if (!content) {
     throw new Error(`${input.providerLabel} returned an empty response.`);
+  }
+  return content;
+}
+
+async function callXaiResponses(messages: TextInferenceMessage[], model: string, temperature: number, maxTokens: number): Promise<string> {
+  const env = getEnv();
+  const apiKey = env.XAI_API_KEY;
+  if (!apiKey) {
+    throw new Error("XAI_API_KEY is required for the xAI provider.");
+  }
+
+  const runtime = await getInferenceRuntimeConfig();
+  const baseUrl = runtime.text.baseUrl ?? env.XAI_BASE_URL;
+
+  const response = await withRetry(
+    async () => {
+      const res = await fetchWithTimeout(
+        `${baseUrl.replace(/\/+$/, "")}/responses`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            model,
+            input: messages.map((message) => ({
+              role: message.role,
+              content: message.content,
+            })),
+            temperature,
+            max_output_tokens: maxTokens,
+          }),
+        },
+        30_000,
+      );
+
+      if (!res.ok) {
+        const body = await res.text();
+        if (isRetryableHttpStatus(res.status)) {
+          throw new RetryableError(`xAI retryable request failed (${res.status}): ${body}`);
+        }
+        throw new Error(`xAI request failed (${res.status}): ${body}`);
+      }
+
+      return res;
+    },
+    { attempts: 3, baseDelayMs: 700, maxDelayMs: 4_000 },
+  );
+
+  const payload = (await response.json()) as unknown;
+  const content = collectXaiOutputText(payload);
+  if (!content) {
+    throw new Error("xAI returned an empty response.");
   }
   return content;
 }
@@ -242,6 +322,10 @@ export async function generateTextInference(params: {
   const model = resolveProviderModel(provider, params.model ?? runtime.text.model ?? env.TEXT_INFERENCE_MODEL);
   const temperature = params.temperature ?? 0.2;
   const maxTokens = params.maxTokens ?? 1200;
+
+  if (provider === "xai") {
+    return callXaiResponses(params.messages, model, temperature, maxTokens);
+  }
 
   if (provider === "openrouter") {
     const openRouterMessages = params.messages

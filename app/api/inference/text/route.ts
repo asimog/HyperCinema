@@ -2,8 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { generateTextInference } from "@/lib/inference/text";
 import type { TextInferenceProviderId } from "@/lib/inference/providers";
+import { enforceRateLimit } from "@/lib/security/rate-limit";
+import { getRequestIp } from "@/lib/security/request-ip";
 
 export const runtime = "nodejs";
+
+const INFERENCE_TEXT_RATE_LIMIT_RULES = [
+  { name: "inference_text_per_minute", windowSec: 60, limit: 10 },
+  { name: "inference_text_per_hour", windowSec: 60 * 60, limit: 120 },
+] as const;
 
 export async function POST(request: NextRequest) {
   try {
@@ -26,6 +33,29 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: "prompt or messages are required." },
         { status: 400 },
+      );
+    }
+
+    const ip = getRequestIp(request);
+    const rateLimit = await enforceRateLimit({
+      scope: "api_inference_text_post",
+      key: ip,
+      rules: [...INFERENCE_TEXT_RATE_LIMIT_RULES],
+    });
+
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        {
+          error: "Rate limit exceeded",
+          retryAfterSec: rateLimit.retryAfterSec,
+          rule: rateLimit.exceededRule,
+        },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": String(rateLimit.retryAfterSec),
+          },
+        },
       );
     }
 

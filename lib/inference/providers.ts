@@ -1,4 +1,5 @@
 export type TextInferenceProviderId =
+  | "xai"
   | "openrouter"
   | "openai"
   | "claude"
@@ -9,6 +10,7 @@ export type TextInferenceProviderId =
 
 export type VideoInferenceProviderId =
   | "google_veo"
+  | "xai"
   | "openai"
   | "replicate"
   | "huggingface"
@@ -25,6 +27,14 @@ export interface ProviderOption<TProvider extends string = string> {
 }
 
 export const TEXT_INFERENCE_PROVIDER_OPTIONS: ProviderOption<TextInferenceProviderId>[] = [
+  {
+    id: "xai",
+    label: "xAI",
+    description: "Direct xAI Responses API for Grok and SuperGrok text inference.",
+    implemented: true,
+    defaultModel: "grok-4.20-reasoning",
+    envHint: "XAI_API_KEY",
+  },
   {
     id: "openrouter",
     label: "OpenRouter",
@@ -91,6 +101,14 @@ export const VIDEO_INFERENCE_PROVIDER_OPTIONS: ProviderOption<VideoInferenceProv
     envHint: "VIDEO_API_BASE_URL",
   },
   {
+    id: "xai",
+    label: "xAI Video",
+    description: "xAI Grok Imagine Video for text-to-video and image-to-video clips.",
+    implemented: true,
+    defaultModel: "grok-imagine-video",
+    envHint: "XAI_API_KEY",
+  },
+  {
     id: "openai",
     label: "OpenAI",
     description: "Reserved for OpenAI-native video workflows or custom backends.",
@@ -134,4 +152,3 @@ export function isTextInferenceProvider(value: string): value is TextInferencePr
 export function isVideoInferenceProvider(value: string): value is VideoInferenceProviderId {
   return VIDEO_INFERENCE_PROVIDER_OPTIONS.some((option) => option.id === value);
 }
-

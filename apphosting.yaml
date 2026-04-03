@@ -23,6 +23,10 @@ env:
     secret: HELIUS_WEBHOOK_ID
   - variable: JOB_DISPATCH_BATCH_LIMIT
     secret: JOB_DISPATCH_BATCH_LIMIT
+  - variable: TEXT_INFERENCE_MODEL
+    secret: TEXT_INFERENCE_MODEL
+  - variable: TEXT_INFERENCE_PROVIDER
+    secret: TEXT_INFERENCE_PROVIDER
   - variable: OPENROUTER_API_KEY
     secret: OPENROUTER_API_KEY
   - variable: OPENROUTER_APP_NAME
@@ -39,6 +43,18 @@ env:
     secret: SOLANA_RPC_FALLBACK_URL
   - variable: SOLANA_RPC_URL
     secret: SOLANA_RPC_URL
+  - variable: XAI_API_KEY
+    secret: XAI_API_KEY
+  - variable: XAI_BASE_URL
+    secret: XAI_BASE_URL
+  - variable: XAI_VIDEO_MODEL
+    secret: XAI_VIDEO_MODEL
+  - variable: X_API_BEARER_TOKEN
+    secret: X_API_BEARER_TOKEN
+  - variable: X_API_CONSUMER_KEY
+    secret: X_API_CONSUMER_KEY
+  - variable: X_API_CONSUMER_SECRET
+    secret: X_API_CONSUMER_SECRET
   - variable: SWEEP_BATCH_LIMIT
     secret: SWEEP_BATCH_LIMIT
   - variable: SWEEP_MIN_LAMPORTS

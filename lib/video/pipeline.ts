@@ -16,6 +16,7 @@ export async function buildAndRenderVideo(input: {
   const script = await generateCinematicScript(input.walletStory);
   const env = getEnv();
   const inferenceConfig = await getInferenceRuntimeConfig();
+
   const googleVeoPayload = buildGoogleVeoRenderPayload({
     walletStory: input.walletStory,
     script,

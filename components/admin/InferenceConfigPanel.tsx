@@ -16,7 +16,11 @@ type InferenceConfigPanelProps = {
 };
 
 function providerSummary(option: ProviderOption): string {
-  return `${option.label}${option.defaultModel ? ` · ${option.defaultModel}` : ""}`;
+  return `${option.label}${option.defaultModel ? ` - ${option.defaultModel}` : ""}`;
+}
+
+function providerLabel(option: ProviderOption): string {
+  return `${providerSummary(option)}${!option.implemented ? " (coming soon)" : ""}`;
 }
 
 export function InferenceConfigPanel({
@@ -102,8 +106,8 @@ export function InferenceConfigPanel({
               onChange={(event) => setTextProvider(event.target.value as TextInferenceProviderId)}
             >
               {textOptions.map((option) => (
-                <option key={option.id} value={option.id}>
-                  {providerSummary(option)}
+                <option key={option.id} value={option.id} disabled={!option.implemented}>
+                  {providerLabel(option)}
                 </option>
               ))}
             </select>
@@ -146,8 +150,8 @@ export function InferenceConfigPanel({
               onChange={(event) => setVideoProvider(event.target.value as VideoInferenceProviderId)}
             >
               {videoOptions.map((option) => (
-                <option key={option.id} value={option.id}>
-                  {providerSummary(option)}
+                <option key={option.id} value={option.id} disabled={!option.implemented}>
+                  {providerLabel(option)}
                 </option>
               ))}
             </select>

@@ -1,6 +1,20 @@
 import { randomBytes } from "node:crypto";
 
-export const DISCOUNT_CODES = ["MEPH123", "SHAW123", "MILADY"] as const;
+export const DISCOUNT_CODES = [
+  "MEPH123",
+  "SHAW123",
+  "MILADY",
+  "DYLAN",
+  "MODALPH",
+  "MEPH",
+  "MARIO",
+  "HIHIHI",
+  "PROL1",
+  "PROL2",
+  "PROL3",
+  "PROL4",
+  "PROL5",
+] as const;
 
 export type DiscountCode = (typeof DISCOUNT_CODES)[number];
 

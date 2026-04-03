@@ -8,9 +8,7 @@ import { PaymentInstructionsCard } from "@/components/PaymentInstructionsCard";
 import { HyperflowAssemblyScaffold } from "@/components/shell/HyperflowAssemblyScaffold";
 import {
   ArrowRightIcon,
-  FilmIcon,
   SparkIcon,
-  TrendingIcon,
 } from "@/components/ui/AppIcons";
 import { buildDirectorPrompt } from "@/lib/cinema/directorPrompt";
 import { getCinemaPackageConfig, CINEMA_PAGE_CONFIGS } from "@/lib/cinema/config";
@@ -70,7 +68,7 @@ function statusLabel(status?: string, progress?: string): string {
   if (status === "payment_confirmed") return "Payment confirmed";
   if (progress === "generating_report") return "Building autobiography";
   if (progress === "generating_video") return "Rendering cut";
-  if (status === "processing") return "In render pipeline";
+  if (status === "processing") return "In production";
   if (status === "complete") return "Ready";
   if (status === "failed") return "Failed";
   return "Staging";
@@ -343,13 +341,9 @@ export function HyperMGeneratorClient() {
             <section className="panel rail-panel">
               <div className="panel-header">
               <div>
-                  <p className="eyebrow">MythX</p>
-                  <h2>Source feed</h2>
+                  <h2>Source</h2>
                 </div>
               </div>
-              <p className="route-summary">
-                Drop in an X profile link, fetch the last 42 tweets, and build the autobiography from the public voice itself.
-              </p>
               <div className="route-badges">
                 <span className="status-badge">{tweetCount || 42} tweets</span>
                 <span className="status-badge">X API</span>
@@ -360,7 +354,6 @@ export function HyperMGeneratorClient() {
             <section className="panel rail-panel">
               <div className="panel-header">
                 <div>
-                  <p className="eyebrow">Current source</p>
                   <h2>{profileDisplayName || profileHandle || "Waiting for input"}</h2>
                 </div>
               </div>
@@ -387,48 +380,6 @@ export function HyperMGeneratorClient() {
             </section>
           </div>
         }
-        rightRail={
-          <div className="rail-stack">
-            <section className="panel rail-panel">
-              <div className="panel-header">
-                <div>
-                  <p className="eyebrow">MythX rules</p>
-                  <h2>No holds barred</h2>
-                </div>
-              </div>
-              <p className="route-summary">
-                This generator turns a public profile into a cinematic autobiography. It is not a sanitized brand reel.
-              </p>
-            </section>
-
-            <section className="panel rail-panel">
-              <div className="panel-header">
-                <div>
-                  <p className="eyebrow">Build</p>
-                  <h2>Output settings</h2>
-                </div>
-              </div>
-              <div className="route-badges">
-                <span className="status-badge">{packageConfig.videoSeconds}s cut</span>
-                <span className="status-badge">{packageConfig.priceSol} SOL</span>
-                <span className="status-badge">public</span>
-              </div>
-              <div className="inline-note">
-                Add the X API bearer token later and this page will fetch the tweets directly. Until then, paste the transcript manually.
-              </div>
-              <div className="button-row">
-                <Link href="/trending" className="button button-secondary">
-                  <TrendingIcon className="button-icon" aria-hidden="true" />
-                  Trending archive
-                </Link>
-                <Link href="/" className="button button-secondary">
-                  <FilmIcon className="button-icon" aria-hidden="true" />
-                  Home
-                </Link>
-              </div>
-            </section>
-          </div>
-        }
       >
         <section className="panel home-hero-panel">
           <div className="home-hero-copy">
@@ -446,8 +397,7 @@ export function HyperMGeneratorClient() {
         <section className="panel">
           <div className="panel-header">
             <div>
-              <p className="eyebrow">Generate</p>
-              <h2>Load the feed, then cut the story</h2>
+              <h2>Configure the brief</h2>
             </div>
             <div className="button-row">
               <button
@@ -456,7 +406,7 @@ export function HyperMGeneratorClient() {
                 onClick={loadTweets}
                 disabled={isLoadingTweets || !profileInput.trim()}
               >
-                {isLoadingTweets ? "Loading tweets..." : "Load last 42 tweets"}
+                {isLoadingTweets ? "Loading..." : "Load tweets"}
               </button>
             </div>
           </div>
@@ -549,7 +499,7 @@ export function HyperMGeneratorClient() {
                 onChange={(event) => setAudioEnabled(event.target.checked)}
                 disabled={isSubmitting}
               />
-              <span>Voiceover / audio on</span>
+              <span>Audio on</span>
             </label>
 
             <div className="field">
@@ -563,10 +513,6 @@ export function HyperMGeneratorClient() {
               />
             </div>
 
-            <div className="inline-note">
-              The prompt below is automatically assembled from the profile link, bio, and tweet transcript.
-            </div>
-
             <div className="button-row">
               <button
                 type="button"
@@ -575,7 +521,7 @@ export function HyperMGeneratorClient() {
                 className="button button-primary"
               >
                 <SparkIcon className="button-icon" aria-hidden="true" />
-                {isSubmitting ? "Opening payment..." : "Generate autobiography"}
+                {isSubmitting ? "Opening checkout..." : "Create video"}
               </button>
             </div>
 
@@ -588,13 +534,12 @@ export function HyperMGeneratorClient() {
           <section className="panel">
             <div className="panel-header">
               <div>
-                <p className="eyebrow">Payment Adapter</p>
-                <h2>{jobPayment.subjectName ?? subjectName ?? "MythX job"} is queued</h2>
+                <h2>{jobPayment.subjectName ?? subjectName ?? "MythX job"} ready for checkout</h2>
               </div>
               <div className="button-row">
                 <Link className="button button-secondary" href={`/job/${jobPayment.jobId}`}>
                   <ArrowRightIcon className="button-icon" aria-hidden="true" />
-                  Open job page
+                  Open job
                 </Link>
               </div>
             </div>

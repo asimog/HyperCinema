@@ -107,24 +107,24 @@ type AgentPersona = {
 };
 
 const DEFAULT_PERSONA: AgentPersona = {
-  director: "HyperMythsX",
+  director: "HyperMyths",
   sound: "MythSound",
   editor: "MythEditor",
-  greeting: "I'm your HyperMythsX. I'll collect your video details, refine the prompt, create the paid job, and track it until render starts.",
+  greeting: "I'm your HyperMyths guide. I'll gather the details, shape the brief, create the order, and keep you updated until production starts.",
 };
 
 const AGENT_PERSONAS: Partial<Record<CinemaPageId, AgentPersona>> = {
   hyperm: {
-    director: "HyperMythsX",
-    sound: "HyperMythsX",
-    editor: "HyperMythsX",
-    greeting: "HyperMythsX loaded. Build a no-holds-barred creator cut and I’ll keep the prompt sharp.",
+    director: "HyperMyths",
+    sound: "HyperMyths",
+    editor: "HyperMyths",
+    greeting: "HyperMyths is ready. Build a bold creator cut and I’ll keep the brief sharp.",
   },
   mythx: {
-    director: "HyperMythsX",
-    sound: "HyperMythsX",
-    editor: "HyperMythsX",
-    greeting: "HyperMythsX here. Drop an X profile link or @handle and I’ll turn the last 42 tweets into autobiography.",
+    director: "HyperMyths",
+    sound: "HyperMyths",
+    editor: "HyperMyths",
+    greeting: "HyperMyths is ready. Drop an X profile link or @handle and I’ll shape the last 42 posts into a cinematic autobiography.",
   },
   hashmyth: {
     director: "HashIntern",
@@ -139,16 +139,16 @@ const AGENT_PERSONAS: Partial<Record<CinemaPageId, AgentPersona>> = {
     greeting: "Hello, MythFren here. Let's craft something slow, classy, and beautiful. Classical music, no words, unless you want them. Pick a style to begin.",
   },
   hypercinema: {
-    director: "HyperMythsX",
-    sound: "HyperMythsX",
-    editor: "HyperMythsX",
-    greeting: "HyperMythsX loaded. 42 cinematic styles at your disposal, from VHS grain to Ghibli watercolors. What's the vision?",
+    director: "HyperMyths",
+    sound: "HyperMyths",
+    editor: "HyperMyths",
+    greeting: "HyperMyths is ready. You have 42 cinematic styles to choose from, from VHS grain to watercolor worlds. What's the vision?",
   },
   trenchcinema: {
-    director: "HyperMythsX",
-    sound: "HyperMythsX",
-    editor: "HyperMythsX",
-    greeting: "HyperMythsX here. Trending lane, memecoin stories, wallet drops, and token mythology across all chains.",
+    director: "HyperMyths",
+    sound: "HyperMyths",
+    editor: "HyperMyths",
+    greeting: "HyperMyths is ready. Bring the token, wallet, or meme story and I’ll shape it into a fast cinematic cut.",
   },
   funcinema: {
     director: "MythEditor",
@@ -188,14 +188,14 @@ const INITIAL_MESSAGES: ChatMessage[] = [
   {
     id: "assistant-intro-1",
     role: "assistant",
-    text: "Hi, I'm your HyperMythsX. I'll collect your video details, refine the prompt, create the paid job, and track it until render starts.",
-    agentName: "HyperMythsX",
+    text: "Hi, I'm HyperMyths. I'll collect the essentials, tighten the brief, create your order, and keep the process moving.",
+    agentName: "HyperMyths",
   },
   {
     id: "assistant-intro-2",
     role: "assistant",
-    text: "First step: choose a category.",
-    agentName: "HyperMythsX",
+    text: "Start by choosing a studio.",
+    agentName: "HyperMyths",
   },
 ];
 
@@ -219,19 +219,12 @@ function buildInitialConversationState(initialExperienceId?: CinemaPageId | null
   }
 
   const config = CINEMA_PAGE_CONFIGS[initialExperienceId];
-  const persona = getPersona(initialExperienceId);
   const nextStep: ConciergeStep =
     config.requestKind === "token_video" ? "token_address" : "subject";
 
   return {
     step: nextStep,
     messages: [
-      {
-        id: "assistant-intro-1",
-        role: "assistant",
-        text: persona.greeting,
-        agentName: persona.director,
-      },
       {
         id: "assistant-page-context",
         role: "assistant",
@@ -241,7 +234,7 @@ function buildInitialConversationState(initialExperienceId?: CinemaPageId | null
             : config.id === "mythx"
               ? "Paste an X profile link or @handle."
               : "What should we call this video?",
-        agentName: persona.director,
+        agentName: getPersona(initialExperienceId).director,
       },
     ] satisfies ChatMessage[],
     draft: {
@@ -270,12 +263,12 @@ const LOVEX_STYLE_CHOICES: { value: VideoStyleId; label: string }[] = [
 /* ── Utility functions ───────────────────────────────────────────── */
 
 function statusLabel(status?: string, progress?: string): string {
-  if (status === "awaiting_payment") return "Awaiting payment";
-  if (status === "payment_detected") return "Payment detected";
+  if (status === "awaiting_payment") return "Checkout ready";
+  if (status === "payment_detected") return "Payment received";
   if (status === "payment_confirmed") return "Payment confirmed";
   if (progress === "generating_report") return "Building story pack";
   if (progress === "generating_video") return "Rendering video";
-  if (status === "processing") return "In render pipeline";
+  if (status === "processing") return "In production";
   if (status === "complete") return "Ready";
   if (status === "failed") return "Failed";
   return "Staging";
@@ -396,6 +389,7 @@ function buildForwardedPrompt(input: {
 /* ── Main component ──────────────────────────────────────────────── */
 
 export function CinemaConciergeChat(input: CinemaConciergeChatProps) {
+  const isWorkspaceMode = Boolean(input.initialExperienceId);
   const initialState = useMemo(
     () => buildInitialConversationState(input.initialExperienceId ?? null),
     [input.initialExperienceId],
@@ -463,14 +457,14 @@ export function CinemaConciergeChat(input: CinemaConciergeChatProps) {
           if (status === "payment_detected") {
             setMessages((current) => [
               ...current,
-              createMessage("assistant", "Payment detected. Waiting for confirmation.", persona.director),
+              createMessage("assistant", "Payment received. Confirming now.", persona.director),
             ]);
           }
 
           if (status === "payment_confirmed") {
             setMessages((current) => [
               ...current,
-              createMessage("assistant", "Payment confirmed. Dispatching your video job now.", persona.director),
+              createMessage("assistant", "Payment confirmed. Starting your video now.", persona.director),
             ]);
           }
         }
@@ -538,7 +532,7 @@ export function CinemaConciergeChat(input: CinemaConciergeChatProps) {
     if (step === "confirm") {
       return [
         { value: "discount_code", label: "Enter discount code" },
-        { value: "create", label: "Generate paid job" },
+        { value: "create", label: "Continue to checkout" },
         { value: "restart", label: "Start over" },
       ];
     }
@@ -640,20 +634,44 @@ export function CinemaConciergeChat(input: CinemaConciergeChatProps) {
     tokenFlow: boolean;
     pricingMode: "public" | "private";
   }) {
+    const packageConfig = getCinemaPackageConfig({
+      packageType: input.nextDraft.packageType,
+      pricingMode: input.pricingMode,
+    });
+    const compactSummary = [
+      `${packageConfig.videoSeconds} sec`,
+      input.nextDraft.audioEnabled ? "audio on" : "audio off",
+      input.nextDraft.stylePreset ? "style locked" : null,
+    ]
+      .filter(Boolean)
+      .join(" - ");
+
     setStep("confirm");
     setMessages((current) => [
       ...current,
-      agentMsg("Perfect. Review this brief:"),
       agentMsg(
-        summaryText({
-          configTitle: input.configTitle,
-          draft: input.nextDraft,
-          experienceId: input.nextDraft.experienceId ?? draft.experienceId ?? "hyperm",
-          tokenFlow: input.tokenFlow,
-          pricingMode: input.pricingMode,
-        }),
+        isWorkspaceMode
+          ? `Ready to generate. ${compactSummary}.`
+          : "Perfect. Review this brief:",
       ),
-      agentMsg("If you have a discount code, enter it now. Otherwise press Generate paid job."),
+      ...(isWorkspaceMode
+        ? []
+        : [
+            agentMsg(
+              summaryText({
+                configTitle: input.configTitle,
+                draft: input.nextDraft,
+                experienceId: input.nextDraft.experienceId ?? draft.experienceId ?? "hyperm",
+                tokenFlow: input.tokenFlow,
+                pricingMode: input.pricingMode,
+              }),
+            ),
+          ]),
+      agentMsg(
+        isWorkspaceMode
+          ? "Use a discount code or generate the paid job."
+          : "If you have a discount code, enter it now. Otherwise continue to checkout.",
+      ),
     ]);
   }
 
@@ -677,7 +695,7 @@ export function CinemaConciergeChat(input: CinemaConciergeChatProps) {
     setJobPayment(null);
     setJobStatus(null);
 
-    // Greeting from the sub-agent
+    // Greeting from the selected studio guide
     setMessages((current) => [
       ...current,
       createMessage("assistant", nextPersona.greeting, nextPersona.director),
@@ -830,7 +848,7 @@ export function CinemaConciergeChat(input: CinemaConciergeChatProps) {
       setStep("payment");
       setMessages((current) => [
         ...current,
-        agentMsg("Job created. Complete payment below and I'll keep tracking status."),
+        agentMsg("Job created. Finish checkout below."),
       ]);
     } catch (createError) {
       const message =
@@ -855,7 +873,7 @@ export function CinemaConciergeChat(input: CinemaConciergeChatProps) {
       if (!parsed) {
         setMessages((current) => [
           ...current,
-          agentMsg("Pick a category from the chips so I can route you to the right sub-agent."),
+          agentMsg("Pick a studio from the chips so I can guide the right flow."),
         ]);
         return;
       }
@@ -867,7 +885,7 @@ export function CinemaConciergeChat(input: CinemaConciergeChatProps) {
     if (!selectedConfig) {
       setMessages((current) => [
         ...current,
-        agentMsg("Choose a category first."),
+        agentMsg("Choose a studio first."),
       ]);
       setStep(input.initialExperienceId ? initialState.step : "choose_experience");
       return;
@@ -1078,7 +1096,7 @@ export function CinemaConciergeChat(input: CinemaConciergeChatProps) {
 
   const inputPlaceholder =
     step === "choose_experience"
-      ? "Type category name..."
+      ? "Type studio name..."
       : step === "subject"
         ? selectedConfig?.subjectPlaceholder ?? "Video title..."
         : step === "token_address"
@@ -1098,13 +1116,12 @@ export function CinemaConciergeChat(input: CinemaConciergeChatProps) {
                     : "Message";
 
   return (
-    <section className="panel concierge-panel" id="concierge-chat">
+    <section
+      className={`panel concierge-panel${isWorkspaceMode ? " concierge-panel--workspace" : ""}`}
+      id="concierge-chat"
+    >
       <header className="concierge-header">
-        <p className="eyebrow">{persona.director}</p>
-        <h2>Build your video in chat</h2>
-        <p className="route-summary">
-          Sub-agents: {persona.director} / {persona.sound} / {persona.editor}
-        </p>
+        <h2>{isWorkspaceMode ? "Create in chat" : "Start in chat"}</h2>
       </header>
 
       <div className="concierge-thread" ref={threadRef}>
@@ -1117,11 +1134,13 @@ export function CinemaConciergeChat(input: CinemaConciergeChatProps) {
                 : "concierge-bubble-user"
             }`}
           >
-            <span className="concierge-role">
-              {message.role === "assistant"
-                ? message.agentName ?? persona.director
-                : "You"}
-            </span>
+            {!isWorkspaceMode ? (
+              <span className="concierge-role">
+                {message.role === "assistant"
+                  ? message.agentName ?? persona.director
+                  : "You"}
+              </span>
+            ) : null}
             <p>{message.text}</p>
           </article>
         ))}

@@ -62,11 +62,11 @@ export function PaymentInstructionsCard(props: PaymentInstructionsCardProps) {
   );
 
   const copyPayload = [
-    "HYPERCINEMA manual payment",
-    `Address: ${props.paymentAddress}`,
+    "HyperMyths checkout",
+    `Wallet: ${props.paymentAddress}`,
     `Amount (SOL): ${payableAmount}`,
     "Network: Solana",
-    "Send exactly the amount above.",
+    "Send the exact amount above.",
   ].join("\n");
 
   useEffect(() => {
@@ -174,17 +174,16 @@ export function PaymentInstructionsCard(props: PaymentInstructionsCardProps) {
     <section className="cinema-panel payment-instructions-panel grid gap-6 md:grid-cols-[1fr,300px]">
       <div className="space-y-4">
         <div>
-          <p className="cinema-kicker text-[0.68rem] font-semibold">Payment Lock-In</p>
-          <h2 className="font-display mt-2 text-3xl text-[var(--foreground)]">Manual send. Exact amount.</h2>
+          <p className="cinema-kicker text-[0.68rem] font-semibold">Checkout</p>
+          <h2 className="font-display mt-2 text-3xl text-[var(--foreground)]">Complete your payment</h2>
         </div>
 
         <p className="route-summary">
-          Copy the dedicated address and the exact amount below, then send from your wallet app.
-          Once the chain confirms it, the job continues on its own.
+          Send the exact amount to the wallet below. Once payment is confirmed, your video moves into production automatically.
         </p>
 
         <p className="inline-note">
-          Required amount:{" "}
+          Due:{" "}
           <span className="font-semibold text-[var(--accent-soft)]">
             {formatSol(props.amountSol)} SOL
           </span>
@@ -198,7 +197,7 @@ export function PaymentInstructionsCard(props: PaymentInstructionsCardProps) {
           ) : null}
           {typeof props.remainingSol === "number" && props.remainingSol > 0 ? (
             <>
-              {" | "}Remaining:{" "}
+              {" | "}Left:{" "}
               <span className="font-semibold text-[#ffd789]">
                 {formatSol(props.remainingSol)} SOL
               </span>
@@ -207,7 +206,7 @@ export function PaymentInstructionsCard(props: PaymentInstructionsCardProps) {
         </p>
 
         <article className="surface-card grid gap-3">
-          <p className="eyebrow">Payment Address</p>
+          <p className="eyebrow">Wallet</p>
           <p className="route-summary compact break-all">{props.paymentAddress}</p>
           <button
             type="button"
@@ -220,7 +219,7 @@ export function PaymentInstructionsCard(props: PaymentInstructionsCardProps) {
         </article>
 
         <article className="surface-card grid gap-3">
-          <p className="eyebrow">Amount (SOL)</p>
+          <p className="eyebrow">Amount</p>
           <p className="font-display text-3xl leading-none text-[var(--foreground)]">{payableAmount}</p>
           <button
             type="button"
@@ -239,16 +238,16 @@ export function PaymentInstructionsCard(props: PaymentInstructionsCardProps) {
             className="button button-secondary"
           >
             <WalletIcon className="button-icon" aria-hidden="true" />
-            Copy full payment instructions
+            Copy payment details
           </button>
         </div>
 
         {props.jobId ? (
           <article className="surface-card grid gap-3">
             <div>
-              <p className="eyebrow">Discount Code</p>
+              <p className="eyebrow">Discount code</p>
               <p className="route-summary compact">
-                Enter a one-time code to waive payment and trigger this job immediately.
+                Apply a code before paying if one was shared with you.
               </p>
             </div>
             <div className="grid gap-3 sm:grid-cols-[1fr,auto] sm:items-end">
@@ -287,7 +286,7 @@ export function PaymentInstructionsCard(props: PaymentInstructionsCardProps) {
 
         {props.statusText ? (
           <p className="route-summary compact">
-            Status: <span className="font-semibold text-[var(--accent-soft)]">{props.statusText}</span>
+            Payment status: <span className="font-semibold text-[var(--accent-soft)]">{props.statusText}</span>
           </p>
         ) : null}
 
@@ -308,8 +307,7 @@ export function PaymentInstructionsCard(props: PaymentInstructionsCardProps) {
               className="mx-auto h-56 w-56 rounded-[1.1rem] border border-white/10 bg-white p-3"
             />
             <p className="route-summary compact">
-              Scan in your Solana wallet app and verify both address and amount before sending
-              anything.
+              Scan with your Solana wallet and confirm both the wallet and amount before sending.
             </p>
           </div>
         ) : qrError ? (

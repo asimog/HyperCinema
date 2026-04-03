@@ -12,7 +12,7 @@ export function CrossmintLoginCard(input: {
     <section className="panel gate-panel grid gap-5">
       <div className="panel-header">
         <div>
-          <p className="eyebrow">Private Gate</p>
+          <p className="eyebrow">Private access</p>
           <h2>{input.title}</h2>
         </div>
       </div>
@@ -24,17 +24,16 @@ export function CrossmintLoginCard(input: {
             <strong>Crossmint login required</strong>
           </div>
           <p className="route-summary compact">
-            Private jobs stay out of the public gallery and receive the private studio rate.
+            Private jobs stay out of public discovery and use the private studio flow.
           </p>
         </article>
         <article className="mini-item-card">
           <div>
             <span>Status</span>
-            <strong>{enabled ? "Crossmint configured" : "Crossmint env missing"}</strong>
+            <strong>{enabled ? "Ready" : "Setup required"}</strong>
           </div>
           <p className="route-summary compact">
-            Set `NEXT_PUBLIC_CROSSMINT_API_KEY` and `CROSSMINT_SERVER_API_KEY` to turn the
-            private studio flow on in production.
+            Crossmint keys are required before private sign-in can be turned on in production.
           </p>
         </article>
       </div>

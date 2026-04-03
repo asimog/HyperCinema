@@ -9,6 +9,7 @@ import { MoonPayHostedPaymentButton } from "@/components/payments/MoonPayHostedP
 import { HyperflowAssemblyScaffold } from "@/components/shell/HyperflowAssemblyScaffold";
 import { ArrowRightIcon, SparkIcon } from "@/components/ui/AppIcons";
 import { buildDirectorPrompt } from "@/lib/cinema/directorPrompt";
+import { HYPERM_STYLE_GROUPS } from "@/lib/hyperm/styles";
 import { getTokenVideoStylePreset } from "@/lib/memecoins/styles";
 import {
   CINEMA_PACKAGE_TYPES,
@@ -76,7 +77,7 @@ function statusLabel(status?: string, progress?: string): string {
   if (status === "payment_confirmed") return "Payment confirmed";
   if (progress === "generating_report") return "Building story pack";
   if (progress === "generating_video") return "Rendering video";
-  if (status === "processing") return "In render pipeline";
+  if (status === "processing") return "In production";
   if (status === "complete") return "Ready";
   if (status === "failed") return "Failed";
   return "Staging";
@@ -262,7 +263,7 @@ export function CinemaGeneratorClient(input: {
     <div className="cinema-shell cinema-noise min-h-[100dvh] overflow-hidden px-4 py-6 text-[#fff1dc] md:px-8 md:py-8">
       <HyperflowAssemblyScaffold
         leftRail={
-          <div className="home-concierge-column home-concierge-column--workspace">
+          <div className="hyperflow-chat-rail">
             <CinemaConciergeChat initialExperienceId={config.id} />
           </div>
         }
@@ -289,7 +290,6 @@ export function CinemaGeneratorClient(input: {
         <section className="panel">
           <div className="panel-header">
             <div>
-              <p className="eyebrow">Generate</p>
               <h2>Configure the brief</h2>
             </div>
           </div>
@@ -374,17 +374,29 @@ export function CinemaGeneratorClient(input: {
                   onChange={(event) => setStylePreset(event.target.value as VideoStyleId)}
                   disabled={isSubmitting}
                 >
-                  {config.styleOptions.map((item) => (
-                    <option key={item} value={item}>
-                      {getTokenVideoStylePreset(item).label}
-                    </option>
-                  ))}
+                  {config.id === "hyperm"
+                    ? HYPERM_STYLE_GROUPS.map((group) => (
+                        <optgroup key={group.label} label={group.label}>
+                          {group.styles
+                            .filter((item) => config.styleOptions.includes(item.id))
+                            .map((item) => (
+                              <option key={item.id} value={item.id}>
+                                {item.label}
+                              </option>
+                            ))}
+                        </optgroup>
+                      ))
+                    : config.styleOptions.map((item) => (
+                        <option key={item} value={item}>
+                          {getTokenVideoStylePreset(item).label}
+                        </option>
+                      ))}
                 </select>
               </div>
             </div>
 
             <details className="optional-panel" open={config.requestKind === "bedtime_story"}>
-              <summary>Story box</summary>
+              <summary>Story</summary>
               <div className="optional-panel-body">
                 <div className="field">
                   <span>Story direction</span>
@@ -400,7 +412,7 @@ export function CinemaGeneratorClient(input: {
             </details>
 
             <details className="optional-panel">
-              <summary>Characters box</summary>
+              <summary>Characters</summary>
               <div className="optional-panel-body">
                 <div className="field">
                   <span>Character references</span>
@@ -416,7 +428,7 @@ export function CinemaGeneratorClient(input: {
             </details>
 
             <details className="optional-panel">
-              <summary>Visual box</summary>
+              <summary>Visuals</summary>
               <div className="optional-panel-body">
                 <div className="field">
                   <span>Visual references</span>
@@ -456,7 +468,7 @@ export function CinemaGeneratorClient(input: {
                   config.requestKind === "scene_recreation"
                 }
               >
-                <summary>Source box</summary>
+                <summary>Source</summary>
                 <div className="optional-panel-body">
                   <div className="field">
                     <span>Source URL</span>
@@ -477,15 +489,12 @@ export function CinemaGeneratorClient(input: {
                       disabled={isSubmitting}
                     />
                   </div>
-                  <div className="inline-note">
-                    Source links inform the script writer and editor. They do not force burnt-in subtitles unless you explicitly ask for on-screen text in the brief.
-                  </div>
                 </div>
               </details>
             ) : null}
 
             <details className="optional-panel">
-              <summary>Lyrics and dialogue box</summary>
+              <summary>Lyrics and dialogue</summary>
               <div className="optional-panel-body">
                 <div className="field">
                   <span>Lyrics</span>
@@ -519,14 +528,10 @@ export function CinemaGeneratorClient(input: {
               />
               <span>
                 {config.audioMode === "required"
-                  ? "Audio is required for this category."
-                  : "Optional audio on"}
+                  ? "Audio included"
+                  : "Audio on"}
               </span>
             </label>
-
-            <div className="inline-note">
-              Keep the brief short and clear. The best results usually come from one strong idea.
-            </div>
 
             <div className="button-row">
               <button
@@ -536,7 +541,7 @@ export function CinemaGeneratorClient(input: {
                 className="button button-primary"
               >
                 <SparkIcon className="button-icon" aria-hidden="true" />
-                {isSubmitting ? "Opening payment..." : "Generate cinema"}
+                {isSubmitting ? "Opening checkout..." : "Create video"}
               </button>
             </div>
 
@@ -548,13 +553,12 @@ export function CinemaGeneratorClient(input: {
           <section className="panel">
             <div className="panel-header">
               <div>
-                <p className="eyebrow">Payment Adapter</p>
-                <h2>{(jobPayment.subjectName ?? subjectName) || "Job"} is queued</h2>
+                <h2>{(jobPayment.subjectName ?? subjectName) || "Job"} ready for checkout</h2>
               </div>
               <div className="button-row">
                 <Link className="button button-secondary" href={`/job/${jobPayment.jobId}`}>
                   <ArrowRightIcon className="button-icon" aria-hidden="true" />
-                  Open job page
+                  Open job
                 </Link>
               </div>
             </div>
@@ -585,4 +589,3 @@ export function CinemaGeneratorClient(input: {
     </div>
   );
 }
-

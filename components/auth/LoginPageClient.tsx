@@ -28,22 +28,21 @@ export function LoginPageClient({ next }: { next: string }) {
           <section className="panel gate-panel grid gap-5">
             <div className="panel-header">
               <div>
-                <p className="eyebrow">Private Cinema</p>
+                <p className="eyebrow">Private access</p>
                 <h2>Sign in to HyperMyths</h2>
               </div>
             </div>
             <p className="route-summary">
-              Login is optional. Sign in if you want your renders kept private and out of the public
-              gallery.
+              Sign in if you want your finished videos kept private and visible only to you.
             </p>
             <div className="mini-list">
               <article className="mini-item-card">
                 <div>
                   <span>Without login</span>
-                  <strong>Videos go to public gallery</strong>
+                  <strong>Videos can appear publicly</strong>
                 </div>
                 <p className="route-summary compact">
-                  All tools are freely usable. Completed renders appear in the shared gallery.
+                  All tools stay available. Finished videos may appear in the public gallery.
                 </p>
               </article>
               <article className="mini-item-card">
@@ -52,19 +51,19 @@ export function LoginPageClient({ next }: { next: string }) {
                   <strong>Videos stay private</strong>
                 </div>
                 <p className="route-summary compact">
-                  Family and music projects stay private by default.
+                  Private projects stay tied to your account and out of public discovery.
                 </p>
               </article>
             </div>
             <div className="button-row">
               {isLoggedIn ? (
-                <p className="route-summary compact">You&apos;re signed in, redirecting...</p>
+                <p className="route-summary compact">You&apos;re signed in. Redirecting now...</p>
               ) : (
                 <CrossmintAuthButton />
               )}
               {!inProgress && !isLoggedIn && (
                 <Link href="/" className="button button-secondary">
-                  Continue without login
+                  Continue without signing in
                 </Link>
               )}
             </div>

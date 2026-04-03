@@ -54,9 +54,9 @@ export default async function TrendingPage({
         <div className="relative z-10 mx-auto max-w-7xl space-y-6">
           <section className="panel trend-hero trend-hero--sleek">
             <p className="eyebrow">Trending</p>
-            <h1 className="font-display">Current cuts.</h1>
+            <h1 className="font-display">What people are making now.</h1>
             <p className="route-summary">
-              A sharper rail for what is moving now, plus the gallery archive folded into the same page.
+              Browse recent HyperMyths releases, featured formats, and completed videos in one place.
             </p>
           </section>
 
@@ -77,8 +77,8 @@ export default async function TrendingPage({
           <section className="panel trend-recent-panel">
             <div className="panel-header">
               <div>
-                <p className="eyebrow">Gallery archive</p>
-                <h2>Recent generations</h2>
+                <p className="eyebrow">Archive</p>
+                <h2>Recent releases</h2>
               </div>
               <Link href="/trending" className="button button-secondary">
                 Clear search
@@ -96,7 +96,7 @@ export default async function TrendingPage({
               </div>
               <div className="button-row">
                 <button type="submit" className="button button-primary">
-                  Search archive
+                  Search videos
                 </button>
                 <Link href="/" className="button button-secondary">
                   Home
@@ -141,8 +141,8 @@ export default async function TrendingPage({
             ) : (
               <p className="route-summary">
                 {tokenQuery
-                  ? `No completed jobs found for ${tokenQuery}.`
-                  : "No completed token videos yet. Generate the first one and it will show up here."}
+                  ? `No completed videos found for ${tokenQuery}.`
+                  : "No completed videos yet. The first finished release will appear here."}
               </p>
             )}
           </section>

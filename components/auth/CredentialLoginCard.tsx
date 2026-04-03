@@ -13,7 +13,7 @@ export function CredentialLoginCard({ title, summary, error }: CredentialLoginCa
           <section className="panel gate-panel grid gap-5">
             <div className="panel-header">
               <div>
-                <p className="eyebrow">Admin Access</p>
+                <p className="eyebrow">Studio admin</p>
                 <h2>{title}</h2>
               </div>
             </div>
@@ -45,7 +45,7 @@ export function CredentialLoginCard({ title, summary, error }: CredentialLoginCa
               {error ? <div className="inline-error">{error}</div> : null}
 
               <button type="submit" className="button button-primary w-full">
-                Enter cockpit
+                Enter admin
               </button>
             </form>
           </section>

@@ -23,14 +23,14 @@ interface JobApiPayload {
 }
 
 function statusLabel(status: JobDocument["status"], progress: JobDocument["progress"]) {
-  if (status === "awaiting_payment") return "Waiting on the send";
-  if (status === "payment_detected") return "Payment seen on-chain";
-  if (status === "payment_confirmed") return "Payment locked";
-  if (progress === "generating_report") return "Composing the token card";
-  if (progress === "generating_video") return "Rendering the memecoin cut";
-  if (status === "processing") return "In the studio";
-  if (status === "complete") return "Premiere ready";
-  return "Render failed";
+  if (status === "awaiting_payment") return "Awaiting payment";
+  if (status === "payment_detected") return "Payment received";
+  if (status === "payment_confirmed") return "Payment confirmed";
+  if (progress === "generating_report") return "Preparing story pack";
+  if (progress === "generating_video") return "Rendering video";
+  if (status === "processing") return "In production";
+  if (status === "complete") return "Ready to watch";
+  return "Needs attention";
 }
 
 function nextPollDelay(job: JobDocument | null, elapsedMs: number): number {
@@ -257,7 +257,7 @@ export default function JobPage() {
                   ? "x402 / USDC"
                   : job?.paymentWaived || job?.paymentMethod === "discount_code"
                     ? "Discount code"
-                    : "Manual SOL"}
+                    : "Direct SOL"}
               </strong>
             </div>
           </article>
@@ -305,8 +305,8 @@ export default function JobPage() {
         <section className="panel">
           <div className="panel-header">
             <div>
-              <p className="eyebrow">Production File</p>
-              <h1>{job?.subjectSymbol ?? "Token"} render status</h1>
+              <p className="eyebrow">Job status</p>
+              <h1>{job?.subjectSymbol ?? "Token"} video status</h1>
             </div>
           </div>
           <p className="route-summary">

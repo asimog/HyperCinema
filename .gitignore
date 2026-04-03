@@ -20,6 +20,8 @@
 # production
 /build
 video-service/dist/
+cards-agent/build/
+cards-agent/node_modules/
 
 # misc
 .DS_Store

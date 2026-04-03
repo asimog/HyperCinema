@@ -13,11 +13,20 @@ const requestKindSchema = z.enum([
   "scene_recreation",
 ]);
 
+const requestedCompositionSchema = z.enum([
+  "cards",
+  "title_page",
+  "end_page",
+  "game_of_life",
+  "three_js",
+]);
+
 const cardsAgentRequestSchema = z.object({
   requestKind: requestKindSchema.optional(),
   subjectName: z.string().min(1).max(160).optional(),
   subjectDescription: z.string().max(4000).optional(),
   requestedPrompt: z.string().max(4000).optional(),
+  requestedComposition: requestedCompositionSchema.optional(),
   sourceTranscript: z.string().max(12000).optional(),
   sourceReferenceLabel: z.string().max(400).optional(),
   storyBeats: z.array(z.string().min(1).max(600)).optional(),
@@ -42,6 +51,8 @@ export async function POST(request: NextRequest) {
       id: "hypercinema.cards-agent",
       label: "CardsAgent",
       mode: "remotion",
+      requestField: "requestedComposition",
+      requestedComposition: deck.requestedComposition,
     },
     deck,
   });

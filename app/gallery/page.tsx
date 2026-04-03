@@ -33,9 +33,19 @@ export default async function GalleryPage({
 }) {
   const params = (await Promise.resolve(searchParams)) ?? {};
   const tokenQuery = params.token?.trim() ?? "";
-  const jobs = tokenQuery
-    ? await listCompletedJobArtifactsByWallet(tokenQuery, 12)
-    : await listCompletedJobArtifacts(12);
+  let jobs: Awaited<ReturnType<typeof listCompletedJobArtifacts>> = [];
+  let galleryError: string | null = null;
+
+  try {
+    jobs = tokenQuery
+      ? await listCompletedJobArtifactsByWallet(tokenQuery, 12)
+      : await listCompletedJobArtifacts(12);
+  } catch (error) {
+    galleryError =
+      error instanceof Error
+        ? error.message
+        : "Gallery data is temporarily unavailable.";
+  }
 
   const leftRail = (
     <div className="rail-stack">
@@ -50,6 +60,14 @@ export default async function GalleryPage({
           Finished public renders. Hidden jobs disappear from the gallery.
         </p>
       </section>
+
+      {galleryError ? (
+        <section className="panel">
+          <p className="route-summary">
+            {galleryError}
+          </p>
+        </section>
+      ) : null}
     </div>
   );
 
@@ -143,6 +161,8 @@ export default async function GalleryPage({
             <p className="route-summary">
               {tokenQuery
                 ? `No completed jobs found for ${tokenQuery}.`
+                : galleryError
+                  ? "Gallery data is unavailable until the database and Firebase env are configured."
                 : "No completed token videos yet. Generate the first one and it will show up here."}
             </p>
           </section>

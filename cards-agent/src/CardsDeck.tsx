@@ -51,7 +51,14 @@ function motion(frame: number, delay: number) {
   };
 }
 
-export function CardsDeck({ title, subtitle, cards }: CardsDeckProps) {
+export function CardsDeck({
+  title,
+  subtitle,
+  requestedComposition,
+  cards,
+  visualAdapters,
+  proposals,
+}: CardsDeckProps) {
   const frame = useCurrentFrame();
 
   return (
@@ -115,6 +122,24 @@ export function CardsDeck({ title, subtitle, cards }: CardsDeckProps) {
           >
             {subtitle}
           </p>
+          {requestedComposition ? (
+            <div
+              style={{
+                alignSelf: "flex-start",
+                padding: "8px 12px",
+                borderRadius: 999,
+                background: "rgba(255,255,255,0.06)",
+                border: "1px solid rgba(255,255,255,0.08)",
+                fontFamily: bodyFont,
+                fontSize: 12,
+                letterSpacing: "0.12em",
+                textTransform: "uppercase",
+                color: palette.gold,
+              }}
+            >
+              Requested composition: {requestedComposition}
+            </div>
+          ) : null}
         </div>
 
         <div
@@ -251,6 +276,96 @@ export function CardsDeck({ title, subtitle, cards }: CardsDeckProps) {
               </article>
             );
           })}
+        </div>
+
+        <div style={{display: "grid", gridTemplateColumns: "1.25fr 1fr", gap: 16}}>
+          <article style={{...glass, padding: 18}}>
+            <div
+              style={{
+                fontFamily: bodyFont,
+                fontSize: 11,
+                fontWeight: 800,
+                letterSpacing: "0.18em",
+                textTransform: "uppercase",
+                color: palette.cyan,
+                marginBottom: 12,
+              }}
+            >
+              Visual adapters
+            </div>
+            <div style={{display: "flex", flexWrap: "wrap", gap: 10}}>
+              {visualAdapters.map((adapter) => (
+                <div
+                  key={adapter.id}
+                  style={{
+                    padding: "10px 12px",
+                    borderRadius: 999,
+                    background: "rgba(255,255,255,0.04)",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                    color: palette.text,
+                    fontFamily: bodyFont,
+                    fontSize: 13,
+                  }}
+                >
+                  {adapter.label}
+                </div>
+              ))}
+            </div>
+          </article>
+
+          <article style={{...glass, padding: 18}}>
+            <div
+              style={{
+                fontFamily: bodyFont,
+                fontSize: 11,
+                fontWeight: 800,
+                letterSpacing: "0.18em",
+                textTransform: "uppercase",
+                color: palette.gold,
+                marginBottom: 12,
+              }}
+            >
+              Director proposals
+            </div>
+            <div style={{display: "flex", flexDirection: "column", gap: 10}}>
+              {proposals.slice(0, 3).map((proposal) => (
+                <div
+                  key={`${proposal.target}-${proposal.adapterId}`}
+                  style={{
+                    padding: "10px 12px",
+                    borderRadius: 16,
+                    background: "rgba(255,255,255,0.04)",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      gap: 16,
+                      fontFamily: bodyFont,
+                      fontSize: 12,
+                      color: palette.muted,
+                    }}
+                  >
+                    <strong style={{color: palette.text}}>{proposal.label}</strong>
+                    <span>{proposal.target}</span>
+                  </div>
+                  <p
+                    style={{
+                      margin: "8px 0 0",
+                      fontFamily: bodyFont,
+                      fontSize: 14,
+                      lineHeight: 1.5,
+                      color: palette.text,
+                    }}
+                  >
+                    {proposal.reason}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </article>
         </div>
       </div>
     </AbsoluteFill>

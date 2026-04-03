@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "video-service/dist/**",
+    "cards-agent/build/**",
+    "cards-agent/node_modules/**",
     "next-env.d.ts",
   ]),
 ]);

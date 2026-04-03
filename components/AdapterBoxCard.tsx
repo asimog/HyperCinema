@@ -10,6 +10,9 @@ export function AdapterBoxCard({ service }: AdapterBoxCardProps) {
   function kindLabel(kind: string): string {
     if (kind === "hosted_checkout") return "hosted checkout";
     if (kind === "remotion") return "remotion cards";
+    if (kind === "cards") return "cards deck";
+    if (kind === "game_of_life") return "game of life";
+    if (kind === "three_js") return "three.js";
     return kind;
   }
 
@@ -65,11 +68,40 @@ export function AdapterBoxCard({ service }: AdapterBoxCardProps) {
           </article>
           <article className="mini-item-card">
             <div>
+              <span>request</span>
+              <strong>{service.cardsAgent.requestField}</strong>
+            </div>
+            <p className="route-summary compact">Optional payload field for title_page, end_page, game_of_life, or three_js.</p>
+          </article>
+          <article className="mini-item-card">
+            <div>
               <span>render</span>
               <strong>{service.cardsAgent.renderEndpoint}</strong>
             </div>
             <p className="route-summary compact">Render-aware alias for the same deck payload.</p>
           </article>
+        </div>
+        <div className="mini-list" style={{marginTop: 14}}>
+          {service.cardsAgent.compositions.map((composition) => (
+            <article key={composition.id} className="mini-item-card">
+              <div>
+                <span>{kindLabel(composition.kind)}</span>
+                <strong>{composition.label}</strong>
+              </div>
+              <p className="route-summary compact">{composition.summary}</p>
+            </article>
+          ))}
+        </div>
+        <div className="mini-list" style={{marginTop: 14}}>
+          {service.cardsAgent.proposals.map((proposal) => (
+            <article key={`${proposal.target}-${proposal.adapterId}`} className="mini-item-card">
+              <div>
+                <span>{proposal.target}</span>
+                <strong>{proposal.label}</strong>
+              </div>
+              <p className="route-summary compact">{proposal.reason}</p>
+            </article>
+          ))}
         </div>
       </div>
 

@@ -3,6 +3,7 @@ import {
   alignSceneStatesToCount,
   buildSceneContinuityPrompt,
 } from "@/lib/analytics/videoCoherence";
+import { buildCardsAgentDeck } from "@/lib/cards-agent";
 import {
   buildCinematographyKnowledgeLines,
   buildCreativeAssemblyLines,
@@ -11,6 +12,7 @@ import {
   allowsOnScreenText,
   buildOnScreenTextPolicy,
   buildSourceReferencePrompt,
+  sourceReferenceLabel,
 } from "@/lib/cinema/sourceReference";
 import { buildStoryCards } from "@/lib/cinema/storyCards";
 import { logger } from "@/lib/logging/logger";
@@ -190,6 +192,17 @@ function enrichScenesWithCoherence(
 }
 
 function buildCinematicPromptInput(story: WalletStory): Record<string, unknown> {
+  const cardsAgentDeck = buildCardsAgentDeck({
+    requestKind: story.storyKind,
+    subjectName: story.subjectName,
+    subjectDescription: story.subjectDescription,
+    requestedPrompt: story.requestedPrompt,
+    sourceReferenceLabel: sourceReferenceLabel(story.sourceReference),
+    sourceTranscript: story.sourceTranscript,
+    storyBeats: story.storyBeats,
+    audioEnabled: story.audioEnabled,
+  });
+
   return {
     storyKind: story.storyKind ?? "wallet_recap",
     wallet: story.wallet,
@@ -222,6 +235,12 @@ function buildCinematicPromptInput(story: WalletStory): Record<string, unknown> 
     behaviorPatterns: story.behaviorPatterns,
     funObservations: story.funObservations,
     keyEvents: story.keyEvents,
+    cardsAgent: {
+      requestField: "requestedComposition",
+      requestedComposition: cardsAgentDeck.requestedComposition,
+      visualAdapters: cardsAgentDeck.visualAdapters,
+      proposals: cardsAgentDeck.proposals,
+    },
   };
 }
 

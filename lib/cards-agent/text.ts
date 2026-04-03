@@ -1,5 +1,91 @@
 import { JobRequestKind, StoryCard } from "@/lib/types/domain";
 
+export type CardsAgentPlacement =
+  | "main_card"
+  | "title_page"
+  | "end_page"
+  | "interstitial"
+  | "transition";
+
+export type CardsAgentVisualAdapterKind = "cards" | "game_of_life" | "three_js";
+export type CardsAgentRequestedComposition =
+  | "cards"
+  | "title_page"
+  | "end_page"
+  | "game_of_life"
+  | "three_js";
+
+export interface CardsAgentVisualAdapter {
+  id: string;
+  label: string;
+  kind: CardsAgentVisualAdapterKind;
+  summary: string;
+  placements: CardsAgentPlacement[];
+}
+
+export interface CardsAgentProposal {
+  target: CardsAgentPlacement;
+  adapterId: string;
+  label: string;
+  reason: string;
+}
+
+function compositionLabel(composition: CardsAgentRequestedComposition): string {
+  switch (composition) {
+    case "cards":
+      return "Cards Deck";
+    case "title_page":
+      return "Title Page";
+    case "end_page":
+      return "End Page";
+    case "game_of_life":
+      return "Game of Life";
+    case "three_js":
+      return "Three.js Stage";
+  }
+}
+
+function buildRequestedCompositionProposal(
+  subject: string,
+  requestedComposition: CardsAgentRequestedComposition,
+): CardsAgentProposal {
+  const target: CardsAgentPlacement =
+    requestedComposition === "cards"
+      ? "main_card"
+      : requestedComposition === "title_page"
+        ? "title_page"
+        : requestedComposition === "end_page"
+          ? "end_page"
+          : requestedComposition === "game_of_life"
+            ? "interstitial"
+            : "title_page";
+
+  const adapterId =
+    requestedComposition === "title_page" || requestedComposition === "three_js"
+      ? "three_js"
+      : requestedComposition === "end_page" || requestedComposition === "game_of_life"
+        ? "game_of_life"
+        : "cards";
+
+  const reason =
+    requestedComposition === "title_page"
+      ? "Director requested the title_page composition explicitly."
+      : requestedComposition === "end_page"
+        ? "Director requested the end_page composition explicitly."
+        : requestedComposition === "game_of_life"
+          ? "Director requested the Game of Life composition explicitly."
+          : requestedComposition === "three_js"
+            ? "Director requested the Three.js composition explicitly."
+            : "Director requested the working deck explicitly.";
+
+  return {
+    target,
+    adapterId,
+    label: `${subject} / ${compositionLabel(requestedComposition)}`,
+    reason,
+  };
+}
+
 function trimSentence(value: string): string {
   const trimmed = value.replace(/\s+/g, " ").trim();
   if (!trimmed) {
@@ -54,6 +140,93 @@ function continuationAngle(requestKind: JobRequestKind | undefined): string {
     default:
       return "Design a sequel beat that raises the stakes without breaking continuity.";
   }
+}
+
+function buildVisualAdapters(requestKind: JobRequestKind | undefined): CardsAgentVisualAdapter[] {
+  const cinematicMomentum = requestKind === "music_video" || requestKind === "scene_recreation";
+
+  return [
+    {
+      id: "cards",
+      label: "Cards Deck",
+      kind: "cards",
+      summary: "Readable text cards for beat structure, notes, and follow-on prompts.",
+      placements: ["main_card", "interstitial", "transition"],
+    },
+    {
+      id: "game_of_life",
+      label: "Game of Life",
+      kind: "game_of_life",
+      summary:
+        "Cellular automaton motion texture for transitions, soft openers, and reflective endings.",
+      placements: ["title_page", "end_page", "interstitial", "transition"],
+    },
+    {
+      id: "three_js",
+      label: "Three.js Stage",
+      kind: "three_js",
+      summary:
+        cinematicMomentum
+          ? "Cinematic 3D environment for energetic openings, hero cards, and end slates."
+          : "3D motion stage for title pages, feature calls, and polished closing cards.",
+      placements: ["title_page", "end_page", "main_card", "transition"],
+    },
+  ];
+}
+
+function buildCardProposals(
+  input: {
+    requestKind?: JobRequestKind;
+    subjectName?: string | null;
+    subjectDescription?: string | null;
+    requestedPrompt?: string | null;
+    sourceReferenceLabel?: string | null;
+    requestedComposition?: CardsAgentRequestedComposition | null;
+  },
+  visualAdapters: CardsAgentVisualAdapter[],
+): CardsAgentProposal[] {
+  const subject = input.subjectName?.trim() || "this trailer";
+  const description =
+    input.subjectDescription?.trim() || "the cards should stay readable and cinematic";
+  const prompt = input.requestedPrompt?.trim();
+  const reference = input.sourceReferenceLabel?.trim();
+
+  return [
+    {
+      target: "title_page",
+      adapterId: "three_js",
+      label: `${subject} / Title Page`,
+      reason:
+        prompt && prompt.length > 0
+          ? `Use Three.js when the director wants a stronger opening statement around: ${prompt}.`
+          : `Use Three.js when the director wants a stronger opening statement for ${subject}.`,
+    },
+    {
+      target: "end_page",
+      adapterId: "game_of_life",
+      label: `${subject} / End Page`,
+      reason: reference
+        ? `Use Game of Life as a living end card that echoes the source reference: ${reference}.`
+        : `Use Game of Life as a living end card when the director wants the finish to keep moving.`,
+    },
+    {
+      target: "interstitial",
+      adapterId: "game_of_life",
+      label: `${subject} / Interstitial`,
+      reason:
+        description.length > 0
+          ? `Use the cellular pattern as a pacing reset between chapters while keeping ${description}.`
+          : `Use the cellular pattern as a pacing reset between chapters.`,
+    },
+    {
+      target: "main_card",
+      adapterId: "cards",
+      label: `${subject} / Working Deck`,
+      reason:
+        visualAdapters.find((adapter) => adapter.id === "cards")?.summary ??
+        "Use the readable deck when the director needs structured notes.",
+    },
+  ];
 }
 
 export function buildContinuationPrompt(input: {
@@ -180,6 +353,7 @@ export function buildCardsAgentDeck(input: {
   subjectName?: string | null;
   subjectDescription?: string | null;
   requestedPrompt?: string | null;
+  requestedComposition?: CardsAgentRequestedComposition | null;
   sourceTranscript?: string | null;
   sourceReferenceLabel?: string | null;
   storyBeats?: string[] | null;
@@ -189,17 +363,33 @@ export function buildCardsAgentDeck(input: {
   subtitle: string;
   cards: StoryCard[];
   continuationPrompt: string;
+  requestedComposition: CardsAgentRequestedComposition | null;
+  visualAdapters: CardsAgentVisualAdapter[];
+  proposals: CardsAgentProposal[];
 } {
   const cards = buildStoryCards(input);
   const subject = input.subjectName?.trim() || "Untitled trailer";
+  const visualAdapters = buildVisualAdapters(input.requestKind);
+  const requestedComposition = input.requestedComposition ?? null;
   const title = `${subject} / CardsAgent`;
-  const subtitle = `Remotion-backed card deck for ${modeTone(input.requestKind)} text generation.`;
+  const subtitle = requestedComposition
+    ? `Remotion-backed card deck for ${modeTone(input.requestKind)} text generation. Requested mode: ${requestedComposition}.`
+    : `Remotion-backed card deck for ${modeTone(input.requestKind)} text generation.`;
   const continuationPrompt = buildContinuationPrompt(input);
+  const proposals = requestedComposition
+    ? [
+        buildRequestedCompositionProposal(subject, requestedComposition),
+        ...buildCardProposals(input, visualAdapters),
+      ]
+    : buildCardProposals(input, visualAdapters);
 
   return {
     title,
     subtitle,
     cards,
     continuationPrompt,
+    requestedComposition,
+    visualAdapters,
+    proposals,
   };
 }

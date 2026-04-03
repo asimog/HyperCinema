@@ -1,0 +1,13 @@
+import { MotionBackdrop } from "./MotionBackdrop";
+import type { CardsDeckProps } from "./types";
+
+export function ThreeScene(props: CardsDeckProps) {
+  return (
+    <MotionBackdrop
+      {...props}
+      mode="three_js"
+      placement="title_page"
+      kicker="Three.js adapter"
+    />
+  );
+}

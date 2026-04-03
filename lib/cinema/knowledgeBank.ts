@@ -75,6 +75,8 @@ export function buildCreativeAssemblyLines(input: {
         `${role.name}: ${role.mandate} Final output: ${role.deliverable}`,
     ),
     "Tianshi has final cut authority. If the source disappears, the shot language repeats, or accidental text appears on screen, Tianshi rejects the package and rebuilds it.",
+    "CardsAgent box: use the readable cards deck when the editor needs structure, then escalate into Three.js for title pages, end pages, and hero cards, or Game of Life for transitions and reflective motion textures.",
+    "Director request field: requestedComposition may be cards, title_page, end_page, game_of_life, or three_js when a specific visual adapter should lead the beat.",
     input.source
       ? "Source Intake box: extract title, iconography, rhythm, and emotional promise from the supplied source before any scene writing begins."
       : "Source Intake box: if no external source exists, derive world rules strictly from the brief and keep them consistent across the entire cut.",

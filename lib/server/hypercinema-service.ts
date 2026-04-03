@@ -14,7 +14,7 @@ export function getHyperCinemaServiceManifest(): InterfaceAdapterServiceManifest
     id: "hypercinema.multichain-memecoin-video",
     name: "TrenchMyths",
     summary:
-      "HyperMyths memecoin video generation from a single mint or contract address with manual SOL checkout, MoonPay Commerce checkout, x402/USDC settlement, or CardsAgent text decks.",
+      "HyperMyths memecoin video generation from a single mint or contract address with manual SOL checkout, MoonPay Commerce checkout, x402/USDC settlement, or CardsAgent text decks, title pages, and motion adapters.",
     primaryMode: "token_video",
     supportedChains: ["solana", "ethereum", "bsc", "base"],
     inputSchema: {

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { PaymentInstructionsCard } from "@/components/PaymentInstructionsCard";
-import { CrossmintHostedPaymentButton } from "@/components/payments/CrossmintHostedPaymentButton";
+import { MoonPayHostedPaymentButton } from "@/components/payments/MoonPayHostedPaymentButton";
 import {
   ArrowRightIcon,
   ChainIcon,
@@ -266,21 +266,6 @@ function statusLabel(status?: string, progress?: string): string {
   return "Staging";
 }
 
-function crossmintProductLocator(input: {
-  pricingMode: "public" | "private";
-  packageType: PackageType;
-}): string | undefined {
-  if (input.pricingMode === "private") {
-    return input.packageType === "1d"
-      ? process.env.NEXT_PUBLIC_CROSSMINT_PRIVATE_30_PRODUCT
-      : process.env.NEXT_PUBLIC_CROSSMINT_PRIVATE_60_PRODUCT;
-  }
-
-  return input.packageType === "1d"
-    ? process.env.NEXT_PUBLIC_CROSSMINT_PUBLIC_30_PRODUCT
-    : process.env.NEXT_PUBLIC_CROSSMINT_PUBLIC_60_PRODUCT;
-}
-
 function createMessage(
   role: "assistant" | "user",
   text: string,
@@ -424,14 +409,6 @@ export function CinemaConciergeChat(input: CinemaConciergeChatProps) {
   }, [draft.experienceId]);
 
   const persona = useMemo(() => getPersona(draft.experienceId), [draft.experienceId]);
-
-  const paymentLocator = useMemo(() => {
-    if (!selectedConfig) return undefined;
-    return crossmintProductLocator({
-      pricingMode: selectedConfig.pricingMode,
-      packageType: draft.packageType,
-    });
-  }, [selectedConfig, draft.packageType]);
 
   useEffect(() => {
     const node = threadRef.current;
@@ -1165,9 +1142,11 @@ export function CinemaConciergeChat(input: CinemaConciergeChatProps) {
           ) : null}
 
           <div className="button-row">
-            <CrossmintHostedPaymentButton
-              productLocator={paymentLocator}
-              label="Pay with Crossmint"
+            <MoonPayHostedPaymentButton
+              amountSol={jobStatus?.payment?.amountSol ?? jobPayment.amountSol}
+              jobId={jobPayment.jobId}
+              paymentAddress={jobStatus?.payment?.paymentAddress ?? jobPayment.paymentAddress}
+              label="Pay with MoonPay"
             />
           </div>
 

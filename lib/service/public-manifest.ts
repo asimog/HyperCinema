@@ -6,7 +6,7 @@ export const publicHyperCinemaServiceManifest: InterfaceAdapterServiceManifest =
   id: "hypercinema.multichain-memecoin-video",
   name: "TrenchMyths",
   summary:
-    "HyperMyths memecoin video generation from one mint or contract address, packaged for direct UI use or x402 agent calls.",
+    "HyperMyths memecoin video generation from one mint or contract address, packaged for direct UI use, MoonPay Commerce checkout, x402 agent calls, or CardsAgent text decks.",
   primaryMode: "token_video",
   supportedChains: ["solana", "ethereum", "bsc", "base"],
   inputSchema: {
@@ -37,6 +37,14 @@ export const publicHyperCinemaServiceManifest: InterfaceAdapterServiceManifest =
       endpoint: "/api/jobs",
     },
     {
+      id: "hypercinema-moonpay",
+      label: "MoonPay Commerce",
+      kind: "hosted_checkout",
+      currency: "SOL",
+      network: "solana",
+      endpoint: "/api/jobs",
+    },
+    {
       id: "hypercinema-x402",
       label: "x402 / USDC",
       kind: "x402",
@@ -45,6 +53,16 @@ export const publicHyperCinemaServiceManifest: InterfaceAdapterServiceManifest =
       endpoint: "/api/x402/video",
     },
   ],
+  cardsAgent: {
+    id: "hypercinema-cards-agent",
+    label: "CardsAgent",
+    kind: "remotion",
+    repoPath: "C:\\SessionMint\\my-video",
+    entrypoint: "src/Root.tsx",
+    compositions: ["CardsDeck", "HashArtPromo", "HarvestRentReclaimer"],
+    textEndpoint: "/api/cards-agent",
+    renderEndpoint: "/api/cards-agent/render",
+  },
   endpoints: {
     createJob: "/api/jobs",
     x402: "/api/x402/video",

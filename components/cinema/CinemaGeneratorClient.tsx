@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { PaymentInstructionsCard } from "@/components/PaymentInstructionsCard";
 import { CinemaConciergeChat } from "@/components/chat/CinemaConciergeChat";
-import { CrossmintHostedPaymentButton } from "@/components/payments/CrossmintHostedPaymentButton";
+import { MoonPayHostedPaymentButton } from "@/components/payments/MoonPayHostedPaymentButton";
 import { HyperflowAssemblyScaffold } from "@/components/shell/HyperflowAssemblyScaffold";
 import { ArrowRightIcon, SparkIcon } from "@/components/ui/AppIcons";
 import { buildDirectorPrompt } from "@/lib/cinema/directorPrompt";
@@ -80,21 +80,6 @@ function statusLabel(status?: string, progress?: string): string {
   if (status === "complete") return "Ready";
   if (status === "failed") return "Failed";
   return "Staging";
-}
-
-function crossmintProductLocator(input: {
-  pricingMode: "public" | "private";
-  packageType: PackageType;
-}): string | undefined {
-  if (input.pricingMode === "private") {
-    return input.packageType === "1d"
-      ? process.env.NEXT_PUBLIC_CROSSMINT_PRIVATE_30_PRODUCT
-      : process.env.NEXT_PUBLIC_CROSSMINT_PRIVATE_60_PRODUCT;
-  }
-
-  return input.packageType === "1d"
-    ? process.env.NEXT_PUBLIC_CROSSMINT_PUBLIC_30_PRODUCT
-    : process.env.NEXT_PUBLIC_CROSSMINT_PUBLIC_60_PRODUCT;
 }
 
 export function CinemaGeneratorClient(input: {
@@ -272,11 +257,6 @@ export function CinemaGeneratorClient(input: {
       if (timer) clearInterval(timer);
     };
   }, [jobPayment?.jobId]);
-
-  const paymentLocator = crossmintProductLocator({
-    pricingMode: effectivePricingMode,
-    packageType,
-  });
 
   return (
     <div className="cinema-shell cinema-noise min-h-[100dvh] overflow-hidden px-4 py-6 text-[#fff1dc] md:px-8 md:py-8">
@@ -579,9 +559,11 @@ export function CinemaGeneratorClient(input: {
               </div>
             </div>
             <div className="button-row">
-              <CrossmintHostedPaymentButton
-                productLocator={paymentLocator}
-                label="Pay with Crossmint"
+              <MoonPayHostedPaymentButton
+                amountSol={jobStatus?.payment?.amountSol ?? jobPayment.amountSol}
+                jobId={jobPayment.jobId}
+                paymentAddress={jobStatus?.payment?.paymentAddress ?? jobPayment.paymentAddress}
+                label="Pay with MoonPay"
               />
             </div>
             <div className="stack-section">

@@ -1,7 +1,15 @@
 import { getDb } from "@/lib/firebase/admin";
 import { assertTransition } from "@/lib/jobs/state-machine";
 import { getPackageConfig } from "@/lib/packages";
-import { type DiscountCode, resolveDiscountCode } from "@/lib/payments/discount-codes";
+import {
+  DISCOUNT_CODES,
+  generateDiscountCode,
+  isBuiltinDiscountCode,
+  isValidIssuedDiscountCode,
+  type DiscountCode,
+  normalizeDiscountCode,
+  resolveDiscountCode,
+} from "@/lib/payments/discount-codes";
 import { derivePaymentAddress } from "@/lib/payments/dedicated-address";
 import { applyPaymentSettlement } from "@/lib/payments/settlement";
 import { getRevenueWalletAddress, solToLamports } from "@/lib/payments/solana-pay";
@@ -213,9 +221,24 @@ async function upsertDispatchOutboxPending(jobId: string): Promise<void> {
 interface DiscountCodeUsageDocument {
   code: DiscountCode;
   createdAt: string;
+  origin: "builtin" | "admin";
+  label: string | null;
+  issuedBy: string | null;
   usedAt: string | null;
   usedByJobId: string | null;
   usedByAction: "job_create" | "job_redeem" | null;
+}
+
+export interface DiscountCodeAdminRecord {
+  code: string;
+  origin: "builtin" | "admin";
+  label: string | null;
+  createdAt: string | null;
+  issuedBy: string | null;
+  usedAt: string | null;
+  usedByJobId: string | null;
+  usedByAction: "job_create" | "job_redeem" | null;
+  isConsumed: boolean;
 }
 
 function normalizeDiscountCodeUsageDocument(
@@ -225,6 +248,9 @@ function normalizeDiscountCodeUsageDocument(
   return {
     code,
     createdAt: raw.createdAt ?? nowIso(),
+    origin: raw.origin === "admin" ? "admin" : "builtin",
+    label: raw.label ?? null,
+    issuedBy: raw.issuedBy ?? null,
     usedAt: raw.usedAt ?? null,
     usedByJobId: raw.usedByJobId ?? null,
     usedByAction:
@@ -240,24 +266,30 @@ async function claimDiscountCodeInTransaction(input: {
   jobId: string;
   action: "job_create" | "job_redeem";
 }): Promise<DiscountCode> {
-  const resolved = resolveDiscountCode(input.code);
-  if (!resolved) {
+  const normalized = normalizeDiscountCode(input.code);
+  const resolved = resolveDiscountCode(normalized);
+  const isBuiltin = resolved !== null || isBuiltinDiscountCode(normalized);
+  if (!resolved && !isBuiltin) {
     throw new Error("Invalid discount code");
   }
 
-  const ref = discountCodesCollection().doc(resolved);
+  const ref = discountCodesCollection().doc(normalized);
   const snap = await input.tx.get(ref);
   const current = normalizeDiscountCodeUsageDocument(
-    resolved,
+    (resolved ?? normalized) as DiscountCode,
     snap.exists ? (snap.data() as Partial<DiscountCodeUsageDocument>) : {},
   );
+
+  if (!snap.exists && !isBuiltin) {
+    throw new Error("Invalid discount code");
+  }
 
   if (current.usedAt) {
     if (
       current.usedByJobId === input.jobId &&
       current.usedByAction === input.action
     ) {
-      return resolved;
+      return (resolved ?? normalized) as DiscountCode;
     }
 
     throw new Error("This discount code has already been used.");
@@ -267,8 +299,11 @@ async function claimDiscountCodeInTransaction(input: {
   input.tx.set(
     ref,
     {
-      code: resolved,
+      code: (resolved ?? normalized) as DiscountCode,
       createdAt,
+      origin: current.origin,
+      label: current.label,
+      issuedBy: current.issuedBy,
       usedAt: nowIso(),
       usedByJobId: input.jobId,
       usedByAction: input.action,
@@ -276,7 +311,112 @@ async function claimDiscountCodeInTransaction(input: {
     { merge: true },
   );
 
-  return resolved;
+  return (resolved ?? normalized) as DiscountCode;
+}
+
+function discountCodeRecordFromDoc(
+  code: string,
+  raw: Partial<DiscountCodeUsageDocument> | null,
+  origin: "builtin" | "admin",
+): DiscountCodeAdminRecord {
+  const normalized = normalizeDiscountCode(code);
+  const current = raw
+    ? normalizeDiscountCodeUsageDocument(normalized as DiscountCode, raw)
+    : null;
+
+  return {
+    code: normalized,
+    origin: current?.origin ?? origin,
+    label: current?.label ?? null,
+    createdAt: current?.createdAt ?? null,
+    issuedBy: current?.issuedBy ?? null,
+    usedAt: current?.usedAt ?? null,
+    usedByJobId: current?.usedByJobId ?? null,
+    usedByAction: current?.usedByAction ?? null,
+    isConsumed: Boolean(current?.usedAt),
+  };
+}
+
+export async function listDiscountCodeAdminRecords(): Promise<DiscountCodeAdminRecord[]> {
+  const snapshot = await discountCodesCollection().get();
+  const byCode = new Map<string, Partial<DiscountCodeUsageDocument>>();
+
+  for (const doc of snapshot.docs) {
+    byCode.set(normalizeDiscountCode(doc.id), doc.data() as Partial<DiscountCodeUsageDocument>);
+  }
+
+  const builtinRecords = DISCOUNT_CODES.map((code) =>
+    discountCodeRecordFromDoc(code, byCode.get(code) ?? null, "builtin"),
+  );
+
+  const adminRecords = snapshot.docs
+    .map((doc) => {
+      const normalized = normalizeDiscountCode(doc.id);
+      if (isBuiltinDiscountCode(normalized)) {
+        return null;
+      }
+
+      return discountCodeRecordFromDoc(
+        normalized,
+        doc.data() as Partial<DiscountCodeUsageDocument>,
+        "admin",
+      );
+    })
+    .filter((record): record is DiscountCodeAdminRecord => record !== null);
+
+  return [...builtinRecords, ...adminRecords].sort((left, right) => {
+    if (left.isConsumed !== right.isConsumed) {
+      return left.isConsumed ? -1 : 1;
+    }
+    if (left.origin !== right.origin) {
+      return left.origin === "builtin" ? -1 : 1;
+    }
+    return left.code.localeCompare(right.code);
+  });
+}
+
+export async function issueDiscountCode(input: {
+  code?: string;
+  label?: string | null;
+  issuedBy?: string | null;
+}): Promise<DiscountCodeAdminRecord> {
+  const requested = input.code?.trim();
+  const candidates = requested
+    ? [normalizeDiscountCode(requested)]
+    : Array.from({ length: 12 }, () => generateDiscountCode());
+
+  for (const candidate of candidates) {
+    if (!isValidIssuedDiscountCode(candidate)) {
+      if (requested) {
+        throw new Error("Enter a new alphanumeric code that is not one of the built-ins.");
+      }
+      continue;
+    }
+
+    const ref = discountCodesCollection().doc(candidate);
+    const createdAt = nowIso();
+    const record: DiscountCodeUsageDocument = {
+      code: candidate as DiscountCode,
+      createdAt,
+      origin: "admin",
+      label: input.label?.trim() || null,
+      issuedBy: input.issuedBy?.trim() || null,
+      usedAt: null,
+      usedByJobId: null,
+      usedByAction: null,
+    };
+
+    try {
+      await ref.create(record);
+      return discountCodeRecordFromDoc(candidate, record, "admin");
+    } catch {
+      if (requested) {
+        throw new Error("That code already exists in Firestore.");
+      }
+    }
+  }
+
+  throw new Error("Unable to generate a unique code. Try again.");
 }
 
 export async function createJob(input: {

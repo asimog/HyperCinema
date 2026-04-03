@@ -3,10 +3,21 @@ import { SupportedTokenChain, VideoStyleId } from "@/lib/types/domain";
 export interface InterfacePaymentAdapter {
   id: string;
   label: string;
-  kind: "manual" | "x402";
+  kind: "manual" | "x402" | "hosted_checkout";
   currency: "SOL" | "USDC";
   network: "solana";
   endpoint: string;
+}
+
+export interface InterfaceCardsAgent {
+  id: string;
+  label: string;
+  kind: "remotion";
+  repoPath: string;
+  entrypoint: string;
+  compositions: string[];
+  textEndpoint: string;
+  renderEndpoint: string;
 }
 
 export interface InterfacePackageQuote {
@@ -38,6 +49,7 @@ export interface InterfaceAdapterServiceManifest {
   packages: InterfacePackageQuote[];
   styles: InterfaceStyleOption[];
   adapters: InterfacePaymentAdapter[];
+  cardsAgent: InterfaceCardsAgent;
   endpoints: {
     createJob: string;
     x402: string;

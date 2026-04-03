@@ -54,6 +54,9 @@ export default async function ModerationPage({
           </div>
         </div>
         <div className="button-row">
+          <Link href="/admin/discount-codes" className="button button-secondary">
+            Discount codes
+          </Link>
           <Link href="/" className="button button-secondary">
             Home
           </Link>

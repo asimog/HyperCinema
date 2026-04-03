@@ -90,6 +90,10 @@ const envSchema = z.object({
   ANALYTICS_ENGINE_MODE: z
     .enum(["v2_fallback_legacy", "v2", "legacy"])
     .default("v2_fallback_legacy"),
+  MOONPAY_API_KEY: z.string().min(1).optional(),
+  MOONPAY_WEBHOOK_SHARED_TOKEN: z.string().min(1).optional(),
+  NEXT_PUBLIC_MOONPAY_PAYLINK_ID: z.string().min(1).optional(),
+  NEXT_PUBLIC_MOONPAY_NETWORK: z.enum(["main", "test"]).optional(),
   CROSSMINT_SERVER_API_KEY: z.string().min(1).optional(),
   NEXT_PUBLIC_CROSSMINT_API_KEY: z.string().min(1).optional(),
   CROSSMINT_COOKIE_DOMAIN: z.string().min(1).optional(),
@@ -121,6 +125,19 @@ export function getEnv(): AppEnv {
       trimOptionalEnvValue(process.env.GOONBOOK_AGENT_BIO) ??
       "HyperMyths drops AI video trailers and posts them to GoonBook.",
     CROSSMINT_SERVER_API_KEY: trimOptionalEnvValue(process.env.CROSSMINT_SERVER_API_KEY),
+    MOONPAY_API_KEY: trimOptionalEnvValue(process.env.MOONPAY_API_KEY),
+    MOONPAY_WEBHOOK_SHARED_TOKEN: trimOptionalEnvValue(
+      process.env.MOONPAY_WEBHOOK_SHARED_TOKEN,
+    ),
+    NEXT_PUBLIC_MOONPAY_PAYLINK_ID: trimOptionalEnvValue(
+      process.env.NEXT_PUBLIC_MOONPAY_PAYLINK_ID,
+    ),
+    NEXT_PUBLIC_MOONPAY_NETWORK:
+      process.env.NEXT_PUBLIC_MOONPAY_NETWORK === "test"
+        ? "test"
+        : process.env.NEXT_PUBLIC_MOONPAY_NETWORK === "main"
+          ? "main"
+          : undefined,
     NEXT_PUBLIC_CROSSMINT_API_KEY: trimOptionalEnvValue(
       process.env.NEXT_PUBLIC_CROSSMINT_API_KEY,
     ),

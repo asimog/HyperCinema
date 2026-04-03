@@ -76,18 +76,23 @@ async function requestChatCompletion(input: {
   messages: OpenRouterMessage[];
   temperature: number;
   maxTokens: number;
+  baseUrl: string;
 }): Promise<OpenRouterResponse> {
   const env = getEnv();
+  const apiKey = env.OPENROUTER_API_KEY;
+  if (!apiKey) {
+    throw new Error("OPENROUTER_API_KEY is required for OpenRouter chat completions.");
+  }
 
   return withRetry(
     async () => {
       const response = await fetchWithTimeout(
-        `${env.OPENROUTER_BASE_URL}/chat/completions`,
+        `${input.baseUrl}/chat/completions`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${env.OPENROUTER_API_KEY}`,
+            Authorization: `Bearer ${apiKey}`,
             ...(env.OPENROUTER_SITE_URL
               ? { "HTTP-Referer": env.OPENROUTER_SITE_URL }
               : {}),
@@ -132,20 +137,28 @@ export async function openRouterChat(params: {
   messages: OpenRouterMessage[];
   temperature?: number;
   maxTokens?: number;
+  baseUrl?: string;
+  model?: string;
 }): Promise<string> {
   const env = getEnv();
-  const modelCandidates = resolveModelCandidates(env);
+  const modelCandidates = [
+    params.model?.trim(),
+    ...resolveModelCandidates(env),
+  ].filter((value): value is string => Boolean(value && value.length > 0));
+  const deduped = [...new Set(modelCandidates)];
   const temperature = params.temperature ?? 0.2;
   const maxTokens = params.maxTokens ?? 1200;
+  const baseUrl = (params.baseUrl ?? env.OPENROUTER_BASE_URL).replace(/\/+$/, "");
 
   let lastError: unknown = null;
-  for (const model of modelCandidates) {
+  for (const model of deduped) {
     try {
       const payload = await requestChatCompletion({
         model,
         messages: params.messages,
         temperature,
         maxTokens,
+        baseUrl,
       });
 
       const content = payload.choices?.[0]?.message?.content?.trim();
@@ -195,6 +208,8 @@ export async function openRouterJson<T>(params: {
   messages: OpenRouterMessage[];
   temperature?: number;
   maxTokens?: number;
+  baseUrl?: string;
+  model?: string;
 }): Promise<T> {
   const content = await openRouterChat(params);
   const jsonText = extractJson(content);

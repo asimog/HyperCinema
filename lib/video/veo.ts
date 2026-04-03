@@ -56,7 +56,7 @@ export interface VeoCoherenceMetadata {
 
 export interface GoogleVeoRenderPayload {
   provider: "google_veo";
-  model: "veo-3.1-fast-generate-001";
+  model: string;
   resolution: "720p" | "1080p";
   generateAudio: boolean;
   prompt: string;
@@ -765,7 +765,7 @@ function buildPrompt(input: {
 export function buildGoogleVeoRenderPayload(input: {
   walletStory: WalletStory;
   script: GeneratedCinematicScript;
-  model?: "veo-3.1-fast-generate-001";
+  model?: string;
   resolution?: "720p" | "1080p";
 }): GoogleVeoRenderPayload {
   const generateAudio =

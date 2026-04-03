@@ -1,4 +1,4 @@
-import { openRouterJson } from "@/lib/ai/openrouter";
+import { generateTextInferenceJson } from "@/lib/inference/text";
 import {
   alignSceneStatesToCount,
   buildSceneContinuityPrompt,
@@ -382,7 +382,9 @@ export async function generateCinematicScript(
       impactScore: reference.impactScore,
     }));
 
-    const raw = await openRouterJson<unknown>({
+    const raw = await generateTextInferenceJson<unknown>({
+      provider: undefined,
+      model: undefined,
       temperature: 0.35,
       maxTokens: 1600,
       messages: [

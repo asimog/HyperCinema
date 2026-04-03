@@ -1,3 +1,4 @@
+import { getInferenceRuntimeConfig } from "@/lib/inference/config";
 import { getEnv } from "@/lib/env";
 import { fetchWithTimeout } from "@/lib/network/http";
 import {
@@ -36,7 +37,9 @@ export async function renderCinematicVideo(params: {
   googleVeo?: GoogleVeoRenderPayload;
 }): Promise<{ videoUrl: string; thumbnailUrl: string | null }> {
   const env = getEnv();
-  if (!env.VIDEO_API_BASE_URL) {
+  const inferenceConfig = await getInferenceRuntimeConfig();
+  const videoBaseUrl = inferenceConfig.video.baseUrl ?? env.VIDEO_API_BASE_URL;
+  if (!videoBaseUrl) {
     throw new Error(
       "VIDEO_API_BASE_URL is required to render cinematic videos.",
     );
@@ -47,6 +50,7 @@ export async function renderCinematicVideo(params: {
     includeAudio: params.googleVeo?.generateAudio ?? false,
   }));
   const withSound = params.googleVeo?.generateAudio ?? false;
+  const isVeoProvider = inferenceConfig.video.provider === "google_veo";
   const baseRequestPayload = {
     jobId: params.jobId,
     wallet: params.wallet,
@@ -56,9 +60,11 @@ export async function renderCinematicVideo(params: {
     hookLine: params.script.hookLine,
     scenes: scenePayload,
     videoEngine: env.VIDEO_ENGINE,
+    provider: inferenceConfig.video.provider,
+    model: inferenceConfig.video.model ?? params.googleVeo?.model ?? env.VIDEO_VEO_MODEL,
   };
   const renderRequestPayload =
-    env.VIDEO_ENGINE === "google_veo"
+    isVeoProvider
       ? {
           ...baseRequestPayload,
           provider: "google_veo",
@@ -71,7 +77,7 @@ export async function renderCinematicVideo(params: {
   const startPayload = await withRetry(
     async () => {
       const startResponse = await fetchWithTimeout(
-        `${env.VIDEO_API_BASE_URL}/render`,
+        `${videoBaseUrl.replace(/\/+$/, "")}/render`,
         {
           method: "POST",
           headers: {
@@ -120,7 +126,7 @@ export async function renderCinematicVideo(params: {
   ) {
     await sleep(env.VIDEO_RENDER_POLL_INTERVAL_MS);
     const pollUrl =
-      startPayload.statusUrl ?? `${env.VIDEO_API_BASE_URL}/render/${renderId}`;
+      startPayload.statusUrl ?? `${videoBaseUrl.replace(/\/+$/, "")}/render/${renderId}`;
     let pollResponse: Response;
     try {
       pollResponse = await withRetry(

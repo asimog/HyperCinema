@@ -1,5 +1,5 @@
-import { openRouterJson } from "@/lib/ai/openrouter";
 import { logger } from "@/lib/logging/logger";
+import { generateTextInferenceJson } from "@/lib/inference/text";
 import { ReportDocument } from "@/lib/types/domain";
 
 interface SummaryResponse {
@@ -150,7 +150,9 @@ export async function generateReportSummary(
   report: Omit<ReportDocument, "summary" | "downloadUrl">,
 ): Promise<string> {
   try {
-    const response = await openRouterJson<SummaryResponse>({
+    const response = await generateTextInferenceJson<SummaryResponse>({
+      provider: undefined,
+      model: undefined,
       temperature: 0.1,
       maxTokens: 400,
       messages: [

@@ -1,5 +1,6 @@
 import { generateCinematicScript } from "@/lib/ai/cinematic";
 import { getEnv } from "@/lib/env";
+import { getInferenceRuntimeConfig } from "@/lib/inference/config";
 import { renderCinematicVideo } from "@/lib/video/client";
 import { buildGoogleVeoRenderPayload } from "@/lib/video/veo";
 import { GeneratedCinematicScript, WalletStory } from "@/lib/types/domain";
@@ -14,10 +15,11 @@ export async function buildAndRenderVideo(input: {
 }> {
   const script = await generateCinematicScript(input.walletStory);
   const env = getEnv();
+  const inferenceConfig = await getInferenceRuntimeConfig();
   const googleVeoPayload = buildGoogleVeoRenderPayload({
     walletStory: input.walletStory,
     script,
-    model: env.VIDEO_VEO_MODEL,
+    model: inferenceConfig.video.model ?? env.VIDEO_VEO_MODEL,
     resolution: env.VIDEO_RESOLUTION,
   });
 

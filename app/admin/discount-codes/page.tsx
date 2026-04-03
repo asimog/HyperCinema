@@ -59,6 +59,9 @@ export default async function DiscountCodesPage({
           <Link href="/admin/moderation" className="button button-secondary">
             Moderation
           </Link>
+          <Link href="/admin/inference" className="button button-secondary">
+            Inference
+          </Link>
           <Link href="/" className="button button-secondary">
             Home
           </Link>

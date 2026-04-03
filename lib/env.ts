@@ -28,10 +28,28 @@ const envSchema = z.object({
     .string()
     .url()
     .default("https://api.mainnet-beta.solana.com"),
-  OPENROUTER_API_KEY: z.string().min(1),
+  TEXT_INFERENCE_PROVIDER: z
+    .enum(["openrouter", "openai", "claude", "replicate", "huggingface", "ollama", "others"])
+    .default("openrouter"),
+  TEXT_INFERENCE_MODEL: z.string().min(1).optional(),
+  TEXT_INFERENCE_BASE_URL: z.string().url().optional(),
+  TEXT_INFERENCE_API_KEY: z.string().min(1).optional(),
+  OPENROUTER_API_KEY: z.string().min(1).optional(),
   VIDEO_API_KEY: z.string().min(1),
   X_API_BEARER_TOKEN: z.string().min(1).optional(),
   X_API_BASE_URL: z.string().url().default("https://api.x.com/2"),
+  OPENAI_API_KEY: z.string().min(1).optional(),
+  OPENAI_BASE_URL: z.string().url().default("https://api.openai.com/v1"),
+  ANTHROPIC_API_KEY: z.string().min(1).optional(),
+  ANTHROPIC_BASE_URL: z.string().url().default("https://api.anthropic.com/v1"),
+  REPLICATE_API_TOKEN: z.string().min(1).optional(),
+  REPLICATE_BASE_URL: z.string().url().default("https://api.replicate.com/v1"),
+  HUGGINGFACE_API_TOKEN: z.string().min(1).optional(),
+  HUGGINGFACE_TEXT_BASE_URL: z
+    .string()
+    .url()
+    .default("https://api-inference.huggingface.co/models"),
+  OLLAMA_BASE_URL: z.string().url().default("http://127.0.0.1:11434"),
   HELIUS_WEBHOOK_SECRET: z.string().min(1).optional(),
   FIREBASE_PROJECT_ID: z.string().min(1),
   FIREBASE_CLIENT_EMAIL: z.string().min(1).optional(),
@@ -67,6 +85,10 @@ const envSchema = z.object({
     .url()
     .default("https://openrouter.ai/api/v1"),
   OPENROUTER_MODEL: z.string().min(1).optional(),
+  VIDEO_INFERENCE_PROVIDER: z
+    .enum(["google_veo", "openai", "replicate", "huggingface", "ollama", "others"])
+    .default("google_veo"),
+  VIDEO_INFERENCE_MODEL: z.string().min(1).optional(),
   OPENROUTER_APP_NAME: z.string().default("HYPERCINEMA"),
   OPENROUTER_SITE_URL: z.string().url().optional(),
   VIDEO_API_BASE_URL: z.string().url().optional(),
@@ -113,11 +135,20 @@ export function getEnv(): AppEnv {
     ...process.env,
     HELIUS_WEBHOOK_ID: trimOptionalEnvValue(process.env.HELIUS_WEBHOOK_ID),
     OPENROUTER_MODEL: trimOptionalEnvValue(process.env.OPENROUTER_MODEL),
+    TEXT_INFERENCE_PROVIDER: trimEnvValue(process.env.TEXT_INFERENCE_PROVIDER),
+    TEXT_INFERENCE_MODEL: trimOptionalEnvValue(process.env.TEXT_INFERENCE_MODEL),
+    TEXT_INFERENCE_BASE_URL: trimOptionalEnvValue(process.env.TEXT_INFERENCE_BASE_URL),
+    TEXT_INFERENCE_API_KEY: trimOptionalEnvValue(process.env.TEXT_INFERENCE_API_KEY),
     VIDEO_ENGINE: trimEnvValue(process.env.VIDEO_ENGINE),
     VIDEO_VEO_MODEL: trimEnvValue(process.env.VIDEO_VEO_MODEL),
     VIDEO_RESOLUTION: trimEnvValue(process.env.VIDEO_RESOLUTION),
     X_API_BEARER_TOKEN: trimOptionalEnvValue(process.env.X_API_BEARER_TOKEN),
     X_API_BASE_URL: trimEnvValue(process.env.X_API_BASE_URL),
+    OPENAI_BASE_URL: trimEnvValue(process.env.OPENAI_BASE_URL),
+    ANTHROPIC_BASE_URL: trimEnvValue(process.env.ANTHROPIC_BASE_URL),
+    REPLICATE_BASE_URL: trimEnvValue(process.env.REPLICATE_BASE_URL),
+    HUGGINGFACE_TEXT_BASE_URL: trimEnvValue(process.env.HUGGINGFACE_TEXT_BASE_URL),
+    OLLAMA_BASE_URL: trimEnvValue(process.env.OLLAMA_BASE_URL),
     X402_FACILITATOR_URL: trimEnvValue(process.env.X402_FACILITATOR_URL),
     GOONBOOK_API_BASE_URL: trimOptionalEnvValue(process.env.GOONBOOK_API_BASE_URL),
     GOONBOOK_AGENT_API_KEY: trimOptionalEnvValue(process.env.GOONBOOK_AGENT_API_KEY),
@@ -149,6 +180,8 @@ export function getEnv(): AppEnv {
     CROSSMINT_ADMIN_ALLOWLIST: trimOptionalEnvValue(
       process.env.CROSSMINT_ADMIN_ALLOWLIST,
     ),
+    VIDEO_INFERENCE_PROVIDER: trimEnvValue(process.env.VIDEO_INFERENCE_PROVIDER),
+    VIDEO_INFERENCE_MODEL: trimOptionalEnvValue(process.env.VIDEO_INFERENCE_MODEL),
     ALLOW_IN_PROCESS_WORKER:
       process.env.ALLOW_IN_PROCESS_WORKER ??
       (process.env.NODE_ENV === "production" ? "false" : "true"),

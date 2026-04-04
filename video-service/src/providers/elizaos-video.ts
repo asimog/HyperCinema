@@ -1,6 +1,8 @@
+// ElizaOS video provider for video-service
 import { setTimeout as sleep } from "timers/promises";
 import { getVideoServiceEnv } from "../env";
 
+// Input for generating a single clip
 export interface GenerateElizaOSClipInput {
   model?: string;
   prompt: string;
@@ -11,12 +13,14 @@ export interface GenerateElizaOSClipInput {
   onProgress?: () => Promise<void> | void;
 }
 
+// Response from ElizaOS video start
 interface ElizaOSVideoStartResponse {
   id?: string;
   videoUrl?: string;
   status?: string;
 }
 
+// Response from polling video status
 interface ElizaOSVideoStatusResponse {
   id?: string;
   status?: string;
@@ -26,6 +30,7 @@ interface ElizaOSVideoStatusResponse {
   completedAt?: string;
 }
 
+// Clean image URL or return undefined
 function normalizeImageUrl(value?: string | null): string | undefined {
   if (!value) return undefined;
   const trimmed = value.trim();

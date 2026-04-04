@@ -1,15 +1,5 @@
-/**
- * MythXEliza Agent - Full Autobiographical Video Generation Pipeline
- * 
- * Capabilities:
- * 1. Scrape 42 tweets from X profile
- * 2. Synthesize tweets into cinematic narrative via narrator
- * 3. Generate video clips via ElizaOS
- * 4. Save to Firebase & appear in Gallery
- * 5. Post to X automatically
- * 6. Handle promo codes for free generations
- * 7. Process commands from X mentions
- */
+// MythXEliza agent - video generation pipeline
+// Scrapes tweets, synthesizes narrative, generates video
 
 import { getElizaOSClient } from "./client";
 import { MYTHX_ELIZA_CHARACTER, MYTHX_ELIZA_AGENT_ID } from "./mythx-character";
@@ -19,6 +9,7 @@ import { getXClient, XClient, XCommandParseResult } from "@/lib/x/client";
 import { validatePromoCode, usePromoCode } from "@/lib/promocodes/manager";
 import { randomUUID } from "crypto";
 
+// X profile data for video generation
 export interface MythXElizaProfile {
   displayName: string;
   username: string;
@@ -27,6 +18,7 @@ export interface MythXElizaProfile {
   profileImageUrl: string | null;
 }
 
+// Individual tweet from profile
 export interface MythXElizaTweet {
   id: string;
   text: string;

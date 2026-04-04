@@ -32,6 +32,13 @@ const MAIN_PAGES = [
 
 const TONE_CLASSES = ["tone-0", "tone-1", "tone-5", "tone-gallery"] as const;
 
+const HOW_IT_WORKS = [
+  { step: "1", title: "Choose Your Story", desc: "Pick MythX for tweets, HashMyth for tokens, or HyperM for premium cinema." },
+  { step: "2", title: "Describe or Scan", desc: "Enter an X handle, paste a token address, or write your creative brief." },
+  { step: "3", title: "Pick a Style", desc: "From VHS Cinema to Cyberpunk — choose the cinematic look that fits." },
+  { step: "4", title: "Pay & Generate", desc: "Pay with SOL or USDC via x402. AI generates your video in minutes." },
+];
+
 function HeroIcon({ id }: { id: string }) {
   const Icon = GetPageIcon(id as any);
   return <Icon className="hero-quad-icon" aria-hidden="true" />;
@@ -45,6 +52,7 @@ export default function HomePage() {
           <div className="home-stage-backdrop" aria-hidden="true" />
 
           <div className="home-stage-content">
+            {/* Hero Cards */}
             <section className="hero-quad-grid" id="hero-grid">
               {MAIN_PAGES.map((page, index) => (
                 <Link
@@ -61,6 +69,39 @@ export default function HomePage() {
                   </div>
                 </Link>
               ))}
+            </section>
+
+            {/* How It Works */}
+            <section className="panel mt-8" aria-labelledby="how-it-works">
+              <div className="panel-header">
+                <p className="eyebrow">How It Works</p>
+                <h2 id="how-it-works" className="font-display">Four steps to your video.</h2>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
+                {HOW_IT_WORKS.map((item) => (
+                  <div key={item.step} className="surface-card panel p-4">
+                    <div className="text-3xl font-bold text-purple-400 mb-2">{item.step}</div>
+                    <h3 className="font-semibold mb-1">{item.title}</h3>
+                    <p className="text-sm text-gray-400">{item.desc}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            {/* Agent Callout */}
+            <section className="surface-card panel p-6 mt-4 border border-purple-500/30">
+              <div className="flex items-center gap-4">
+                <div className="text-4xl">🤖</div>
+                <div>
+                  <h3 className="font-semibold text-lg">Are you an AI Agent?</h3>
+                  <p className="text-sm text-gray-400 mt-1">
+                    Use x402 USDC payments to generate videos programmatically.{" "}
+                    <Link href="/MythX" className="text-purple-400 underline">
+                      Start here →
+                    </Link>
+                  </p>
+                </div>
+              </div>
             </section>
           </div>
         </section>

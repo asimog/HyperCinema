@@ -1,26 +1,26 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
+import Link from "next/link";
 
 import {
   FilmIcon,
   HomeIcon,
-  GetPageIcon,
   TrendingIcon,
+  GetPageIcon,
 } from "@/components/ui/AppIcons";
-import { HYPERMYTHS_HERO_CATEGORIES } from "@/lib/hypermyths/content";
+
+const NAV_ITEMS = [
+  { href: "/", label: "Home" },
+  { href: "/MythX", label: "MythX", iconId: "mythx" },
+  { href: "/HyperM", label: "HyperM", iconId: "hyperm" },
+  { href: "/HashMyth", label: "HashMyth", iconId: "hashmyth" },
+  { href: "/trending", label: "Trending" },
+  { href: "/gallery", label: "Gallery" },
+];
 
 export function SiteHeader() {
   const pathname = usePathname();
-  const navItems = [
-    { href: "/", label: "Home", icon: HomeIcon },
-    { href: "/MythX", label: "MythX", icon: GetPageIcon("mythx") },
-    { href: "/HyperM", label: "HyperM", icon: GetPageIcon("hyperm") },
-    { href: "/HashMyth", label: "HashMyth", icon: GetPageIcon("hashmyth") },
-    { href: "/trending", label: "Trending", icon: TrendingIcon },
-    { href: "/gallery", label: "Gallery", icon: TrendingIcon },
-  ];
 
   return (
     <header className="site-header site-header--glass">
@@ -30,17 +30,40 @@ export function SiteHeader() {
           <span className="site-brand-title">HyperMyths</span>
         </Link>
 
-        <nav className="nav-links">
-          {navItems.map((item) => (
-            <Link
-              key={item.href}
-              className={`nav-link${pathname === item.href ? " nav-link-active" : ""}`}
-              href={item.href}
-            >
-              <item.icon className="nav-link-icon" aria-hidden="true" />
-              {item.label}
-            </Link>
-          ))}
+        {/* Desktop nav */}
+        <nav className="nav-links hidden md:flex">
+          {NAV_ITEMS.map((item) => {
+            const Icon = item.iconId ? GetPageIcon(item.iconId as any) : TrendingIcon;
+            const isActive = pathname === item.href;
+            return (
+              <Link
+                key={item.href}
+                className={`nav-link${isActive ? " nav-link-active" : ""}`}
+                href={item.href}
+              >
+                <Icon className="nav-link-icon" aria-hidden="true" />
+                {item.label}
+              </Link>
+            );
+          })}
+        </nav>
+
+        {/* Mobile nav - scrollable */}
+        <nav className="nav-links md:hidden flex overflow-x-auto gap-1 pb-1">
+          {NAV_ITEMS.map((item) => {
+            const Icon = item.iconId ? GetPageIcon(item.iconId as any) : TrendingIcon;
+            const isActive = pathname === item.href;
+            return (
+              <Link
+                key={item.href}
+                className={`nav-link whitespace-nowrap${isActive ? " nav-link-active" : ""}`}
+                href={item.href}
+              >
+                <Icon className="nav-link-icon" aria-hidden="true" />
+                {item.label}
+              </Link>
+            );
+          })}
         </nav>
       </div>
     </header>

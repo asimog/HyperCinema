@@ -182,6 +182,11 @@ const CONCIERGE_EXPERIENCES = [
   { ...CINEMA_PAGE_CONFIGS.lovex, label: "LoveX" },
   { ...CINEMA_PAGE_CONFIGS.hashmyth, label: "HashMyth" },
   { ...CINEMA_PAGE_CONFIGS.hyperm, label: "HyperM" },
+  { ...CINEMA_PAGE_CONFIGS.trenchcinema, label: "TrenchMyths" },
+  { ...CINEMA_PAGE_CONFIGS.funcinema, label: "FunMyths" },
+  { ...CINEMA_PAGE_CONFIGS.familycinema, label: "Family" },
+  { ...CINEMA_PAGE_CONFIGS.musicvideo, label: "Music" },
+  { ...CINEMA_PAGE_CONFIGS.recreator, label: "Recreator" },
 ] as const;
 
 const INITIAL_MESSAGES: ChatMessage[] = [

@@ -127,6 +127,20 @@ export default async function TrendingPage() {
 
           {/* Custom Video Creators Grid */}
           <section>
+            {/* Agent Callout */}
+            <div className="surface-card panel p-4 mb-6 border border-purple-500/30">
+              <div className="flex items-center gap-4">
+                <div className="text-3xl">🤖</div>
+                <div className="flex-1">
+                  <h3 className="font-semibold">Are you an AI Agent?</h3>
+                  <p className="text-sm text-gray-400 mt-1">
+                    Use x402 USDC to generate videos programmatically.{" "}
+                    <Link href="/MythX" className="text-purple-400 underline">Start here →</Link>
+                  </p>
+                </div>
+              </div>
+            </div>
+
             <h2 className="text-2xl font-bold mb-6">🎨 Video Creators</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {CUSTOM_CREATORS.map(creator => (
@@ -179,13 +193,18 @@ export default async function TrendingPage() {
                     href={`/job/${job.jobId}`}
                     className="surface-card panel p-4 hover:border-purple-500/50 transition-all"
                   >
-                    <div className="aspect-video bg-gray-800 rounded mb-3 flex items-center justify-center">
+                    <div className="aspect-video bg-gray-800 rounded mb-3 flex items-center justify-center relative">
                       <span className="text-3xl">
                         {job.requestKind === "mythx" ? "🎬" :
                          job.requestKind === "token_video" ? "📊" :
                          job.requestKind === "bedtime_story" ? "🌙" :
                          job.requestKind === "music_video" ? "🎵" : "🎥"}
                       </span>
+                      {job.videoSeconds && (
+                        <div className="absolute bottom-2 right-2 px-2 py-1 bg-black/80 rounded text-xs font-mono">
+                          {job.videoSeconds}s
+                        </div>
+                      )}
                     </div>
                     <h4 className="font-medium truncate">
                       {job.subjectName || shortWallet(job.wallet)}

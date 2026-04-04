@@ -37,14 +37,21 @@ const CHAIN_OPTIONS = [
   { id: "bsc", label: "BSC", icon: "⬢" },
 ];
 
+const PRICE_1D = 0.004;
+const PRICE_2D = 0.007;
+const PRICE_USDC_1D = 1.5;
+const PRICE_USDC_2D = 2.5;
+
 export function HashMythPage() {
   const [input, setInput] = useState("");
   const [selectedChain, setSelectedChain] = useState("solana");
   const [selectedStyle, setSelectedStyle] = useState("");
+  const [duration, setDuration] = useState<"1d" | "2d">("1d");
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
   const [isScanning, setIsScanning] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [jobId, setJobId] = useState<string | null>(null);
+  const [isAgent, setIsAgent] = useState(false);
 
   const handleScan = useCallback(async () => {
     if (!input.trim()) return;
@@ -55,8 +62,6 @@ export function HashMythPage() {
 
     try {
       const address = input.trim();
-
-      // Classify input
       let scanType: "token" | "wallet" | null = null;
       let name = "";
       let symbol = "";
@@ -64,36 +69,58 @@ export function HashMythPage() {
       let riskScore: number | undefined;
       let riskFactors: string[] | undefined;
       let style = selectedStyle || "trench_neon";
-      let personality: string | undefined;
-      let totalTrades: number | undefined;
       let imageUri: string | null = null;
 
-      // Simple classification
+      // Try to fetch real metadata from Helius (Solana)
       if (/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(address)) {
         scanType = "token";
-        name = address.slice(0, 8);
-        symbol = name.toUpperCase();
+        try {
+          const response = await fetch("/api/helius-webhook", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              type: "scan_token",
+              address,
+            }),
+          });
+
+          // If Helius API works, use real data
+          if (response.ok) {
+            const data = await response.json();
+            name = data.name || address.slice(0, 8);
+            symbol = data.symbol || name.toUpperCase();
+            imageUri = data.image || null;
+            riskScore = data.riskScore || 50;
+            riskFactors = data.riskFactors || ["Metadata requires on-chain fetch"];
+          } else {
+            // Fallback: use address as name
+            name = address.slice(0, 8);
+            symbol = name.toUpperCase();
+            riskScore = 50;
+            riskFactors = ["On-chain metadata fetch failed"];
+          }
+        } catch {
+          name = address.slice(0, 8);
+          symbol = name.toUpperCase();
+          riskScore = 50;
+          riskFactors = ["On-chain metadata fetch failed"];
+        }
         recommendation = `🔍 Scanned Solana token. Ready for cinematic transformation!`;
-        riskScore = 50;
-        riskFactors = ["Metadata requires on-chain fetch"];
+        style = (riskScore || 50) < 40 ? "trench_neon" : "hyperflow_assembly";
       } else if (/^0x[a-fA-F0-9]{40}$/.test(address)) {
         scanType = "token";
         name = address.slice(0, 10);
         symbol = name.toUpperCase();
         recommendation = `🔍 Scanned EVM token. Let's make it cinematic!`;
         riskScore = 55;
+        style = "trench_neon";
       } else {
         // Treat as wallet
         scanType = "wallet";
         name = address.slice(0, 8);
         symbol = "Wallet";
         recommendation = `📊 Wallet scanned. Ready for trading story video!`;
-        personality = "Active Trader";
-        totalTrades = Math.floor(Math.random() * 50) + 5;
       }
-
-      // Simulate scan delay
-      await new Promise(r => setTimeout(r, 800));
 
       setScanResult({
         type: scanType,
@@ -103,9 +130,7 @@ export function HashMythPage() {
         recommendation,
         riskScore,
         riskFactors,
-        style: selectedStyle || (riskScore && riskScore < 40 ? "trench_neon" : "hyperflow_assembly"),
-        personality,
-        totalTrades,
+        style: selectedStyle || style,
         imageUri,
         loading: false,
       });
@@ -135,17 +160,18 @@ export function HashMythPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          experience: "hashmyth",
-          subjectInput: scanResult.address,
+          requestKind: "token_video",
+          tokenAddress: scanResult.address,
           chain: selectedChain,
+          packageType: duration,
           stylePreset: scanResult.style,
-          packageType: "1d",
           audioEnabled: true,
         }),
       });
 
       if (!response.ok) {
-        throw new Error("Job creation failed");
+        const err = await response.json();
+        throw new Error(err.error || err.message || "Job creation failed");
       }
 
       const data = await response.json();
@@ -159,7 +185,7 @@ export function HashMythPage() {
     } finally {
       setIsGenerating(false);
     }
-  }, [scanResult, selectedChain]);
+  }, [scanResult, selectedChain, duration]);
 
   return (
     <div className="cinema-shell cinema-noise min-h-[100dvh] text-[#f4efe8] px-4 py-6 md:px-8 md:py-8">
@@ -276,19 +302,73 @@ export function HashMythPage() {
                   </div>
                 </div>
 
+                {/* Pricing */}
+                <div className="flex items-center justify-between p-3 bg-gray-700/50 rounded">
+                  <span className="text-sm text-gray-400">Price</span>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setDuration("1d")}
+                      className={`px-3 py-1 rounded text-sm ${
+                        duration === "1d" ? "bg-purple-600 text-white" : "bg-gray-600"
+                      }`}
+                    >
+                      30s — {isAgent ? `$${PRICE_USDC_1D} USDC` : `${PRICE_1D} SOL`}
+                    </button>
+                    <button
+                      onClick={() => setDuration("2d")}
+                      className={`px-3 py-1 rounded text-sm ${
+                        duration === "2d" ? "bg-purple-600 text-white" : "bg-gray-600"
+                      }`}
+                    >
+                      60s — {isAgent ? `$${PRICE_USDC_2D} USDC` : `${PRICE_2D} SOL`}
+                    </button>
+                  </div>
+                </div>
+
                 {/* Generate button */}
                 <button
-                  onClick={handleGenerate}
+                  onClick={async () => {
+                    if (!scanResult) return;
+                    setIsGenerating(true);
+                    try {
+                      const response = await fetch("/api/jobs", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          requestKind: "token_video",
+                          tokenAddress: scanResult.address,
+                          chain: selectedChain,
+                          packageType: duration,
+                          stylePreset: scanResult.style,
+                          audioEnabled: true,
+                        }),
+                      });
+                      if (!response.ok) {
+                        const err = await response.json();
+                        throw new Error(err.error || err.message || "Job creation failed");
+                      }
+                      const data = await response.json();
+                      window.location.href = `/job/${data.jobId}`;
+                    } catch (err) {
+                      setScanResult({
+                        ...scanResult,
+                        error: err instanceof Error ? err.message : "Generation failed",
+                        loading: false,
+                      });
+                    } finally {
+                      setIsGenerating(false);
+                    }
+                  }}
                   disabled={isGenerating}
                   className="w-full py-4 px-6 bg-gradient-to-r from-green-600 to-cyan-600 hover:from-green-700 hover:to-cyan-700 disabled:opacity-50 rounded-lg font-semibold text-lg transition-all"
                 >
-                  {isGenerating ? "🎬 Generating..." : "🎬 Generate Video"}
+                  {isGenerating ? "🎬 Creating Job..." : isAgent ? `Generate via x402 — $${duration === "1d" ? PRICE_USDC_1D : PRICE_USDC_2D} USDC` : `Generate Video — ${duration === "1d" ? PRICE_1D : PRICE_2D} SOL`}
                 </button>
 
                 {jobId && (
                   <div className="p-3 bg-green-900/30 border border-green-700 rounded">
-                    <p className="text-green-400">✅ Video queued!</p>
-                    <a href={`/job/${jobId}`} className="text-cyan-400 underline">View status →</a>
+                    <p className="text-green-400">✅ Job created!</p>
+                    <a href={`/job/${jobId}`} className="text-cyan-400 underline">View status and pay →</a>
                   </div>
                 )}
               </div>

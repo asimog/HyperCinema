@@ -22,6 +22,74 @@ interface JobApiPayload {
   warning?: string;
 }
 
+const JOB_STAGES = [
+  { key: "awaiting_payment", label: "Payment" },
+  { key: "processing", label: "Processing" },
+  { key: "generating_script", label: "Script" },
+  { key: "generating_report", label: "Report" },
+  { key: "generating_video", label: "Rendering" },
+  { key: "uploading_assets", label: "Upload" },
+  { key: "complete", label: "Complete" },
+  { key: "failed", label: "Failed" },
+];
+
+function getStageIndex(status: string, progress?: string): number {
+  if (status === "failed") return JOB_STAGES.length - 1;
+  if (status === "complete") return JOB_STAGES.length - 2;
+
+  if (progress) {
+    const idx = JOB_STAGES.findIndex((s) => s.key === progress);
+    if (idx >= 0) return idx;
+  }
+
+  if (status === "awaiting_payment") return 0;
+  if (status === "payment_detected") return 1;
+  if (status === "payment_confirmed") return 1;
+  return 1;
+}
+
+function VisualStepper({ status, progress }: { status: string; progress?: string }) {
+  const currentIndex = getStageIndex(status, progress);
+  const isFailed = status === "failed";
+
+  return (
+    <div className="surface-card panel p-4">
+      <div className="flex items-center gap-1">
+        {JOB_STAGES.map((stage, i) => {
+          if (stage.key === "failed" && !isFailed) return null;
+          const isComplete = i < currentIndex && !isFailed;
+          const isActive = i === currentIndex;
+          const isFailedStage = isFailed && stage.key === "failed";
+
+          return (
+            <div key={stage.key} className="flex items-center flex-1">
+              <div
+                className={`flex-1 h-2 rounded-full transition-all ${
+                  isFailedStage
+                    ? "bg-red-500"
+                    : isComplete
+                    ? "bg-green-500"
+                    : isActive
+                    ? "bg-purple-500 animate-pulse"
+                    : "bg-gray-700"
+                }`}
+                title={stage.label}
+              />
+              <span
+                className={`text-xs ml-1 ${
+                  isFailedStage ? "text-red-400" : isActive ? "text-purple-400" : "text-gray-500"
+                }`}
+              >
+                {isComplete ? "✓" : isFailedStage ? "✗" : stage.label}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function statusLabel(status: JobDocument["status"], progress: JobDocument["progress"]) {
   if (status === "awaiting_payment") return "Awaiting payment";
   if (status === "payment_detected") return "Payment received";
@@ -197,12 +265,18 @@ export default function JobPage() {
   const shareUrl = useMemo(() => {
     if (typeof window === "undefined") return "";
     const publicUrl = `${window.location.origin}/job/${jobId}`;
-    const tokenName = job?.subjectSymbol ?? job?.subjectName ?? "this memecoin";
-    const text = `HyperMyths just turned ${tokenName} into a cinematic token card.`;
+    const experienceLabel = job?.experience === "mythx"
+      ? `@${job?.subjectName}'s autobiography`
+      : job?.subjectSymbol
+      ? `${job.subjectSymbol} token`
+      : job?.subjectName
+      ? `${job.subjectName}'s story`
+      : "this memecoin";
+    const text = `HyperMyths just turned ${experienceLabel} into a cinematic video.`;
     return `https://x.com/intent/tweet?text=${encodeURIComponent(
       text,
     )}&url=${encodeURIComponent(publicUrl)}`;
-  }, [job?.subjectName, job?.subjectSymbol, jobId]);
+  }, [job?.subjectName, job?.subjectSymbol, job?.experience, jobId]);
 
   const leftRail = (
     <div className="rail-stack">
@@ -302,6 +376,9 @@ export default function JobPage() {
   return (
     <div className="cinema-shell cinema-noise min-h-[100dvh] overflow-hidden px-4 py-6 text-[#fff1dc] md:px-8 md:py-8">
       <HyperflowAssemblyScaffold leftRail={leftRail} rightRail={rightRail}>
+        {/* Visual Stepper */}
+        {job && <VisualStepper status={job.status} progress={job.progress} />}
+
         <section className="panel">
           <div className="panel-header">
             <div>

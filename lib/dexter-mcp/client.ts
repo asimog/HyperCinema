@@ -121,6 +121,11 @@ export class DexterMCPClient {
     return this.callTool("search", { query });
   }
 
+  // Fetch URL content
+  async fetchUrl(url: string, parse: boolean = true): Promise<DexterMCPToolResult> {
+    return this.callTool("fetch", { url, parse });
+  }
+
   // Execute Hyperliquid trade
   async hyperliquidTrade(ticker: string, side: "buy" | "sell", size: number): Promise<DexterMCPToolResult> {
     return this.callTool("hyperliquid_perp_trade", { ticker, side, size });

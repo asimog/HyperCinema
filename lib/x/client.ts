@@ -1,23 +1,7 @@
 // Twitter/X client - post, reply, monitor mentions
 import { getEnv } from "@/lib/env";
 import { buildOAuth1aHeaders, hasOAuth1aCredentials } from "@/lib/x/api";
-// Agents have native access to DeFi + system tools
-import {
-  agentResolveToken,
-  agentPreviewSwap,
-  agentGetJupiterQuote,
-  agentCheckBalance,
-  agentGetTrendingTokens,
-  agentAnalyzeWallet,
-  agentSearchPumpfun,
-  agentWebSearch,
-  agentReadFile,
-  agentGitStatus,
-  agentTimeNow,
-  agentEstimateCost,
-} from "@/lib/elizaos/mythx-agent";
-
-// Re-export agent tools for direct use from X client
+// Re-export all agent helper tools
 export {
   agentResolveToken,
   agentPreviewSwap,
@@ -31,7 +15,10 @@ export {
   agentGitStatus,
   agentTimeNow,
   agentEstimateCost,
-};
+  agentFetchViaDexter,
+  agentOHLCV,
+  agentHyperliquidTrade,
+} from "@/lib/agents/helpers";
 
 // Result from posting a tweet
 export interface XPostResult {

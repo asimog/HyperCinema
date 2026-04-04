@@ -9,69 +9,44 @@ import { getXClient, XClient, XCommandParseResult } from "@/lib/x/client";
 import { validatePromoCode, usePromoCode } from "@/lib/promocodes/manager";
 import { getDexterMCPClient } from "@/lib/dexter-mcp/client";
 import { getPolyMCPClient } from "@/lib/poly-mcp/client";
+import { scrapeTweetsViaDexter } from "@/lib/dexter-mcp/tweet-scraper";
+import {
+  agentResolveToken,
+  agentPreviewSwap,
+  agentGetJupiterQuote,
+  agentCheckBalance,
+  agentGetTrendingTokens,
+  agentAnalyzeWallet,
+  agentSearchPumpfun,
+  agentWebSearch,
+  agentReadFile,
+  agentGitStatus,
+  agentTimeNow,
+  agentEstimateCost,
+  agentFetchViaDexter,
+  agentOHLCV,
+  agentHyperliquidTrade,
+} from "@/lib/agents/helpers";
 import { randomUUID } from "crypto";
 
-// Native DeFi tools available to all agents via Dexter MCP
-export async function agentResolveToken(token: string) {
-  const client = getDexterMCPClient();
-  return client.resolveToken(token);
-}
-
-export async function agentPreviewSwap(input: string, output: string, amount: number) {
-  const client = getDexterMCPClient();
-  return client.previewSwap(input, output, amount);
-}
-
-export async function agentGetJupiterQuote(input: string, output: string, amount: number) {
-  const client = getDexterMCPClient();
-  return client.getJupiterQuote(input, output, amount);
-}
-
-export async function agentCheckBalance(wallet: string) {
-  const client = getDexterMCPClient();
-  return client.checkBalance(wallet);
-}
-
-export async function agentGetTrendingTokens(timeframe?: string) {
-  const client = getDexterMCPClient();
-  return client.getTrendingTokens(timeframe);
-}
-
-export async function agentAnalyzeWallet(wallet: string) {
-  const client = getDexterMCPClient();
-  return client.analyzeWallet(wallet);
-}
-
-export async function agentSearchPumpfun(query: string) {
-  const client = getDexterMCPClient();
-  return client.searchPumpfun(query);
-}
-
-export async function agentWebSearch(query: string) {
-  const client = getDexterMCPClient();
-  return client.webSearch(query);
-}
-
-// System tools available via Poly MCP
-export async function agentReadFile(path: string) {
-  const client = getPolyMCPClient();
-  return client.callTool("fs_read", { path });
-}
-
-export async function agentGitStatus() {
-  const client = getPolyMCPClient();
-  return client.callTool("git_status", {});
-}
-
-export async function agentTimeNow() {
-  const client = getPolyMCPClient();
-  return client.callTool("time_now", {});
-}
-
-export async function agentEstimateCost(prompt: string) {
-  const client = getPolyMCPClient();
-  return client.callTool("ctx_estimate_cost", { prompt });
-}
+// Re-export agent helpers for use by other modules
+export {
+  agentResolveToken,
+  agentPreviewSwap,
+  agentGetJupiterQuote,
+  agentCheckBalance,
+  agentGetTrendingTokens,
+  agentAnalyzeWallet,
+  agentSearchPumpfun,
+  agentWebSearch,
+  agentReadFile,
+  agentGitStatus,
+  agentTimeNow,
+  agentEstimateCost,
+  agentFetchViaDexter,
+  agentOHLCV,
+  agentHyperliquidTrade,
+};
 
 // X profile data for video generation
 export interface MythXElizaProfile {
@@ -169,41 +144,26 @@ async function scrapeTweets(
     };
   }
 
-  // Fallback: Try ElizaOS knowledge base
-  const client = getElizaOSClient();
-  const response = await client.chatCompletion({
-    agentId: MYTHX_ELIZA_AGENT_ID,
-    messages: [
-      {
-        role: "system",
-        content: `You are a tweet scraper. Fetch the last ${maxTweets} tweets from: ${profileInput}
-Return ONLY JSON: {"profile":{"displayName":"","username":"","profileUrl":"","description":"","profileImageUrl":""},"tweets":[{"id":"","text":"","createdAt":""}],"transcript":""}`,
-      },
-      {
-        role: "user",
-        content: `Scrape tweets from ${profileInput}`,
-      },
-    ],
-    temperature: 0.3,
-    max_tokens: 8000,
-  });
+  // Fallback: Use Dexter MCP web scraping tools
+  try {
+    const result = await scrapeTweetsViaDexter(profileInput, maxTweets);
 
-  const content = response.choices[0]?.message?.content || "";
-  const jsonMatch = content.match(/\{[\s\S]*\}/);
-  
-  if (!jsonMatch) {
-    throw new Error("Failed to parse tweet data from ElizaOS");
+    await onStatus?.(`✅ Scraped ${result.tweets.length} tweets via web`, 20);
+
+    return {
+      profile: result.profile,
+      tweets: result.tweets,
+      transcript: result.transcript,
+    };
+  } catch (dexterError) {
+    logger.warn("dexter_tweet_scrape_failed", {
+      component: "mythx_eliza",
+      errorCode: "dexter_tweet_scrape_failed",
+      errorMessage: dexterError instanceof Error ? dexterError.message : "Unknown error",
+    });
+
+    throw new Error(`Failed to scrape tweets. Configure X_API credentials for reliable scraping.`);
   }
-
-  const parsed = JSON.parse(jsonMatch[0]);
-  
-  await onStatus?.(`✅ Scraped ${parsed.tweets?.length || 0} tweets`, 20);
-
-  return {
-    profile: parsed.profile,
-    tweets: parsed.tweets || [],
-    transcript: parsed.transcript || "",
-  };
 }
 
 /**

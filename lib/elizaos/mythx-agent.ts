@@ -7,7 +7,71 @@ import { getEnv } from "@/lib/env";
 import { logger } from "@/lib/logging/logger";
 import { getXClient, XClient, XCommandParseResult } from "@/lib/x/client";
 import { validatePromoCode, usePromoCode } from "@/lib/promocodes/manager";
+import { getDexterMCPClient } from "@/lib/dexter-mcp/client";
+import { getPolyMCPClient } from "@/lib/poly-mcp/client";
 import { randomUUID } from "crypto";
+
+// Native DeFi tools available to all agents via Dexter MCP
+export async function agentResolveToken(token: string) {
+  const client = getDexterMCPClient();
+  return client.resolveToken(token);
+}
+
+export async function agentPreviewSwap(input: string, output: string, amount: number) {
+  const client = getDexterMCPClient();
+  return client.previewSwap(input, output, amount);
+}
+
+export async function agentGetJupiterQuote(input: string, output: string, amount: number) {
+  const client = getDexterMCPClient();
+  return client.getJupiterQuote(input, output, amount);
+}
+
+export async function agentCheckBalance(wallet: string) {
+  const client = getDexterMCPClient();
+  return client.checkBalance(wallet);
+}
+
+export async function agentGetTrendingTokens(timeframe?: string) {
+  const client = getDexterMCPClient();
+  return client.getTrendingTokens(timeframe);
+}
+
+export async function agentAnalyzeWallet(wallet: string) {
+  const client = getDexterMCPClient();
+  return client.analyzeWallet(wallet);
+}
+
+export async function agentSearchPumpfun(query: string) {
+  const client = getDexterMCPClient();
+  return client.searchPumpfun(query);
+}
+
+export async function agentWebSearch(query: string) {
+  const client = getDexterMCPClient();
+  return client.webSearch(query);
+}
+
+// System tools available via Poly MCP
+export async function agentReadFile(path: string) {
+  const client = getPolyMCPClient();
+  return client.callTool("fs_read", { path });
+}
+
+export async function agentGitStatus() {
+  const client = getPolyMCPClient();
+  return client.callTool("git_status", {});
+}
+
+export async function agentTimeNow() {
+  const client = getPolyMCPClient();
+  return client.callTool("time_now", {});
+}
+
+export async function agentEstimateCost(prompt: string) {
+  const client = getPolyMCPClient();
+  return client.callTool("ctx_estimate_cost", { prompt });
+}
 
 // X profile data for video generation
 export interface MythXElizaProfile {

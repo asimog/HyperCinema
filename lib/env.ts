@@ -151,6 +151,13 @@ const envSchema = z.object({
   POLY_MCP_TIMEOUT: z.string().default("30000"),
   POLY_MCP_RETRY: z.string().optional(),
   POLY_MCP_MAX_RETRIES: z.string().default("3"),
+  // Dexter MCP Solana DeFi tools (60+ tools)
+  DEXTER_MCP_URL: z.string().url().default("https://mcp.dexter.cash/mcp"),
+  DEXTER_MCP_TOKEN: z.string().optional(),
+  DEXTER_MCP_TOOLSETS: z.string().default("solana,x402,markets,pumpstream,onchain,wallet,general,hyperliquid,stream"),
+  DEXTER_MCP_TIMEOUT: z.string().default("30000"),
+  DEXTER_MCP_RETRY: z.string().optional(),
+  DEXTER_MCP_MAX_RETRIES: z.string().default("3"),
 });
 
 export type AppEnv = z.infer<typeof envSchema>;
@@ -224,6 +231,12 @@ export function getEnv(): AppEnv {
     POLY_MCP_TIMEOUT: trimEnvValue(process.env.POLY_MCP_TIMEOUT),
     POLY_MCP_RETRY: trimOptionalEnvValue(process.env.POLY_MCP_RETRY),
     POLY_MCP_MAX_RETRIES: trimEnvValue(process.env.POLY_MCP_MAX_RETRIES),
+    DEXTER_MCP_URL: trimEnvValue(process.env.DEXTER_MCP_URL),
+    DEXTER_MCP_TOKEN: trimOptionalEnvValue(process.env.DEXTER_MCP_TOKEN),
+    DEXTER_MCP_TOOLSETS: trimEnvValue(process.env.DEXTER_MCP_TOOLSETS),
+    DEXTER_MCP_TIMEOUT: trimEnvValue(process.env.DEXTER_MCP_TIMEOUT),
+    DEXTER_MCP_RETRY: trimOptionalEnvValue(process.env.DEXTER_MCP_RETRY),
+    DEXTER_MCP_MAX_RETRIES: trimEnvValue(process.env.DEXTER_MCP_MAX_RETRIES),
     MOLTBOOK_API_BASE_URL: trimOptionalEnvValue(process.env.MOLTBOOK_API_BASE_URL),
     MOLTBOOK_AGENT_API_KEY: trimOptionalEnvValue(process.env.MOLTBOOK_AGENT_API_KEY),
     MOLTBOOK_AGENT_HANDLE:

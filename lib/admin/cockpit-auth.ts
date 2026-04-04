@@ -1,9 +1,8 @@
 import { cookies } from "next/headers";
 import { timingSafeEqual } from "node:crypto";
+import { getEnv } from "@/lib/env";
 
 const COCKPIT_COOKIE_NAME = "hypercinema-cockpit";
-const COCKPIT_USERNAME = "CamiKey";
-const COCKPIT_PASSWORD = "8c2c9f16d57aa627dfd1772c85210c3d116b1a4c40a114238ad29cbb8329ae42";
 const COCKPIT_COOKIE_VALUE = "hypercinema-cockpit-ok";
 
 function safeEqual(left: string, right: string): boolean {
@@ -21,9 +20,10 @@ export function validateCockpitCredentials(input: {
   username: string;
   password: string;
 }): boolean {
+  const env = getEnv();
   return (
-    safeEqual(input.username, COCKPIT_USERNAME) &&
-    safeEqual(input.password, COCKPIT_PASSWORD)
+    safeEqual(input.username, env.COCKPIT_USERNAME) &&
+    safeEqual(input.password, env.COCKPIT_PASSWORD)
   );
 }
 

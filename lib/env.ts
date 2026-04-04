@@ -15,9 +15,9 @@ function trimOptionalEnvValue(value: string | undefined): string | undefined {
 // All required and optional env vars
 const envSchema = z.object({
   // Solana blockchain access
-  HELIUS_API_KEY: z.string().min(1),
+  HELIUS_API_KEY: z.string().optional(),
   HELIUS_WEBHOOK_ID: z.string().uuid().optional(),
-  SOLANA_RPC_URL: z.string().url(),
+  SOLANA_RPC_URL: z.string().url().default("https://api.mainnet-beta.solana.com"),
   SOLANA_RPC_FALLBACK_URL: z
     .string()
     .url()
@@ -36,7 +36,7 @@ const envSchema = z.object({
   // OpenRouter multi-model routing
   OPENROUTER_API_KEY: z.string().min(1).optional(),
   // Video render service key
-  VIDEO_API_KEY: z.string().min(1),
+  VIDEO_API_KEY: z.string().default("local-dev-key"),
   // Twitter X API auth
   X_API_BEARER_TOKEN: z.string().min(1).optional(),
   X_API_CONSUMER_KEY: z.string().min(1).optional(),
@@ -64,11 +64,11 @@ const envSchema = z.object({
   // Helius webhook auth
   HELIUS_WEBHOOK_SECRET: z.string().min(1).optional(),
   // Firebase cloud storage
-  FIREBASE_PROJECT_ID: z.string().min(1),
+  FIREBASE_PROJECT_ID: z.string().default("local-dev-project"),
   FIREBASE_CLIENT_EMAIL: z.string().min(1).optional(),
   FIREBASE_PRIVATE_KEY: z.string().min(1).optional(),
   // Payment wallet seed
-  PAYMENT_MASTER_SEED_HEX: z.string().min(64),
+  PAYMENT_MASTER_SEED_HEX: z.string().default("0000000000000000000000000000000000000000000000000000000000000000"),
   PAYMENT_DERIVATION_PREFIX: z.string().default("hashcinema-job"),
   FIREBASE_STORAGE_BUCKET: z.string().optional(),
   // App base URL for links
@@ -141,6 +141,9 @@ const envSchema = z.object({
   NEXT_PUBLIC_CROSSMINT_API_KEY: z.string().min(1).optional(),
   CROSSMINT_COOKIE_DOMAIN: z.string().min(1).optional(),
   CROSSMINT_ADMIN_ALLOWLIST: z.string().optional(),
+  // Cockpit admin panel auth
+  COCKPIT_USERNAME: z.string().default("admin"),
+  COCKPIT_PASSWORD: z.string().default("admin123"),
   // ElizaOS AI agent platform
   ELIZAOS_API_KEY: z.string().min(1).optional(),
   ELIZAOS_BASE_URL: z.string().url().default("https://cloud.milady.ai/api/v1"),
@@ -214,6 +217,8 @@ export function getEnv(): AppEnv {
     CROSSMINT_ADMIN_ALLOWLIST: trimOptionalEnvValue(
       process.env.CROSSMINT_ADMIN_ALLOWLIST,
     ),
+    COCKPIT_USERNAME: trimOptionalEnvValue(process.env.COCKPIT_USERNAME),
+    COCKPIT_PASSWORD: trimOptionalEnvValue(process.env.COCKPIT_PASSWORD),
     VIDEO_INFERENCE_PROVIDER: trimEnvValue(process.env.VIDEO_INFERENCE_PROVIDER),
     VIDEO_INFERENCE_MODEL: trimOptionalEnvValue(process.env.VIDEO_INFERENCE_MODEL),
     ALLOW_IN_PROCESS_WORKER:

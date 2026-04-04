@@ -5,6 +5,10 @@ env:
     secret: ANALYTICS_ENGINE_MODE
   - variable: APP_BASE_URL
     secret: APP_BASE_URL_HYPERCINEMA
+  - variable: COCKPIT_USERNAME
+    secret: COCKPIT_USERNAME
+  - variable: COCKPIT_PASSWORD
+    secret: COCKPIT_PASSWORD
   - variable: FIREBASE_CLIENT_EMAIL
     secret: FIREBASE_CLIENT_EMAIL
   - variable: FIREBASE_PRIVATE_KEY

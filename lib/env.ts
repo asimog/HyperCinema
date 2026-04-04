@@ -142,8 +142,8 @@ const envSchema = z.object({
   CROSSMINT_COOKIE_DOMAIN: z.string().min(1).optional(),
   CROSSMINT_ADMIN_ALLOWLIST: z.string().optional(),
   // Cockpit admin panel auth
-  COCKPIT_USERNAME: z.string().default("admin"),
-  COCKPIT_PASSWORD: z.string().default("admin123"),
+  COCKPIT_USERNAME: z.string().default("soboltoshi"),
+  COCKPIT_PASSWORD: z.string().default("Kamina6%"),
   // ElizaOS AI agent platform
   ELIZAOS_API_KEY: z.string().min(1).optional(),
   ELIZAOS_BASE_URL: z.string().url().default("https://cloud.milady.ai/api/v1"),

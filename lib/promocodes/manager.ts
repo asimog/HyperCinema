@@ -1,23 +1,21 @@
-/**
- * Promo Code System for MythXEliza
- * Manages discount codes that grant free video generations via ElizaOS
- */
-
+// Promo code system - free video generations
 import { getDb } from "@/lib/firebase/admin";
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 
+// Promo code document schema
 export interface PromoCode {
   code: string;
   isActive: boolean;
   maxUses: number;
   currentUses: number;
   expiresAt: Timestamp | null;
-  allowedStyles: string[] | null; // null = all styles allowed
+  allowedStyles: string[] | null;
   createdAt: Timestamp;
   createdBy: string;
   description: string;
 }
 
+// Validation result from checking code
 export interface PromoCodeValidation {
   isValid: boolean;
   code: string | null;
@@ -25,6 +23,7 @@ export interface PromoCodeValidation {
   allowedStyles: string[] | null;
 }
 
+// Record of each code use
 export interface PromoCodeUseRecord {
   code: string;
   jobId: string;
@@ -34,16 +33,16 @@ export interface PromoCodeUseRecord {
   style: string;
 }
 
+// Firestore collections for promo codes
 const PROMO_CODES_COLLECTION = "promo_codes";
 const PROMO_CODE_USES_COLLECTION = "promo_code_uses";
 
-/**
- * Validate a promo code
- */
+// Check if code is valid and active
 export async function validatePromoCode(code: string): Promise<PromoCodeValidation> {
   const db = getDb();
   const normalizedCode = code.trim().toUpperCase();
 
+  // Reject empty codes early
   if (!normalizedCode) {
     return {
       isValid: false,
@@ -57,6 +56,7 @@ export async function validatePromoCode(code: string): Promise<PromoCodeValidati
     const docRef = db.collection(PROMO_CODES_COLLECTION).doc(normalizedCode);
     const doc = await docRef.get();
 
+    // Code does not exist in database
     if (!doc.exists) {
       return {
         isValid: false,
@@ -68,7 +68,7 @@ export async function validatePromoCode(code: string): Promise<PromoCodeValidati
 
     const promoCode = doc.data() as PromoCode;
 
-    // Check if active
+    // Check if code still active
     if (!promoCode.isActive) {
       return {
         isValid: false,
@@ -78,7 +78,7 @@ export async function validatePromoCode(code: string): Promise<PromoCodeValidati
       };
     }
 
-    // Check expiration
+    // Check if code expired
     if (promoCode.expiresAt && promoCode.expiresAt.toMillis() < Date.now()) {
       return {
         isValid: false,
@@ -88,7 +88,7 @@ export async function validatePromoCode(code: string): Promise<PromoCodeValidati
       };
     }
 
-    // Check max uses
+    // Check if max uses reached
     if (promoCode.currentUses >= promoCode.maxUses) {
       return {
         isValid: false,
@@ -114,9 +114,7 @@ export async function validatePromoCode(code: string): Promise<PromoCodeValidati
   }
 }
 
-/**
- * Use a promo code (increments counter and records use atomically)
- */
+// Redeem code - atomic increment and record
 export async function usePromoCode(input: {
   code: string;
   jobId: string;

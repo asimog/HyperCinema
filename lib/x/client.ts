@@ -1,11 +1,8 @@
-/**
- * Twitter/X Client - Posting, Replying, and Mention Monitoring
- * Integrates with X API v2 for automated social media actions
- */
-
+// Twitter/X client - post, reply, monitor mentions
 import { getEnv } from "@/lib/env";
 import { buildOAuth1aHeaders, hasOAuth1aCredentials } from "@/lib/x/api";
 
+// Result from posting a tweet
 export interface XPostResult {
   id: string;
   text: string;
@@ -13,16 +10,19 @@ export interface XPostResult {
   createdAt: string;
 }
 
+// Input for replying to tweet
 export interface XReplyInput {
   tweetId: string;
   text: string;
 }
 
+// Input for fetching mentions
 export interface XMentionInput {
   username?: string;
   maxResults?: number;
 }
 
+// Parsed mention from X API
 export interface XMention {
   id: string;
   text: string;
@@ -32,6 +32,7 @@ export interface XMention {
   inReplyToTweetId: string | null;
 }
 
+// Parsed command from tweet text
 export interface XCommandParseResult {
   isCommand: boolean;
   action: "generate" | "status" | "help" | null;
@@ -41,6 +42,7 @@ export interface XCommandParseResult {
   rawText: string;
 }
 
+// X API client for posting and reading tweets
 export class XClient {
   private baseUrl: string;
   private bearerToken: string | null;
@@ -49,6 +51,7 @@ export class XClient {
   private accessToken: string | null;
   private accessTokenSecret: string | null;
 
+  // Load X API credentials from env
   constructor() {
     const env = getEnv();
     this.baseUrl = env.X_API_BASE_URL?.replace(/\/+$/, "") || "https://api.x.com/2";
@@ -59,13 +62,12 @@ export class XClient {
     this.accessTokenSecret = env.X_API_ACCESS_TOKEN_SECRET || null;
   }
 
-  /**
-   * Check if posting capabilities are available
-   */
+  // Check if OAuth 1.0a posting works
   canPost(): boolean {
     return hasOAuth1aCredentials();
   }
 
+  // Get headers for read-only API calls
   private getHeaders(): HeadersInit {
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
@@ -78,9 +80,7 @@ export class XClient {
     return headers;
   }
 
-  /**
-   * Build OAuth 1.0a signed headers for POST requests (required for writing)
-   */
+  // Build OAuth 1.0a signed headers for POST
   private getOAuthHeaders(method: string, url: string, body: Record<string, unknown>): HeadersInit {
     const oauthHeader = buildOAuth1aHeaders({ method, url, body });
     if (!oauthHeader) {
@@ -95,9 +95,7 @@ export class XClient {
     };
   }
 
-  /**
-   * Post a tweet (requires OAuth 1.0a)
-   */
+  // Post new tweet with OAuth 1.0a
   async postTweet(text: string): Promise<XPostResult> {
     const url = `${this.baseUrl}/tweets`;
     const body = { text };

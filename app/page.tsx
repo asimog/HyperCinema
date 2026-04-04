@@ -1,8 +1,10 @@
+// Homepage - 4 main products + how it works
 import Link from "next/link";
 
 import { CinemaConciergeChat } from "@/components/chat/CinemaConciergeChat";
 import { GetPageIcon } from "@/components/ui/AppIcons";
 
+// Main product cards shown on homepage
 const MAIN_PAGES = [
   {
     id: "mythx" as const,
@@ -30,8 +32,10 @@ const MAIN_PAGES = [
   },
 ] as const;
 
+// Color tone classes for hero cards
 const TONE_CLASSES = ["tone-0", "tone-1", "tone-5", "tone-gallery"] as const;
 
+// How it works steps shown below hero
 const HOW_IT_WORKS = [
   { step: "1", title: "Choose Your Story", desc: "Pick MythX for tweets, HashMyth for tokens, or HyperM for premium cinema." },
   { step: "2", title: "Describe or Scan", desc: "Enter an X handle, paste a token address, or write your creative brief." },
@@ -39,11 +43,13 @@ const HOW_IT_WORKS = [
   { step: "4", title: "Pay & Generate", desc: "Pay with SOL or USDC via x402. AI generates your video in minutes." },
 ];
 
+// Render hero icon for each product card
 function HeroIcon({ id }: { id: string }) {
   const Icon = GetPageIcon(id as any);
   return <Icon className="hero-quad-icon" aria-hidden="true" />;
 }
 
+// Homepage component with hero cards and onboarding
 export default function HomePage() {
   return (
     <div className="cinema-shell cinema-noise home-landing-shell min-h-[100dvh] overflow-hidden px-4 py-4 text-[#f4efe8] md:px-6 md:py-6">
@@ -52,7 +58,7 @@ export default function HomePage() {
           <div className="home-stage-backdrop" aria-hidden="true" />
 
           <div className="home-stage-content">
-            {/* Hero Cards */}
+            {/* 4 hero product cards */}
             <section className="hero-quad-grid" id="hero-grid">
               {MAIN_PAGES.map((page, index) => (
                 <Link

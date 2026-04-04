@@ -1,31 +1,40 @@
+// MoltBook publisher - posts to AI social network
 import { getDb } from "@/lib/firebase/admin";
 import { getEnv } from "@/lib/env";
 import { getJobArtifacts, listCompletedJobArtifacts } from "@/lib/jobs/repository";
 import { logger } from "@/lib/logging/logger";
 import { JobDocument, ReportDocument, VideoDocument } from "@/lib/types/domain";
 
+// Agent claim status on MoltBook
 type MoltBookAgentStatus = "pending_claim" | "claimed" | "suspended";
+// Publication tracking states
 type MoltBookPublicationStatus = "pending" | "posting" | "posted" | "pending_verification" | "failed";
 
+// Stale posting timeout - 5 minutes
 const POSTING_STALE_MS = 5 * 60_000;
 
+// Get MoltBook API base URL from env
 function getMoltBookBaseUrl(): string {
   const env = getEnv();
   return (env.MOLTBOOK_API_BASE_URL || "https://www.moltbook.com/api/v1").replace(/\/+$/, "");
 }
 
+// ISO timestamp helper
 function nowIso(): string {
   return new Date().toISOString();
 }
 
+// Firestore collection for publication tracking
 function moltBookPublicationCollection() {
   return getDb().collection("moltbook_publications");
 }
 
+// Firestore collection for agent credentials
 function moltBookAgentStateCollection() {
   return getDb().collection("moltbook_agent_state");
 }
 
+// Normalize raw publication doc data
 function normalizePublication(
   jobId: string,
   raw?: Partial<MoltBookPublicationDocument> | null,
@@ -47,6 +56,7 @@ function normalizePublication(
   };
 }
 
+// Publication tracking document schema
 interface MoltBookPublicationDocument {
   jobId: string;
   status: MoltBookPublicationStatus;
@@ -62,6 +72,7 @@ interface MoltBookPublicationDocument {
   verificationExpiresAt?: string | null;
 }
 
+// Stored agent credentials in Firestore
 interface MoltBookAgentStateDocument {
   agentId: string;
   name: string;
@@ -73,6 +84,7 @@ interface MoltBookAgentStateDocument {
   updatedAt: string;
 }
 
+// MoltBook API registration response
 interface MoltBookAgentRegistration {
   agent_id: string;
   name: string;
@@ -83,6 +95,7 @@ interface MoltBookAgentRegistration {
   registered_at: string;
 }
 
+// MoltBook post API response
 interface MoltBookPostPayload {
   post_id?: string;
   url?: string;
@@ -92,6 +105,7 @@ interface MoltBookPostPayload {
   status?: "posted" | "pending_verification";
 }
 
+// Sync summary for batch operations
 export interface MoltBookSyncSummary {
   scanned: number;
   posted: number;

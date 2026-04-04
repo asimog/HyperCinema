@@ -1,8 +1,10 @@
+// Gallery page client - search, filter, display job cards
 "use client";
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
 
+// Job card data from Firestore
 interface JobCard {
   jobId: string;
   subjectName: string | null;
@@ -15,6 +17,7 @@ interface JobCard {
   status: string;
 }
 
+// Style ID to human readable labels
 const STYLE_LABELS: Record<string, string> = {
   trench_neon: "Trench Neon",
   hyperflow_assembly: "Hyperflow",
@@ -33,6 +36,7 @@ const STYLE_LABELS: Record<string, string> = {
   film_grain_70s: "70s Grain",
 };
 
+// Job type to label mapping
 const KIND_LABELS: Record<string, string> = {
   mythx: "MythX",
   token_video: "HashMyth",
@@ -42,6 +46,7 @@ const KIND_LABELS: Record<string, string> = {
   scene_recreation: "Recreator",
 };
 
+// Job type emoji icons
 const KIND_ICONS: Record<string, string> = {
   mythx: "🎬",
   token_video: "📊",
@@ -51,12 +56,14 @@ const KIND_ICONS: Record<string, string> = {
   scene_recreation: "🎭",
 };
 
+// Truncate wallet address for display
 function shortWallet(wallet: string | null): string {
   if (!wallet) return "anonymous";
   if (wallet.length <= 12) return wallet;
   return `${wallet.slice(0, 4)}...${wallet.slice(-4)}`;
 }
 
+// Format timestamp to relative time
 function timeAgo(timestamp: any): string {
   if (!timestamp) return "";
   try {

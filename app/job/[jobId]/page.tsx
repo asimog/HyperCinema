@@ -1,3 +1,4 @@
+// Job detail page - status, payment, video player
 "use client";
 
 import Link from "next/link";
@@ -12,6 +13,7 @@ import { FINAL_JOB_STATUSES } from "@/lib/constants";
 import type { PaymentInstructions } from "@/lib/payments/instructions";
 import { JobDocument, ReportDocument, VideoDocument } from "@/lib/types/domain";
 
+// API response shape for job data
 interface JobApiPayload {
   job?: JobDocument;
   report?: ReportDocument | null;
@@ -22,6 +24,7 @@ interface JobApiPayload {
   warning?: string;
 }
 
+// Visual stepper stages for job progress
 const JOB_STAGES = [
   { key: "awaiting_payment", label: "Payment" },
   { key: "processing", label: "Processing" },
@@ -33,6 +36,7 @@ const JOB_STAGES = [
   { key: "failed", label: "Failed" },
 ];
 
+// Map job status/progress to stepper index
 function getStageIndex(status: string, progress?: string): number {
   if (status === "failed") return JOB_STAGES.length - 1;
   if (status === "complete") return JOB_STAGES.length - 2;
@@ -48,6 +52,7 @@ function getStageIndex(status: string, progress?: string): number {
   return 1;
 }
 
+// Visual progress stepper showing job stages
 function VisualStepper({ status, progress }: { status: string; progress?: string }) {
   const currentIndex = getStageIndex(status, progress);
   const isFailed = status === "failed";
@@ -63,6 +68,7 @@ function VisualStepper({ status, progress }: { status: string; progress?: string
 
           return (
             <div key={stage.key} className="flex items-center flex-1">
+              {/* Progress bar segment */}
               <div
                 className={`flex-1 h-2 rounded-full transition-all ${
                   isFailedStage
@@ -75,6 +81,7 @@ function VisualStepper({ status, progress }: { status: string; progress?: string
                 }`}
                 title={stage.label}
               />
+              {/* Stage label */}
               <span
                 className={`text-xs ml-1 ${
                   isFailedStage ? "text-red-400" : isActive ? "text-purple-400" : "text-gray-500"

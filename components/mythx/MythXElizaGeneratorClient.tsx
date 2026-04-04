@@ -1,7 +1,9 @@
+// MythX generator - tweet to video UI
 "use client";
 
 import React, { useState, useCallback, useEffect } from "react";
 
+// Available cinematic style options
 const STYLE_OPTIONS = [
   { id: "hyperflow_assembly", label: "Hyperflow Assembly", description: "Fluid, interconnected" },
   { id: "vhs_cinema", label: "VHS Cinema", description: "Retro analog warmth" },
@@ -13,9 +15,11 @@ const STYLE_OPTIONS = [
   { id: "film_grain_70s", label: "Film Grain 70s", description: "Vintage cinema look" },
 ];
 
+// SOL prices for each duration tier
 const PRICE_1D = 0.004;
 const PRICE_2D = 0.007;
 
+// Main MythX video generator component
 export default function MythXElizaGeneratorClient() {
   const [profileInput, setProfileInput] = useState("");
   const [selectedStyle, setSelectedStyle] = useState("vhs_cinema");
@@ -27,16 +31,18 @@ export default function MythXElizaGeneratorClient() {
   const [error, setError] = useState<string | null>(null);
   const [isAgent, setIsAgent] = useState(false);
 
-  // Persist inputs
+  // Restore saved profile input from storage
   useEffect(() => {
     const saved = localStorage.getItem("mythx-profile");
     if (saved) setProfileInput(saved);
   }, []);
 
+  // Save profile input to local storage
   useEffect(() => {
     localStorage.setItem("mythx-profile", profileInput);
   }, [profileInput]);
 
+  // Handle video generation button click
   const handleGenerate = useCallback(async () => {
     if (!profileInput.trim()) {
       setError("Please enter an X profile handle or URL");
@@ -50,7 +56,7 @@ export default function MythXElizaGeneratorClient() {
     setProgress("Initializing MythXEliza agent...");
 
     try {
-      // Step 1: Create job
+      // Step 1: Create job via API
       setProgress("Creating job...");
       setProgressStage(10);
 

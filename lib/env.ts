@@ -1,15 +1,20 @@
+// Production env validation with Zod
 import { z } from "zod";
 
+// Trim whitespace from env values
 function trimEnvValue(value: string | undefined): string | undefined {
   return typeof value === "string" ? value.trim() : value;
 }
 
+// Clean optional env values safely
 function trimOptionalEnvValue(value: string | undefined): string | undefined {
   const trimmed = trimEnvValue(value);
   return trimmed && trimmed.length > 0 ? trimmed : undefined;
 }
 
+// All required and optional env vars
 const envSchema = z.object({
+  // Solana blockchain access
   HELIUS_API_KEY: z.string().min(1),
   HELIUS_WEBHOOK_ID: z.string().uuid().optional(),
   SOLANA_RPC_URL: z.string().url(),
@@ -17,48 +22,64 @@ const envSchema = z.object({
     .string()
     .url()
     .default("https://api.mainnet-beta.solana.com"),
+  // AI text generation provider
   TEXT_INFERENCE_PROVIDER: z
     .enum(["xai", "openrouter", "openai", "claude", "replicate", "huggingface", "ollama", "others"])
     .default("openrouter"),
   TEXT_INFERENCE_MODEL: z.string().min(1).optional(),
   TEXT_INFERENCE_BASE_URL: z.string().url().optional(),
   TEXT_INFERENCE_API_KEY: z.string().min(1).optional(),
+  // xAI Grok API access
   XAI_API_KEY: z.string().min(1).optional(),
   XAI_BASE_URL: z.string().url().default("https://api.x.ai/v1"),
   XAI_VIDEO_MODEL: z.string().min(1).default("grok-imagine-video"),
+  // OpenRouter multi-model routing
   OPENROUTER_API_KEY: z.string().min(1).optional(),
+  // Video render service key
   VIDEO_API_KEY: z.string().min(1),
+  // Twitter X API auth
   X_API_BEARER_TOKEN: z.string().min(1).optional(),
   X_API_CONSUMER_KEY: z.string().min(1).optional(),
   X_API_CONSUMER_SECRET: z.string().min(1).optional(),
   X_API_ACCESS_TOKEN: z.string().min(1).optional(),
   X_API_ACCESS_TOKEN_SECRET: z.string().min(1).optional(),
   X_API_BASE_URL: z.string().url().default("https://api.x.com/2"),
+  // OpenAI direct access
   OPENAI_API_KEY: z.string().min(1).optional(),
   OPENAI_BASE_URL: z.string().url().default("https://api.openai.com/v1"),
+  // Anthropic Claude access
   ANTHROPIC_API_KEY: z.string().min(1).optional(),
   ANTHROPIC_BASE_URL: z.string().url().default("https://api.anthropic.com/v1"),
+  // Replicate model hosting
   REPLICATE_API_TOKEN: z.string().min(1).optional(),
   REPLICATE_BASE_URL: z.string().url().default("https://api.replicate.com/v1"),
+  // HuggingFace inference
   HUGGINGFACE_API_TOKEN: z.string().min(1).optional(),
   HUGGINGFACE_TEXT_BASE_URL: z
     .string()
     .url()
     .default("https://api-inference.huggingface.co/models"),
+  // Local Ollama runtime
   OLLAMA_BASE_URL: z.string().url().default("http://127.0.0.1:11434"),
+  // Helius webhook auth
   HELIUS_WEBHOOK_SECRET: z.string().min(1).optional(),
+  // Firebase cloud storage
   FIREBASE_PROJECT_ID: z.string().min(1),
   FIREBASE_CLIENT_EMAIL: z.string().min(1).optional(),
   FIREBASE_PRIVATE_KEY: z.string().min(1).optional(),
+  // Payment wallet seed
   PAYMENT_MASTER_SEED_HEX: z.string().min(64),
   PAYMENT_DERIVATION_PREFIX: z.string().default("hashcinema-job"),
   FIREBASE_STORAGE_BUCKET: z.string().optional(),
+  // App base URL for links
   APP_BASE_URL: z.string().url().default("http://localhost:3000"),
+  // Background worker config
   WORKER_URL: z.string().url().optional(),
   WORKER_TOKEN: z.string().optional(),
   ALLOW_IN_PROCESS_WORKER: z.coerce.boolean().optional(),
   JOB_DISPATCH_BATCH_LIMIT: z.coerce.number().int().positive().default(25),
   JOB_PROCESSING_STALE_MS: z.coerce.number().int().min(30_000).default(120_000),
+  // Video polling config
   VIDEO_RENDER_POLL_INTERVAL_MS: z.coerce
     .number()
     .int()
@@ -69,11 +90,13 @@ const envSchema = z.object({
     .int()
     .min(1)
     .default(2_160),
+  // OpenRouter fallback config
   OPENROUTER_BASE_URL: z
     .string()
     .url()
     .default("https://openrouter.ai/api/v1"),
   OPENROUTER_MODEL: z.string().min(1).optional(),
+  // Video generation provider
   VIDEO_INFERENCE_PROVIDER: z
     .enum(["google_veo", "xai", "openai", "replicate", "huggingface", "ollama", "others"])
     .default("google_veo"),
@@ -86,10 +109,12 @@ const envSchema = z.object({
     .literal("veo-3.1-fast-generate-001")
     .default("veo-3.1-fast-generate-001"),
   VIDEO_RESOLUTION: z.enum(["720p", "1080p"]).default("1080p"),
+  // x402 USDC payment protocol
   X402_FACILITATOR_URL: z
     .string()
     .url()
     .default("https://x402.dexter.cash"),
+  // MoltBook AI social network
   MOLTBOOK_API_BASE_URL: z.string().url().optional(),
   MOLTBOOK_AGENT_API_KEY: z.string().optional(),
   MOLTBOOK_AGENT_HANDLE: z.string().default("mythxeliza"),
@@ -99,19 +124,24 @@ const envSchema = z.object({
     .default("MythXEliza creates AI autobiographical videos from X profiles and posts them to MoltBook."),
   MOLTBOOK_SYNC_BATCH_LIMIT: z.coerce.number().int().positive().default(12),
   MOLTBOOK_VERIFICATION_SOLVER: z.enum(["manual", "auto"]).default("manual"),
+  // Wallet sweep config
   SWEEP_MIN_LAMPORTS: z.coerce.number().int().nonnegative().default(5_000),
   SWEEP_BATCH_LIMIT: z.coerce.number().int().positive().default(50),
+  // Analytics engine mode
   ANALYTICS_ENGINE_MODE: z
     .enum(["v2_fallback_legacy", "v2", "legacy"])
     .default("v2_fallback_legacy"),
+  // MoonPay fiat on-ramp
   MOONPAY_API_KEY: z.string().min(1).optional(),
   MOONPAY_WEBHOOK_SHARED_TOKEN: z.string().min(1).optional(),
   NEXT_PUBLIC_MOONPAY_PAYLINK_ID: z.string().min(1).optional(),
   NEXT_PUBLIC_MOONPAY_NETWORK: z.enum(["main", "test"]).optional(),
+  // Crossmint wallet auth
   CROSSMINT_SERVER_API_KEY: z.string().min(1).optional(),
   NEXT_PUBLIC_CROSSMINT_API_KEY: z.string().min(1).optional(),
   CROSSMINT_COOKIE_DOMAIN: z.string().min(1).optional(),
   CROSSMINT_ADMIN_ALLOWLIST: z.string().optional(),
+  // ElizaOS AI agent platform
   ELIZAOS_API_KEY: z.string().min(1).optional(),
   ELIZAOS_BASE_URL: z.string().url().default("https://cloud.milady.ai/api/v1"),
 });

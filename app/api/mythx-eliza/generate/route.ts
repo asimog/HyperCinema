@@ -1,10 +1,4 @@
-/**
- * POST /api/mythx-eliza/generate
- * Generate autobiographical video from X profile using ElizaOS agent
- * Supports promo codes for free generations
- * Rate limited: 3 per 10 min (no promo code), 10 per hour (with valid promo code)
- */
-
+// MythXEliza generation endpoint with rate limits
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { generateMythXElizaVideo } from "@/lib/elizaos/mythx-agent";
@@ -17,11 +11,13 @@ import { getRequestIp } from "@/lib/security/request-ip";
 
 export const runtime = "nodejs";
 
+// Rate limit rules for generation requests
 const MYTHX_ELIZA_RATE_LIMIT_RULES = [
   { name: "mythx_eliza_per_10min", windowSec: 600, limit: 3 },
   { name: "mythx_eliza_per_hour", windowSec: 3600, limit: 10 },
 ] as const;
 
+// Zod schema for request validation
 const mythxElizaRequestSchema = z.object({
   profileInput: z.string().min(1, "X profile handle or URL is required"),
   style: videoStyleSchema.optional(),
@@ -30,11 +26,12 @@ const mythxElizaRequestSchema = z.object({
   wallet: z.string().optional(),
 });
 
+// Handle POST request for video generation
 export async function POST(request: NextRequest) {
   try {
     const ip = getRequestIp(request);
 
-    // Rate limit before processing
+    // Check rate limits before processing
     const rateLimit = await enforceRateLimit({
       scope: "api_mythx_eliza_generate",
       key: ip,
@@ -67,7 +64,7 @@ export async function POST(request: NextRequest) {
 
     const { profileInput, style, maxTweets, promoCode, wallet } = validation.data;
 
-    // Validate promo code if provided
+    // Check promo code validity if provided
     if (promoCode) {
       const validation = await validatePromoCode(promoCode);
       if (!validation.isValid) {

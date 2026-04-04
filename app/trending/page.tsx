@@ -1,8 +1,11 @@
+// Trending page - custom creators + latest videos
 import Link from "next/link";
 import { getDb } from "@/lib/firebase/admin";
 
+// Disable caching for fresh content
 export const dynamic = "force-dynamic";
 
+// Job card data from Firestore
 interface JobCard {
   jobId: string;
   subjectName: string | null;
@@ -15,6 +18,7 @@ interface JobCard {
   status: string;
 }
 
+// Fetch latest 8 completed jobs
 async function getLast8Jobs(): Promise<JobCard[]> {
   try {
     const db = getDb();
@@ -34,6 +38,7 @@ async function getLast8Jobs(): Promise<JobCard[]> {
   }
 }
 
+// Custom video creator cards shown on trending page
 const CUSTOM_CREATORS = [
   {
     id: "mythx-eliza",

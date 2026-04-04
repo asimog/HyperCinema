@@ -1,10 +1,9 @@
-/**
- * ElizaOS Client - Integration layer for ElizaOS Cloud API
- * Provides agent management, chat completions, and video generation
- */
+// ElizaOS Cloud API client
+// Handles agents, chat, video, knowledge
 
 import { getEnv } from "@/lib/env";
 
+// Agent identity and status
 export interface ElizaOSAgent {
   id: string;
   name: string;
@@ -14,11 +13,13 @@ export interface ElizaOSAgent {
   updatedAt: string;
 }
 
+// Chat message for completions API
 export interface ElizaOSChatMessage {
   role: "user" | "assistant" | "system";
   content: string;
 }
 
+// Chat request payload
 export interface ElizaOSChatCompletionRequest {
   model?: string;
   messages: ElizaOSChatMessage[];
@@ -27,6 +28,7 @@ export interface ElizaOSChatCompletionRequest {
   agentId?: string;
 }
 
+// Chat response from API
 export interface ElizaOSChatCompletionResponse {
   id: string;
   choices: Array<{
@@ -43,6 +45,7 @@ export interface ElizaOSChatCompletionResponse {
   };
 }
 
+// Video generation request
 export interface ElizaOSVideoGenerationRequest {
   prompt: string;
   model?: string;
@@ -52,6 +55,7 @@ export interface ElizaOSVideoGenerationRequest {
   agentId?: string;
 }
 
+// Video generation response
 export interface ElizaOSVideoGenerationResponse {
   id: string;
   status: "pending" | "processing" | "completed" | "failed";
@@ -61,12 +65,14 @@ export interface ElizaOSVideoGenerationResponse {
   completedAt?: string;
 }
 
+// Knowledge base query
 export interface ElizaOSKnowledgeRequest {
   query: string;
   agentId?: string;
   topK?: number;
 }
 
+// Knowledge base results
 export interface ElizaOSKnowledgeResponse {
   results: Array<{
     content: string;
@@ -75,36 +81,36 @@ export interface ElizaOSKnowledgeResponse {
   }>;
 }
 
+// ElizaOS API client class
 export class ElizaOSClient {
   private baseUrl: string;
   private apiKey: string;
 
+  // Load config from environment
   constructor() {
     const env = getEnv();
-    // ElizaOS Cloud API base URL (per https://www.elizacloud.ai/docs/api)
     this.baseUrl = (env.ELIZAOS_BASE_URL || "https://cloud.milady.ai/api/v1").replace(/\/+$/, "");
     this.apiKey = env.ELIZAOS_API_KEY || "";
   }
 
+  // Throw if API key missing
   private ensureConfigured(): void {
     if (!this.apiKey) {
       throw new Error("ELIZAOS_API_KEY is required. Set your ElizaOS API key in environment variables.");
     }
   }
 
+  // Build auth headers for requests
   private getHeaders(extraHeaders: Record<string, string> = {}): HeadersInit {
     return {
       "Content-Type": "application/json",
-      // ElizaOS supports both Authorization: Bearer and X-API-Key headers
       Authorization: `Bearer ${this.apiKey}`,
       "X-API-Key": this.apiKey,
       ...extraHeaders,
     };
   }
 
-  /**
-   * Create or update an agent with a specific character configuration
-   */
+  // Register or update agent config
   async createOrUpdateAgent(input: {
     agentId: string;
     name: string;
@@ -128,9 +134,7 @@ export class ElizaOSClient {
     return (await response.json()) as ElizaOSAgent;
   }
 
-  /**
-   * Get agent details
-   */
+  // Fetch agent details by ID
   async getAgent(agentId: string): Promise<ElizaOSAgent> {
     this.ensureConfigured();
     const response = await fetch(`${this.baseUrl}/api/agents/${agentId}`, {
@@ -145,9 +149,7 @@ export class ElizaOSClient {
     return (await response.json()) as ElizaOSAgent;
   }
 
-  /**
-   * Chat completion using OpenAI-compatible endpoint
-   */
+  // Send chat messages to agent
   async chatCompletion(
     input: ElizaOSChatCompletionRequest
   ): Promise<ElizaOSChatCompletionResponse> {
@@ -172,9 +174,7 @@ export class ElizaOSClient {
     return (await response.json()) as ElizaOSChatCompletionResponse;
   }
 
-  /**
-   * Generate video from text prompt
-   */
+  // Generate video from prompt
   async generateVideo(
     input: ElizaOSVideoGenerationRequest
   ): Promise<ElizaOSVideoGenerationResponse> {
@@ -200,9 +200,7 @@ export class ElizaOSClient {
     return (await response.json()) as ElizaOSVideoGenerationResponse;
   }
 
-  /**
-   * Poll video generation status
-   */
+  // Poll video generation status
   async getVideoStatus(videoId: string): Promise<ElizaOSVideoGenerationResponse> {
     const response = await fetch(`${this.baseUrl}/api/videos/${videoId}`, {
       headers: this.getHeaders(),
@@ -216,9 +214,7 @@ export class ElizaOSClient {
     return (await response.json()) as ElizaOSVideoGenerationResponse;
   }
 
-  /**
-   * Query knowledge base for RAG-powered responses
-   */
+  // Query agent knowledge base
   async queryKnowledge(
     input: ElizaOSKnowledgeRequest
   ): Promise<ElizaOSKnowledgeResponse> {
@@ -240,9 +236,7 @@ export class ElizaOSClient {
     return (await response.json()) as ElizaOSKnowledgeResponse;
   }
 
-  /**
-   * Upload knowledge document to agent
-   */
+  // Upload document to knowledge base
   async uploadKnowledge(input: {
     agentId: string;
     document: string;
@@ -267,9 +261,10 @@ export class ElizaOSClient {
   }
 }
 
-// Singleton instance for easy import
+// Global singleton for reuse
 let elizaOSClientInstance: ElizaOSClient | null = null;
 
+// Get or create client instance
 export function getElizaOSClient(): ElizaOSClient {
   if (!elizaOSClientInstance) {
     elizaOSClientInstance = new ElizaOSClient();

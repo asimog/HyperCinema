@@ -1,7 +1,9 @@
+// HashMyth scanner - token/wallet analysis UI
 "use client";
 
 import React, { useState, useCallback } from "react";
 
+// Scan result data shape
 interface ScanResult {
   type: "token" | "wallet" | null;
   name: string;
@@ -19,6 +21,7 @@ interface ScanResult {
   error?: string;
 }
 
+// Cinematic style options for token videos
 const STYLE_OPTIONS = [
   { id: "trench_neon", label: "Trench Neon", desc: "Nightlife district vibes" },
   { id: "hyperflow_assembly", label: "Hyperflow", desc: "Fluid visual transitions" },
@@ -30,6 +33,7 @@ const STYLE_OPTIONS = [
   { id: "neon_tokyo_night", label: "Tokyo Night", desc: "Tokyo after dark" },
 ];
 
+// Supported blockchain networks
 const CHAIN_OPTIONS = [
   { id: "solana", label: "Solana", icon: "◎" },
   { id: "ethereum", label: "Ethereum", icon: "Ξ" },
@@ -37,11 +41,14 @@ const CHAIN_OPTIONS = [
   { id: "bsc", label: "BSC", icon: "⬢" },
 ];
 
+// SOL pricing tiers for video generation
 const PRICE_1D = 0.004;
 const PRICE_2D = 0.007;
+// USDC pricing tiers for x402 agents
 const PRICE_USDC_1D = 1.5;
 const PRICE_USDC_2D = 2.5;
 
+// HashMyth page component with scanner
 export function HashMythPage() {
   const [input, setInput] = useState("");
   const [selectedChain, setSelectedChain] = useState("solana");

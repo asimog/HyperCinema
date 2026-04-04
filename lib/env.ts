@@ -144,6 +144,13 @@ const envSchema = z.object({
   // ElizaOS AI agent platform
   ELIZAOS_API_KEY: z.string().min(1).optional(),
   ELIZAOS_BASE_URL: z.string().url().default("https://cloud.milady.ai/api/v1"),
+  // Poly MCP system tools (73 tools)
+  POLY_MCP_URL: z.string().url().default("http://localhost:8000/mcp"),
+  POLY_MCP_TRANSPORT: z.enum(["stdio", "http"]).default("http"),
+  POLY_MCP_API_KEY: z.string().optional(),
+  POLY_MCP_TIMEOUT: z.string().default("30000"),
+  POLY_MCP_RETRY: z.string().optional(),
+  POLY_MCP_MAX_RETRIES: z.string().default("3"),
 });
 
 export type AppEnv = z.infer<typeof envSchema>;
@@ -211,6 +218,12 @@ export function getEnv(): AppEnv {
     ),
     ELIZAOS_API_KEY: trimOptionalEnvValue(process.env.ELIZAOS_API_KEY),
     ELIZAOS_BASE_URL: trimEnvValue(process.env.ELIZAOS_BASE_URL),
+    POLY_MCP_URL: trimEnvValue(process.env.POLY_MCP_URL),
+    POLY_MCP_TRANSPORT: trimEnvValue(process.env.POLY_MCP_TRANSPORT),
+    POLY_MCP_API_KEY: trimOptionalEnvValue(process.env.POLY_MCP_API_KEY),
+    POLY_MCP_TIMEOUT: trimEnvValue(process.env.POLY_MCP_TIMEOUT),
+    POLY_MCP_RETRY: trimOptionalEnvValue(process.env.POLY_MCP_RETRY),
+    POLY_MCP_MAX_RETRIES: trimEnvValue(process.env.POLY_MCP_MAX_RETRIES),
     MOLTBOOK_API_BASE_URL: trimOptionalEnvValue(process.env.MOLTBOOK_API_BASE_URL),
     MOLTBOOK_AGENT_API_KEY: trimOptionalEnvValue(process.env.MOLTBOOK_AGENT_API_KEY),
     MOLTBOOK_AGENT_HANDLE:

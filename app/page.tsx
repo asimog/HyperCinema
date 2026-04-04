@@ -2,9 +2,40 @@ import Link from "next/link";
 
 import { CinemaConciergeChat } from "@/components/chat/CinemaConciergeChat";
 import { GetPageIcon } from "@/components/ui/AppIcons";
-import { HYPERMYTHS_HERO_CATEGORIES } from "@/lib/hypermyths/content";
 
-const HERO_TONES = ["tone-0", "tone-1", "tone-5", "tone-gallery"] as const;
+const MAIN_PAGES = [
+  {
+    id: "mythx" as const,
+    href: "/MythX",
+    title: "MythX",
+    summary: "Autobiographical cinema from 42 tweets. Powered by ElizaOS AI.",
+  },
+  {
+    id: "hyperm" as const,
+    href: "/HyperM",
+    title: "HyperM",
+    summary: "Premium creator cuts. Brand stories, cinematic trailers.",
+  },
+  {
+    id: "hashmyth" as const,
+    href: "/HashMyth",
+    title: "HashMyth",
+    summary: "Token & wallet scanner. Turn any contract into a trading story.",
+  },
+  {
+    id: "trending" as const,
+    href: "/trending",
+    title: "Trending",
+    summary: "Discover custom video creators. Browse the latest 8 generations.",
+  },
+] as const;
+
+const TONE_CLASSES = ["tone-0", "tone-1", "tone-5", "tone-gallery"] as const;
+
+function HeroIcon({ id }: { id: string }) {
+  const Icon = GetPageIcon(id as any);
+  return <Icon className="hero-quad-icon" aria-hidden="true" />;
+}
 
 export default function HomePage() {
   return (
@@ -15,24 +46,21 @@ export default function HomePage() {
 
           <div className="home-stage-content">
             <section className="hero-quad-grid" id="hero-grid">
-              {HYPERMYTHS_HERO_CATEGORIES.map((category, index) => {
-                const HeroIcon = GetPageIcon(category.id);
-                return (
-                  <Link
-                    key={category.id}
-                    href={category.href}
-                    className={`surface-card hero-quad-card ${HERO_TONES[index]}`}
-                  >
-                    <div className="hero-quad-card-inner">
-                      <div className="hero-quad-title-row">
-                        <HeroIcon className="hero-quad-icon" aria-hidden="true" />
-                        <h2 className="font-display">{category.title}</h2>
-                      </div>
-                      <p className="route-summary compact">{category.summary}</p>
+              {MAIN_PAGES.map((page, index) => (
+                <Link
+                  key={page.id}
+                  href={page.href}
+                  className={`surface-card hero-quad-card ${TONE_CLASSES[index]}`}
+                >
+                  <div className="hero-quad-card-inner">
+                    <div className="hero-quad-title-row">
+                      <HeroIcon id={page.id} />
+                      <h2 className="font-display">{page.title}</h2>
                     </div>
-                  </Link>
-                );
-              })}
+                    <p className="route-summary compact">{page.summary}</p>
+                  </div>
+                </Link>
+              ))}
             </section>
           </div>
         </section>

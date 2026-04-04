@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(www.elizacloud.ai)",
+      "Bash(npx *)",
+      "Bash(findstr *)",
+      "Bash(del *)",
+      "Bash(git add *)"
+    ]
+  },
+  "$version": 3
+}

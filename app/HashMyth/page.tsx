@@ -1,6 +1,12 @@
-import { CinemaGeneratorClient } from "@/components/cinema/CinemaGeneratorClient";
-import { CINEMA_PAGE_CONFIGS } from "@/lib/cinema/config";
+import type { Metadata } from "next";
+import { HashMythPage } from "@/components/hashmyth/HashMythScanner";
 
-export default function HashMythPage() {
-  return <CinemaGeneratorClient config={CINEMA_PAGE_CONFIGS.hashmyth} viewer={null} />;
+export const metadata: Metadata = {
+  title: "HashMyth - Token Scanner",
+  description:
+    "Scan any token or wallet. AI analyzes risk, metadata, and recommends the perfect cinematic style.",
+};
+
+export default function HashMythRoute() {
+  return <HashMythPage />;
 }

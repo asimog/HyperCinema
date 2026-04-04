@@ -15,11 +15,10 @@ export function SiteHeader() {
   const pathname = usePathname();
   const navItems = [
     { href: "/", label: "Home", icon: HomeIcon },
-    ...HYPERMYTHS_HERO_CATEGORIES.map((category) => ({
-      href: category.href,
-      label: category.title,
-      icon: GetPageIcon(category.id),
-    })),
+    { href: "/MythX", label: "MythX", icon: GetPageIcon("mythx") },
+    { href: "/HyperM", label: "HyperM", icon: GetPageIcon("hyperm") },
+    { href: "/HashMyth", label: "HashMyth", icon: GetPageIcon("hashmyth") },
+    { href: "/trending", label: "Trending", icon: TrendingIcon },
     { href: "/gallery", label: "Gallery", icon: TrendingIcon },
   ];
 

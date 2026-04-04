@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 
-import { HyperMGeneratorClient } from "@/components/hyperm/HyperMGeneratorClient";
+import { MythXElizaGeneratorClient } from "@/components/mythx/MythXElizaGeneratorClient";
 
 export const metadata: Metadata = {
-  title: "MythX",
+  title: "MythX - Powered by ElizaOS",
   description:
-    "Autobiography from the last 42 tweets of an X profile. No title required, just a handle or bio link.",
+    "Autobiography from the last 42 tweets of an X profile. Powered by ElizaOS AI agents. No title required, just a handle or bio link.",
 };
 
 export default function MythXPage() {
-  return <HyperMGeneratorClient />;
+  return <MythXElizaGeneratorClient />;
 }

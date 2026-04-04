@@ -6,10 +6,10 @@ import {
 } from "./sweep-payments";
 import { retryFailedJob, RetryFailedJobResult } from "@/lib/jobs/retry";
 import {
-  publishCompletedJobToGoonBook,
-  syncGalleryToGoonBook,
-  GoonBookSyncSummary,
-} from "@/lib/social/goonbook-publisher";
+  publishCompletedJobToMoltBook,
+  syncGalleryToMoltBook,
+  MoltBookSyncSummary,
+} from "@/lib/social/moltbook-publisher";
 
 export interface WorkerCommandPayload {
   jobId?: string;
@@ -38,11 +38,11 @@ export async function executeRetryFailedJobCommand(
   return retryFailedJob(payload.jobId.trim());
 }
 
-export async function executeGoonBookSyncCommand(
+export async function executeMoltBookSyncCommand(
   payload: WorkerCommandPayload,
-): Promise<GoonBookSyncSummary> {
+): Promise<MoltBookSyncSummary> {
   if (typeof payload.jobId === "string" && payload.jobId.trim().length > 0) {
-    const result = await publishCompletedJobToGoonBook(payload.jobId.trim());
+    const result = await publishCompletedJobToMoltBook(payload.jobId.trim());
     return {
       scanned: 1,
       posted: result.status === "posted" ? 1 : 0,
@@ -52,5 +52,5 @@ export async function executeGoonBookSyncCommand(
     };
   }
 
-  return syncGalleryToGoonBook(payload.limit);
+  return syncGalleryToMoltBook(payload.limit);
 }

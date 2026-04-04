@@ -5,8 +5,8 @@ const mocks = vi.hoisted(() => ({
   sweepDedicatedPaymentAddressForJob: vi.fn(),
   sweepDedicatedPaymentAddresses: vi.fn(),
   retryFailedJob: vi.fn(),
-  publishCompletedJobToGoonBook: vi.fn(),
-  syncGalleryToGoonBook: vi.fn(),
+  publishCompletedJobToMoltBook: vi.fn(),
+  syncGalleryToMoltBook: vi.fn(),
 }));
 
 vi.mock("@/workers/sweep-payments", () => ({
@@ -19,13 +19,13 @@ vi.mock("@/lib/jobs/retry", () => ({
   retryFailedJob: mocks.retryFailedJob,
 }));
 
-vi.mock("@/lib/social/goonbook-publisher", () => ({
-  publishCompletedJobToGoonBook: mocks.publishCompletedJobToGoonBook,
-  syncGalleryToGoonBook: mocks.syncGalleryToGoonBook,
+vi.mock("@/lib/social/moltbook-publisher", () => ({
+  publishCompletedJobToMoltBook: mocks.publishCompletedJobToMoltBook,
+  syncGalleryToMoltBook: mocks.syncGalleryToMoltBook,
 }));
 
 import {
-  executeGoonBookSyncCommand,
+  executeMoltBookSyncCommand,
   executeRetryFailedJobCommand,
   executeSweepCommand,
 } from "@/workers/commands";
@@ -95,22 +95,22 @@ describe("worker retry command", () => {
   });
 });
 
-describe("worker GoonBook sync command", () => {
+describe("worker MoltBook sync command", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it("publishes a specific completed job when payload includes jobId", async () => {
-    mocks.publishCompletedJobToGoonBook.mockResolvedValue({
+    mocks.publishCompletedJobToMoltBook.mockResolvedValue({
       jobId: "job-complete",
       status: "posted",
-      postId: "goonbook-post-1",
+      postId: "moltbook-post-1",
     });
 
-    const result = await executeGoonBookSyncCommand({ jobId: " job-complete " });
+    const result = await executeMoltBookSyncCommand({ jobId: " job-complete " });
 
-    expect(mocks.publishCompletedJobToGoonBook).toHaveBeenCalledWith("job-complete");
-    expect(mocks.syncGalleryToGoonBook).not.toHaveBeenCalled();
+    expect(mocks.publishCompletedJobToMoltBook).toHaveBeenCalledWith("job-complete");
+    expect(mocks.syncGalleryToMoltBook).not.toHaveBeenCalled();
     expect(result).toEqual({
       scanned: 1,
       posted: 1,
@@ -120,7 +120,7 @@ describe("worker GoonBook sync command", () => {
         {
           jobId: "job-complete",
           status: "posted",
-          postId: "goonbook-post-1",
+          postId: "moltbook-post-1",
         },
       ],
     });
@@ -134,11 +134,11 @@ describe("worker GoonBook sync command", () => {
       failed: 1,
       results: [],
     };
-    mocks.syncGalleryToGoonBook.mockResolvedValue(summary);
+    mocks.syncGalleryToMoltBook.mockResolvedValue(summary);
 
-    const result = await executeGoonBookSyncCommand({ limit: 8 });
+    const result = await executeMoltBookSyncCommand({ limit: 8 });
 
-    expect(mocks.syncGalleryToGoonBook).toHaveBeenCalledWith(8);
+    expect(mocks.syncGalleryToMoltBook).toHaveBeenCalledWith(8);
     expect(result).toEqual(summary);
   });
 });

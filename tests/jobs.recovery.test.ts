@@ -43,6 +43,14 @@ vi.mock("@/lib/jobs/trigger", () => ({
   triggerJobProcessing: mocks.triggerJobProcessing,
 }));
 
+vi.mock("@/lib/social/moltbook-publisher", () => ({
+  publishCompletedJobToMoltBook: vi.fn().mockResolvedValue({
+    jobId: "job-1",
+    status: "posted",
+    postId: "moltbook-post-1",
+  }),
+}));
+
 import { recoverJobIfNeeded } from "@/lib/jobs/recovery";
 
 describe("recoverJobIfNeeded", () => {

@@ -122,6 +122,76 @@ function decodeHandleSegment(value: string): string {
   return decodeURIComponent(value).replace(/^@+/, "").trim();
 }
 
+/**
+ * Export OAuth 1.0a header builder for use in X client posting
+ */
+export function buildOAuth1aHeaders(input: {
+  method: string;
+  url: string;
+  body?: Record<string, unknown>;
+}): string | null {
+  const env = getEnv();
+  const consumerKey = env.X_API_CONSUMER_KEY;
+  const consumerSecret = env.X_API_CONSUMER_SECRET;
+  const accessToken = env.X_API_ACCESS_TOKEN;
+  const accessTokenSecret = env.X_API_ACCESS_TOKEN_SECRET;
+
+  if (!consumerKey || !consumerSecret || !accessToken || !accessTokenSecret) {
+    return null;
+  }
+
+  const oauthParams: Record<string, string> = {
+    oauth_consumer_key: consumerKey,
+    oauth_nonce: randomUUID().replace(/-/g, ""),
+    oauth_signature_method: "HMAC-SHA1",
+    oauth_timestamp: Math.floor(Date.now() / 1000).toString(),
+    oauth_token: accessToken,
+    oauth_version: "1.0",
+  };
+
+  // For POST requests, body params are included in the signature base
+  const bodyParams = input.body
+    ? Object.entries(input.body)
+        .filter(([, v]) => v !== undefined && v !== null)
+        .map(([key, value]) => [percentEncode(key), percentEncode(String(value))] as const)
+    : [];
+
+  const normalizedParams = [
+    ...bodyParams,
+    ...Object.entries(oauthParams).map(([key, value]) => [percentEncode(key), percentEncode(value)] as const),
+  ].sort(([leftKey, leftValue], [rightKey, rightValue]) =>
+    leftKey === rightKey ? leftValue.localeCompare(rightValue) : leftKey.localeCompare(rightKey),
+  );
+
+  const parameterString = normalizedParams.map(([key, value]) => `${key}=${value}`).join("&");
+  const baseString = [
+    input.method.toUpperCase(),
+    percentEncode(input.url),
+    percentEncode(parameterString),
+  ].join("&");
+
+  const signingKey = `${percentEncode(consumerSecret)}&${percentEncode(accessTokenSecret)}`;
+  const signature = createHmac("sha1", signingKey).update(baseString).digest("base64");
+
+  const headerParams = {
+    ...oauthParams,
+    oauth_signature: signature,
+  };
+
+  return `OAuth ${Object.entries(headerParams)
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([key, value]) => `${percentEncode(key)}="${percentEncode(value)}"`)
+    .join(", ")}`;
+}
+
+/**
+ * Check if OAuth 1.0a credentials are configured
+ */
+export function hasOAuth1aCredentials(): boolean {
+  const env = getEnv();
+  return !!(env.X_API_CONSUMER_KEY && env.X_API_CONSUMER_SECRET && env.X_API_ACCESS_TOKEN && env.X_API_ACCESS_TOKEN_SECRET);
+}
+
 export function normalizeXProfileInput(input: string): {
   username: string | null;
   profileUrl: string | null;

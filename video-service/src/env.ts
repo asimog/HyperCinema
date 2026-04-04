@@ -33,6 +33,9 @@ const serviceEnvSchema = z.object({
   FIREBASE_CLIENT_EMAIL: z.string().min(1).optional(),
   FIREBASE_PRIVATE_KEY: z.string().min(1).optional(),
   FIREBASE_STORAGE_BUCKET: z.string().optional(),
+  ELIZAOS_API_KEY: z.string().min(1).optional(),
+  ELIZAOS_BASE_URL: z.string().url().default("https://cloud.milady.ai/api/v1"),
+  ELIZAOS_VIDEO_MODEL: z.string().min(1).default("default"),
 });
 
 export type VideoServiceEnv = z.infer<typeof serviceEnvSchema>;
@@ -49,6 +52,8 @@ export function getVideoServiceEnv(): VideoServiceEnv {
     VERTEX_VEO_MODEL: trimEnvValue(process.env.VERTEX_VEO_MODEL),
     VEO_OUTPUT_RESOLUTION: trimEnvValue(process.env.VEO_OUTPUT_RESOLUTION),
     FIREBASE_PRIVATE_KEY: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
+    ELIZAOS_API_KEY: trimEnvValue(process.env.ELIZAOS_API_KEY),
+    ELIZAOS_BASE_URL: trimEnvValue(process.env.ELIZAOS_BASE_URL),
   });
 
   if (!parsed.success) {

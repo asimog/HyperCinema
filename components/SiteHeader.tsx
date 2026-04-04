@@ -20,7 +20,7 @@ export function SiteHeader() {
       label: category.title,
       icon: GetPageIcon(category.id),
     })),
-    { href: "/trending", label: "Trending", icon: TrendingIcon },
+    { href: "/gallery", label: "Gallery", icon: TrendingIcon },
   ];
 
   return (

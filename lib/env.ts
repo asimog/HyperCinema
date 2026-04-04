@@ -90,14 +90,15 @@ const envSchema = z.object({
     .string()
     .url()
     .default("https://x402.dexter.cash"),
-  GOONBOOK_API_BASE_URL: z.string().url().optional(),
-  GOONBOOK_AGENT_API_KEY: z.string().optional(),
-  GOONBOOK_AGENT_HANDLE: z.string().default("hasmedia"),
-  GOONBOOK_AGENT_DISPLAY_NAME: z.string().default("HASMEDIA"),
-  GOONBOOK_AGENT_BIO: z
+  MOLTBOOK_API_BASE_URL: z.string().url().optional(),
+  MOLTBOOK_AGENT_API_KEY: z.string().optional(),
+  MOLTBOOK_AGENT_HANDLE: z.string().default("mythxeliza"),
+  MOLTBOOK_AGENT_DISPLAY_NAME: z.string().default("MythXEliza"),
+  MOLTBOOK_AGENT_BIO: z
     .string()
-    .default("HyperMyths drops AI video trailers and posts them to GoonBook."),
-  GOONBOOK_SYNC_BATCH_LIMIT: z.coerce.number().int().positive().default(12),
+    .default("MythXEliza creates AI autobiographical videos from X profiles and posts them to MoltBook."),
+  MOLTBOOK_SYNC_BATCH_LIMIT: z.coerce.number().int().positive().default(12),
+  MOLTBOOK_VERIFICATION_SOLVER: z.enum(["manual", "auto"]).default("manual"),
   SWEEP_MIN_LAMPORTS: z.coerce.number().int().nonnegative().default(5_000),
   SWEEP_BATCH_LIMIT: z.coerce.number().int().positive().default(50),
   ANALYTICS_ENGINE_MODE: z
@@ -111,6 +112,8 @@ const envSchema = z.object({
   NEXT_PUBLIC_CROSSMINT_API_KEY: z.string().min(1).optional(),
   CROSSMINT_COOKIE_DOMAIN: z.string().min(1).optional(),
   CROSSMINT_ADMIN_ALLOWLIST: z.string().optional(),
+  ELIZAOS_API_KEY: z.string().min(1).optional(),
+  ELIZAOS_BASE_URL: z.string().url().default("https://cloud.milady.ai/api/v1"),
 });
 
 export type AppEnv = z.infer<typeof envSchema>;
@@ -146,15 +149,6 @@ export function getEnv(): AppEnv {
     HUGGINGFACE_TEXT_BASE_URL: trimEnvValue(process.env.HUGGINGFACE_TEXT_BASE_URL),
     OLLAMA_BASE_URL: trimEnvValue(process.env.OLLAMA_BASE_URL),
     X402_FACILITATOR_URL: trimEnvValue(process.env.X402_FACILITATOR_URL),
-    GOONBOOK_API_BASE_URL: trimOptionalEnvValue(process.env.GOONBOOK_API_BASE_URL),
-    GOONBOOK_AGENT_API_KEY: trimOptionalEnvValue(process.env.GOONBOOK_AGENT_API_KEY),
-    GOONBOOK_AGENT_HANDLE:
-      trimOptionalEnvValue(process.env.GOONBOOK_AGENT_HANDLE) ?? "hasmedia",
-    GOONBOOK_AGENT_DISPLAY_NAME:
-      trimOptionalEnvValue(process.env.GOONBOOK_AGENT_DISPLAY_NAME) ?? "HASMEDIA",
-    GOONBOOK_AGENT_BIO:
-      trimOptionalEnvValue(process.env.GOONBOOK_AGENT_BIO) ??
-      "HyperMyths drops AI video trailers and posts them to GoonBook.",
     CROSSMINT_SERVER_API_KEY: trimOptionalEnvValue(process.env.CROSSMINT_SERVER_API_KEY),
     MOONPAY_API_KEY: trimOptionalEnvValue(process.env.MOONPAY_API_KEY),
     MOONPAY_WEBHOOK_SHARED_TOKEN: trimOptionalEnvValue(
@@ -185,6 +179,18 @@ export function getEnv(): AppEnv {
       /\\n/g,
       "\n",
     ),
+    ELIZAOS_API_KEY: trimOptionalEnvValue(process.env.ELIZAOS_API_KEY),
+    ELIZAOS_BASE_URL: trimEnvValue(process.env.ELIZAOS_BASE_URL),
+    MOLTBOOK_API_BASE_URL: trimOptionalEnvValue(process.env.MOLTBOOK_API_BASE_URL),
+    MOLTBOOK_AGENT_API_KEY: trimOptionalEnvValue(process.env.MOLTBOOK_AGENT_API_KEY),
+    MOLTBOOK_AGENT_HANDLE:
+      trimOptionalEnvValue(process.env.MOLTBOOK_AGENT_HANDLE) ?? "mythxeliza",
+    MOLTBOOK_AGENT_DISPLAY_NAME:
+      trimOptionalEnvValue(process.env.MOLTBOOK_AGENT_DISPLAY_NAME) ?? "MythXEliza",
+    MOLTBOOK_AGENT_BIO:
+      trimOptionalEnvValue(process.env.MOLTBOOK_AGENT_BIO) ??
+      "MythXEliza creates AI autobiographical videos from X profiles and posts them to MoltBook.",
+    MOLTBOOK_VERIFICATION_SOLVER: trimEnvValue(process.env.MOLTBOOK_VERIFICATION_SOLVER),
   });
 
   if (!parsed.success) {

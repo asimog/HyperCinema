@@ -2,7 +2,7 @@ import { dispatchDueJobs } from "@/lib/jobs/dispatch";
 import { logger } from "@/lib/logging/logger";
 import { createServer } from "http";
 import {
-  executeGoonBookSyncCommand,
+  executeMoltBookSyncCommand,
   executeRetryFailedJobCommand,
   executeSweepCommand,
 } from "./commands";
@@ -103,8 +103,8 @@ const server = createServer(async (request, response) => {
   const isSweepRoute = request.method === "POST" && pathname === "/sweep";
   const isRetryRoute = request.method === "POST" && pathname === "/retry-job";
   const isDispatchRoute = request.method === "POST" && pathname === "/dispatch";
-  const isGoonBookSyncRoute =
-    request.method === "POST" && pathname === "/goonbook-sync";
+  const isMoltBookSyncRoute =
+    request.method === "POST" && pathname === "/moltbook-sync";
   const isHealthRoute = request.method === "GET" && pathname === "/healthz";
 
   if (isHealthRoute) {
@@ -117,7 +117,7 @@ const server = createServer(async (request, response) => {
     !isSweepRoute &&
     !isRetryRoute &&
     !isDispatchRoute &&
-    !isGoonBookSyncRoute
+    !isMoltBookSyncRoute
   ) {
     sendJson(response, 404, { error: "Not found" });
     return;
@@ -169,14 +169,14 @@ const server = createServer(async (request, response) => {
     }
   }
 
-  if (isGoonBookSyncRoute) {
+  if (isMoltBookSyncRoute) {
     try {
-      const summary = await executeGoonBookSyncCommand(payload);
+      const summary = await executeMoltBookSyncCommand(payload);
       sendJson(response, 200, { ok: true, ...summary });
       return;
     } catch (error) {
       sendJson(response, 500, {
-        error: error instanceof Error ? error.message : "GoonBook sync failure",
+        error: error instanceof Error ? error.message : "MoltBook sync failure",
       });
       return;
     }

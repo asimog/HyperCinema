@@ -28,7 +28,7 @@ import { JobDocument, ReportDocument, WalletStory } from "../lib/types/domain";
 import { buildAndRenderVideo } from "../lib/video/pipeline";
 import { computeAnalyticsFromTrades } from "../lib/analytics/compute";
 import { recoverJobIfNeeded } from "../lib/jobs/recovery";
-import { publishCompletedJobToGoonBook } from "../lib/social/goonbook-publisher";
+import { publishCompletedJobToMoltBook } from "../lib/social/moltbook-publisher";
 import { resolveMemecoinMetadata } from "../lib/memecoins/metadata";
 import { buildTokenVideoArtifacts } from "../lib/memecoins/story";
 import { buildPromptVideoArtifacts } from "../lib/generators/story";
@@ -515,22 +515,24 @@ export async function processJob(jobId: string): Promise<void> {
       await processTokenVideoJob({ job });
 
       try {
-        const publication = await publishCompletedJobToGoonBook(jobId);
+        const publication = await publishCompletedJobToMoltBook(jobId);
         if (publication.status === "failed") {
-          logger.warn("goonbook_publication_attempt_failed", {
+          logger.warn("moltbook_publication_attempt_failed", {
             component: "worker",
-            stage: "publish_goonbook",
+            stage: "publish_moltbook",
             jobId,
-            errorCode: "goonbook_publication_attempt_failed",
-            errorMessage: publication.reason ?? "Unknown GoonBook publication error",
+            wallet: job.wallet,
+            errorCode: "moltbook_publication_attempt_failed",
+            errorMessage: publication.reason ?? "Unknown MoltBook publication error",
           });
         }
       } catch (publicationError) {
-        logger.warn("goonbook_publication_attempt_crashed", {
+        logger.warn("moltbook_publication_attempt_crashed", {
           component: "worker",
-          stage: "publish_goonbook",
+          stage: "publish_moltbook",
           jobId,
-          errorCode: "goonbook_publication_attempt_crashed",
+          wallet: job.wallet,
+          errorCode: "moltbook_publication_attempt_crashed",
           errorMessage: errorMessage(publicationError),
         });
       }
@@ -712,22 +714,24 @@ export async function processJob(jobId: string): Promise<void> {
     ]);
 
     try {
-      const publication = await publishCompletedJobToGoonBook(jobId);
+      const publication = await publishCompletedJobToMoltBook(jobId);
       if (publication.status === "failed") {
-        logger.warn("goonbook_publication_attempt_failed", {
+        logger.warn("moltbook_publication_attempt_failed", {
           component: "worker",
-          stage: "publish_goonbook",
+          stage: "publish_moltbook",
           jobId,
-          errorCode: "goonbook_publication_attempt_failed",
-          errorMessage: publication.reason ?? "Unknown GoonBook publication error",
+          wallet: job.wallet,
+          errorCode: "moltbook_publication_attempt_failed",
+          errorMessage: publication.reason ?? "Unknown MoltBook publication error",
         });
       }
     } catch (publicationError) {
-      logger.warn("goonbook_publication_attempt_crashed", {
+      logger.warn("moltbook_publication_attempt_crashed", {
         component: "worker",
-        stage: "publish_goonbook",
+        stage: "publish_moltbook",
         jobId,
-        errorCode: "goonbook_publication_attempt_crashed",
+        wallet: job.wallet,
+        errorCode: "moltbook_publication_attempt_crashed",
         errorMessage: errorMessage(publicationError),
       });
     }

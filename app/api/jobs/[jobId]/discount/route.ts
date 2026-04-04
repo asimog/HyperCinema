@@ -1,3 +1,4 @@
+import { dispatchSingleJob } from "@/lib/jobs/dispatch";
 import { applyDiscountCodeToJob } from "@/lib/jobs/repository";
 import { normalizeDiscountCode } from "@/lib/payments/discount-codes";
 import { NextResponse } from "next/server";
@@ -27,6 +28,7 @@ export async function POST(request: Request, context: Context) {
 
     const discountCode = normalizeDiscountCode(parsed.data.discountCode);
     const job = await applyDiscountCodeToJob({ jobId, discountCode });
+    await dispatchSingleJob(jobId);
 
     return NextResponse.json({
       ok: true,

@@ -14,6 +14,11 @@ export const DISCOUNT_CODES = [
   "PROL3",
   "PROL4",
   "PROL5",
+  "ELIZA1",
+  "ELIZA2",
+  "ELIZA3",
+  "ELIZA4",
+  "ELIZA5",
 ] as const;
 
 export type DiscountCode = (typeof DISCOUNT_CODES)[number];

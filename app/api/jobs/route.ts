@@ -6,6 +6,7 @@ import {
   findRecentReusableTokenJob,
   rollbackUnpaidJob,
 } from "@/lib/jobs/repository";
+import { dispatchSingleJob } from "@/lib/jobs/dispatch";
 import { ensurePaymentAddressSubscribedToHeliusWebhook } from "@/lib/helius/webhook-subscriptions";
 import { logger } from "@/lib/logging/logger";
 import { resolveMemecoinMetadata } from "@/lib/memecoins/metadata";
@@ -325,6 +326,7 @@ export async function POST(request: NextRequest) {
           rangeDays: pkg.rangeDays,
           discountCode,
         });
+        await dispatchSingleJob(job.jobId);
 
         return NextResponse.json(
           createJobResponse({
@@ -441,6 +443,7 @@ export async function POST(request: NextRequest) {
         rangeDays: pkg.rangeDays,
         discountCode,
       });
+      await dispatchSingleJob(job.jobId);
 
       return NextResponse.json(
         createJobResponse({

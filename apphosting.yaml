@@ -13,14 +13,6 @@ env:
     secret: FIREBASE_PROJECT_ID
   - variable: FIREBASE_STORAGE_BUCKET
     secret: FIREBASE_STORAGE_BUCKET
-  - variable: MOLTBOOK_API_BASE_URL
-    secret: MOLTBOOK_API_BASE_URL
-  - variable: MOLTBOOK_AGENT_API_KEY
-    secret: MOLTBOOK_AGENT_API_KEY
-  - variable: ELIZAOS_API_KEY
-    secret: ELIZAOS_API_KEY
-  - variable: ELIZAOS_BASE_URL
-    secret: ELIZAOS_BASE_URL
   - variable: HELIUS_API_KEY
     secret: HELIUS_API_KEY
   - variable: HELIUS_WEBHOOK_SECRET

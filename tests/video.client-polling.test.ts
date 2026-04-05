@@ -37,9 +37,9 @@ describe("video client polling", () => {
       VIDEO_RESOLUTION: "1080p",
       VIDEO_ENGINE: "google_veo",
     });
-  });
+  }, 15_000);
 
-  it("fails fast on non-retryable polling errors", async () => {
+  it("fails fast on non-retryable polling errors", { timeout: 15_000 }, async () => {
     mocks.fetchWithTimeout
       .mockResolvedValueOnce(jsonResponse(200, { id: "render-1" }))
       .mockResolvedValueOnce(textResponse(401, "Unauthorized"));

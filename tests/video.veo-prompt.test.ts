@@ -323,7 +323,7 @@ describe("google veo prompt engine", () => {
     );
     expect(payload.prompt).toContain("Build a trailer-first music video.");
     expect(payload.prompt).toContain(
-      "Audio is enabled. Follow the lyrics, beat, chorus, and musical dynamics without inventing new song facts.",
+      "Audio rule: cinematic score, beat-locked music, and rich sound design only; no narration or voice unless explicitly requested.",
     );
     expect(payload.prompt.includes("This is cinema, not analytics.")).toBe(false);
   });
@@ -351,7 +351,7 @@ describe("google veo prompt engine", () => {
     );
     expect(payload.prompt).toContain("Build a trailer-grade scene recreation.");
     expect(payload.prompt).toContain(
-      "Audio is enabled. Preserve the dialogue cadence and source-scene timing without inventing new quotes.",
+      "Audio rule: preserve dialogue cadence only because the brief explicitly asks for speech.",
     );
     expect(payload.prompt.includes("This is cinema, not analytics.")).toBe(false);
   });

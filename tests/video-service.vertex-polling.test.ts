@@ -340,8 +340,10 @@ describe("vertex veo polling endpoint", () => {
     const secondStartBody = String((fetchMock.mock.calls[1] as [string, RequestInit])[1].body);
 
     expect(firstStartBody).toContain("stocky but not fat");
-    expect(secondStartBody).toContain(rewrittenPrompt);
-    expect(secondStartBody).not.toContain("stocky but not fat");
+    expect(secondStartBody).toContain("adult protagonist");
+    expect(secondStartBody).toContain("canada");
     expect(secondStartBody).toContain("birthday singalong");
+    expect(secondStartBody).not.toContain("stocky");
+    expect(secondStartBody).not.toContain("fat");
   });
 });

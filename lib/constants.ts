@@ -4,7 +4,7 @@ export const PACKAGE_CONFIG: Record<PackageType, JobPackage> = {
   "1d": {
     packageType: "1d",
     rangeDays: 1,
-    priceSol: 0.01,
+    priceSol: 0.004,
     priceUsdc: 1,
     videoSeconds: 30,
     enabled: true,
@@ -14,7 +14,7 @@ export const PACKAGE_CONFIG: Record<PackageType, JobPackage> = {
   "2d": {
     packageType: "2d",
     rangeDays: 2,
-    priceSol: 0.02,
+    priceSol: 0.007,
     priceUsdc: 2,
     videoSeconds: 60,
     enabled: true,

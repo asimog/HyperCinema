@@ -83,9 +83,9 @@ const PUBLIC_SOL_PRICES: Record<PackageType, number> = {
 };
 
 const PRIVATE_SOL_PRICES: Record<PackageType, number> = {
-  "1d": 0.04,
-  "2d": 0.07,
-  "3d": 0.4,
+  "1d": 0.004,
+  "2d": 0.007,
+  "3d": 0.04,
 };
 
 const PUBLIC_USDC_PRICES: Record<PackageType, number> = {

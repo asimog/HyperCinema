@@ -355,11 +355,35 @@ export class VertexVeoClient {
       // Retry with further sanitization if policy violation still occurs
       if (isVertexPromptPolicyError(response.status, body)) {
         const rewrittenPrompt = sanitizePromptForPolicyRetry(attempt.prompt);
-        // Only retry if prompt actually changed
+        // If sanitization changed the prompt, retry with it
         if (rewrittenPrompt !== attempt.prompt) {
-          startQueue.push({ prompt: rewrittenPrompt, imageUrl: attempt.imageUrl });
+          const retryKey = `retry-policy::${attempt.imageUrl ?? "no-image"}`;
+          if (!seenStarts.has(retryKey)) {
+            seenStarts.add(retryKey);
+            startQueue.push({ prompt: rewrittenPrompt, imageUrl: attempt.imageUrl });
+          }
+          // Also try without image since the image might trigger the policy filter
           if (attempt.imageUrl) {
-            startQueue.push({ prompt: rewrittenPrompt, imageUrl: undefined });
+            const retryKeyNoImg = `retry-policy-noimg::${attempt.imageUrl}`;
+            if (!seenStarts.has(retryKeyNoImg)) {
+              seenStarts.add(retryKeyNoImg);
+              startQueue.push({ prompt: rewrittenPrompt, imageUrl: undefined });
+            }
+          }
+        } else {
+          // Sanitization didn't help - generate a minimal safe fallback prompt
+          const safePrompt = "A peaceful scenic landscape with natural beauty, calm atmosphere, serene environment, gentle lighting, tranquil setting, harmonious composition";
+          const retryKey = `retry-safe::${attempt.imageUrl ?? "no-image"}`;
+          if (!seenStarts.has(retryKey)) {
+            seenStarts.add(retryKey);
+            startQueue.push({ prompt: safePrompt, imageUrl: attempt.imageUrl });
+          }
+          if (attempt.imageUrl) {
+            const retryKeyNoImg = `retry-safe-noimg::${attempt.imageUrl}`;
+            if (!seenStarts.has(retryKeyNoImg)) {
+              seenStarts.add(retryKeyNoImg);
+              startQueue.push({ prompt: safePrompt, imageUrl: undefined });
+            }
           }
         }
       }

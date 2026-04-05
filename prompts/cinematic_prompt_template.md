@@ -44,3 +44,4 @@ Scene writing rules:
 - If token images are available in facts, reference them in visualPrompt.
 - Do not force concrete metrics into narration unless they are absolutely necessary to preserve a factual turning point.
 - No scene should exceed 22 words of narration.
+- Anti-repetition: vary environments, shot types, and verbs across scenes; avoid reusing the same noun or verb in adjacent scenes; do not reuse the same sentence stem more than once; vary cadence (mix simple and compound sentences); prefer new metaphors if a symbol was already used earlier.

@@ -387,7 +387,7 @@ export async function generateCinematicScript(
     const raw = await generateTextInferenceJson<unknown>({
       provider: undefined,
       model: undefined,
-      temperature: 0.35,
+      temperature: 0.82,
       maxTokens: 1600,
       messages: [
         {

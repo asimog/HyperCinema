@@ -8,6 +8,14 @@ function fallbackText(primary: WalletMoment | undefined, secondary: WalletMoment
   return primary?.description ?? secondary?.description ?? text;
 }
 
+function hashString(value: string): number {
+  let hash = 0;
+  for (let i = 0; i < value.length; i += 1) {
+    hash = (hash * 31 + value.charCodeAt(i)) >>> 0;
+  }
+  return hash;
+}
+
 export function generateStoryBeats(input: {
   wallet: string;
   rangeHours: number;
@@ -18,41 +26,98 @@ export function generateStoryBeats(input: {
 }): StoryBeat[] {
   const modifierOne = input.modifiers[0]?.displayName ?? "Chaotic Neutral";
   const modifierTwo = input.modifiers[1]?.displayName ?? modifierOne;
+  const modifierThree = input.modifiers[2]?.displayName ?? modifierTwo;
   const paceIsChaotic =
     input.metrics.risk.overtradeScore >= 0.5 || input.metrics.chaos.chaosIndex >= 0.55;
   const timingIsEarly =
     input.metrics.timing.earlyEntryScore > input.metrics.timing.lateEntryScore;
   const endingTone =
     input.metrics.profit.realizedPnlSOL >= 0 ? "haunted triumph" : "battle-worn fatigue";
+  const templates = [
+    {
+      opening: {
+        text: paceIsChaotic
+          ? `${input.personality.primary.displayName} opened the window like an emergency broadcast: ${input.metrics.activity.tradeCount} Pump.fun decisions across ${input.rangeHours}h with ${input.metrics.session.tradeSessions} active sessions and almost no dead air.`
+          : `${input.personality.primary.displayName} entered the window with a cleaner pace than most trench accounts, spreading ${input.metrics.activity.tradeCount} decisions across ${input.metrics.activity.distinctTokenCount} names without full dashboard panic.`,
+        tone: paceIsChaotic ? "restless ignition" : "cold focus",
+        symbol: paceIsChaotic
+          ? "stacked neon screens waking up all at once"
+          : "quiet chart wall slowly lighting up",
+      },
+      rise: {
+        text: timingIsEarly
+          ? fallbackText(
+              input.moments.mainCharacterMoment,
+              input.moments.convictionMoment,
+              `Early-entry score ${input.metrics.timing.earlyEntryScore.toFixed(2)} gave the rise a head start, and ${modifierOne} behavior turned that edge into momentum.`,
+            )
+          : fallbackText(
+              input.moments.mainCharacterMoment,
+              input.moments.trenchLoreMoment,
+              `Momentum took over quickly as late-entry score ${input.metrics.timing.lateEntryScore.toFixed(2)} and timeline influence ${input.metrics.attention.timelineInfluenceScore.toFixed(2)} pushed the wallet deeper into the move.`,
+            ),
+        tone: timingIsEarly ? "adrenaline with edge" : "accelerating temptation",
+        symbol: timingIsEarly
+          ? "green candles pulsing ahead of the crowd"
+          : "zooming chart tunnel and notification streaks",
+      },
+      pivot: {
+        text: fallbackText(
+          input.moments.comebackMoment,
+          input.moments.convictionMoment,
+          input.metrics.recovery.comebackTrades > 0
+            ? `Instead of folding, the wallet staged ${input.metrics.recovery.comebackTrades} comeback attempts while ${modifierTwo} energy kept the risk dial uncomfortably high.`
+            : `The pivot was not calm, but conviction score ${input.metrics.behavior.convictionScore.toFixed(2)} kept the tape from dissolving into total spray.`,
+        ),
+        tone: input.metrics.recovery.comebackTrades > 0 ? "desperate resolve" : "forced composure",
+        symbol: "split screen of red collapse and green rebound",
+      },
+    },
+    {
+      opening: {
+        text: fallbackText(
+          input.moments.trenchLoreMoment,
+          input.moments.mainCharacterMoment,
+          `${input.personality.primary.displayName} walked on like a narrator already mid-sentence, carrying ${modifierThree} energy into ${input.rangeHours}h of tape.`,
+        ),
+        tone: "already in motion",
+        symbol: "train doors half-open with neon steam",
+      },
+      rise: {
+        text: fallbackText(
+          input.moments.comebackMoment,
+          input.moments.trenchLoreMoment,
+          `Momentum started messy; timeline influence ${input.metrics.attention.timelineInfluenceScore.toFixed(2)} met conviction ${input.metrics.behavior.convictionScore.toFixed(2)} and decided to sprint anyway.`,
+        ),
+        tone: "reckless acceleration",
+        symbol: "billboards switching faster than footsteps",
+      },
+      pivot: {
+        text: fallbackText(
+          input.moments.convictionMoment,
+          input.moments.recoveryMoment,
+          `Halfway through, recovery logic argued with chaos score ${input.metrics.chaos.chaosIndex.toFixed(2)}, and the room took a breath before the final act.`,
+        ),
+        tone: "tightrope pause",
+        symbol: "metronome slowing in neon light",
+      },
+    },
+  ];
+
+  const chosen = templates[Math.abs(hashString(input.wallet)) % templates.length] ?? templates[0];
 
   return [
     {
       phase: "opening",
-      text: paceIsChaotic
-        ? `${input.personality.primary.displayName} opened the window like an emergency broadcast: ${input.metrics.activity.tradeCount} Pump.fun decisions across ${input.rangeHours}h with ${input.metrics.session.tradeSessions} active sessions and almost no dead air.`
-        : `${input.personality.primary.displayName} entered the window with a cleaner pace than most trench accounts, spreading ${input.metrics.activity.tradeCount} decisions across ${input.metrics.activity.distinctTokenCount} names without full dashboard panic.`,
-      emotionalTone: paceIsChaotic ? "restless ignition" : "cold focus",
-      symbolicVisualHint: paceIsChaotic
-        ? "stacked neon screens waking up all at once"
-        : "quiet chart wall slowly lighting up",
+      text: chosen.opening.text,
+      emotionalTone: chosen.opening.tone,
+      symbolicVisualHint: chosen.opening.symbol,
     },
     {
       phase: "rise",
-      text: timingIsEarly
-        ? fallbackText(
-            input.moments.mainCharacterMoment,
-            input.moments.convictionMoment,
-            `Early-entry score ${input.metrics.timing.earlyEntryScore.toFixed(2)} gave the rise a head start, and ${modifierOne} behavior turned that edge into momentum.`,
-          )
-        : fallbackText(
-            input.moments.mainCharacterMoment,
-            input.moments.trenchLoreMoment,
-            `Momentum took over quickly as late-entry score ${input.metrics.timing.lateEntryScore.toFixed(2)} and timeline influence ${input.metrics.attention.timelineInfluenceScore.toFixed(2)} pushed the wallet deeper into the move.`,
-          ),
-      emotionalTone: timingIsEarly ? "adrenaline with edge" : "accelerating temptation",
-      symbolicVisualHint: timingIsEarly
-        ? "green candles pulsing ahead of the crowd"
-        : "zooming chart tunnel and notification streaks",
+      text: chosen.rise.text,
+      emotionalTone: chosen.rise.tone,
+      symbolicVisualHint: chosen.rise.symbol,
     },
     {
       phase: "damage",
@@ -66,18 +131,9 @@ export function generateStoryBeats(input: {
     },
     {
       phase: "pivot",
-      text: fallbackText(
-        input.moments.comebackMoment,
-        input.moments.convictionMoment,
-        input.metrics.recovery.comebackTrades > 0
-          ? `Instead of folding, the wallet staged ${input.metrics.recovery.comebackTrades} comeback attempts while ${modifierTwo} energy kept the risk dial uncomfortably high.`
-          : `The pivot was not calm, but conviction score ${input.metrics.behavior.convictionScore.toFixed(2)} kept the tape from dissolving into total spray.`,
-      ),
-      emotionalTone:
-        input.metrics.recovery.comebackTrades > 0
-          ? "desperate resolve"
-          : "forced composure",
-      symbolicVisualHint: "split screen of red collapse and green rebound",
+      text: chosen.pivot.text,
+      emotionalTone: chosen.pivot.tone,
+      symbolicVisualHint: chosen.pivot.symbol,
     },
     {
       phase: "climax",

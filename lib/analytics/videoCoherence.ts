@@ -47,6 +47,30 @@ function pick<T>(items: T[], seed: number): T {
   return items[Math.abs(seed) % items.length]!;
 }
 
+function seededRandom(seed: number): () => number {
+  let x = seed >>> 0;
+  return () => {
+    // xorshift32
+    x ^= x << 13;
+    x ^= x >>> 17;
+    x ^= x << 5;
+    return (x >>> 0) / 0xffffffff;
+  };
+}
+
+function sampleUnique<T>(items: T[], count: number, seed: number): T[] {
+  const rand = seededRandom(seed);
+  const pool = [...items];
+  const result: T[] = [];
+
+  while (pool.length && result.length < count) {
+    const index = Math.floor(rand() * pool.length);
+    result.push(pool.splice(index, 1)[0]!);
+  }
+
+  return result;
+}
+
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
@@ -232,26 +256,46 @@ function buildProtagonist(archetype: NarrativeArchetype, seed: number): string {
       "hooded casino pilgrim",
       "lone gambler under chart glow",
       "night trader with roulette-wheel confidence",
+      "edge-hunting scalper in arcade neon",
+      "risk poet counting chips by candle glow",
+      "cardsharp coder stalking liquidity",
+      "casino-floor tactician with restless hands",
     ],
     "The Prophet": [
       "chart oracle in a dark room",
       "cyberpunk seer with sleepless eyes",
       "quiet trench prophet at a wall of monitors",
+      "signal interpreter drawing map lines mid-haze",
+      "ledger scribe whispering to indicators",
+      "future-calling tactician with amber eyes",
+      "late-night augur sketching in neon dust",
     ],
     "The Survivor": [
       "battle-worn night trader",
       "storm-tested desk warrior",
       "exhausted protagonist still refusing the exit",
+      "scarred tape-runner gripping conviction",
+      "resilient operator taping screens back together",
+      "stubborn navigator rowing through red seas",
+      "aftershock veteran rebuilding in blue light",
     ],
     "The Martyr": [
       "conviction cultist at a glowing altar of charts",
       "bagholder philosopher in monitor light",
       "sleep-deprived believer defending one last thesis",
+      "ashen zealot guarding a single ticker",
+      "chart pilgrim kneeling beside a cracked dashboard",
+      "sleepless archivist clutching relic screenshots",
+      "faith-first tactician lit by scarlet candles",
     ],
     "The Trickster": [
       "gremlin-genius chart jockey",
       "meme-native trench operator",
       "funhouse-market schemer with suspicious timing",
+      "glitch-savant orchestrating timeline chaos",
+      "neon prankster remixing signals live",
+      "sleight-of-hand scalper juggling alerts",
+      "meme bard turning volatility into pranks",
     ],
   };
 
@@ -386,16 +430,14 @@ export function buildVideoIdentitySheet(input: {
   const protagonist = buildProtagonist(archetype, seed + 17);
   const canon = buildCanonByArchetype(archetype);
   const tokenAnchors = buildTokenAnchors(input.normalizedTrades);
+  const baseSymbols = sampleUnique(VIDEO_VISUAL_SYMBOLS, 5, seed + 3);
   const symbolCanon = unique(
     [
-      pick(VIDEO_VISUAL_SYMBOLS, seed + 3),
-      pick(VIDEO_VISUAL_SYMBOLS, seed + 19),
-      pick(VIDEO_VISUAL_SYMBOLS, seed + 31),
-      pick(VIDEO_VISUAL_SYMBOLS, seed + 47),
+      ...baseSymbols,
       tokenAnchors[0]?.symbol ? `${tokenAnchors[0].symbol} shrine iconography` : undefined,
       tokenAnchors[1]?.symbol ? `${tokenAnchors[1].symbol} poster fragments` : undefined,
     ].filter((value): value is string => Boolean(value)),
-  ).slice(0, 5);
+  ).slice(0, 7);
 
   const negativeConstraints = [
     "Do not replace the protagonist with abstract charts only.",
@@ -746,16 +788,40 @@ function buildCameraMovement(
 function buildSoundDesign(phase: StoryBeatPhase, emotionVector: SceneEmotionVector, seed: number): string {
   const motif = VIDEO_MOTIFS[phase];
   const base = pick(motif.sound, seed);
+  const connector = pick(
+    [
+      "; keep low-end contained",
+      "; leave headroom for impact hits",
+      "; layer restrained foley",
+      "; side-chain around narration room",
+      "; tuck in glitch accents",
+      "; keep mix breathable",
+    ],
+    seed + 97,
+  );
   const policy =
     "cinematic score + atmospheric sound design only; no narration or voice unless explicitly requested, no character dialogue, no SFX, no distortion or clipping";
+  if (emotionVector.desperation >= 0.62) {
+    return `${base}${connector} and let a desperate tremor haunt the mids; ${policy}`;
+  }
   if (emotionVector.chaos >= 0.65) {
-    return `${base}, with the mix slightly out of breath but still readable; ${policy}`;
+    return `${base}${connector} with the mix slightly out of breath but still readable; ${policy}`;
   }
   if (emotionVector.discipline >= 0.65) {
-    return `${base}, with cleaner cadence and precise transitions; ${policy}`;
+    return `${base}${connector} with cleaner cadence and precise transitions; ${policy}`;
   }
-  return `${base}, balanced for cinematic momentum and mix clarity; ${policy}`;
+  return `${base}${connector} balanced for cinematic momentum and mix clarity; ${policy}`;
 }
+
+const COMPOSITION_CONNECTORS = [
+  "Next",
+  "Meanwhile",
+  "Then",
+  "Also",
+  "Keep in frame",
+  "Ensure",
+  "Carry through",
+];
 
 function buildProviderPrompt(input: {
   provider: VideoPromptProvider;
@@ -772,10 +838,13 @@ function buildProviderPrompt(input: {
   symbolicVisuals: string[];
   continuityNote: string;
 }): string {
+  const connector = pick(COMPOSITION_CONNECTORS, hashString(`${input.state.stateRef}|${input.provider}`) + 23);
+  const connectorTwo = pick(COMPOSITION_CONNECTORS, hashString(`${input.state.stateRef}|${input.provider}|b`) + 41);
+
   return [
     `${input.shotType} inside ${input.environment}.`,
-    `Camera movement: ${input.cameraMovement}.`,
-    `Protagonist: ${input.identity.protagonist}.`,
+    `${connector} camera movement: ${input.cameraMovement}.`,
+    `${connectorTwo} protagonist: ${input.identity.protagonist}.`,
     `State ref: ${input.state.stateRef}.`,
     `Subject focus: ${input.state.subjectFocus}.`,
     `Character action: ${input.characterAction}.`,

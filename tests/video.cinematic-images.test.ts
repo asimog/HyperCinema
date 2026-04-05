@@ -1,11 +1,11 @@
-import { assignSceneImageUrls, buildPumpImageReferences } from "@/lib/ai/cinematic";
+﻿import { assignSceneImageUrls, buildPumpImageReferences } from "@/lib/ai/cinematic";
 import { CinematicScene, WalletStory } from "@/lib/types/domain";
 
 function createStory(): WalletStory {
   return {
     wallet: "wallet-test",
     rangeDays: 1,
-    packageType: "1d",
+    packageType: "30s",
     durationSeconds: 30,
     analytics: {
       pumpTokensTraded: 2,

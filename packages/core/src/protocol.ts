@@ -38,7 +38,7 @@ export interface InterfaceCardsAgent {
 }
 
 export interface InterfacePackageQuote {
-  packageType: "1d" | "2d";
+  packageType: "30s" | "60s";
   label: string;
   durationSeconds: number;
   priceSol: number;

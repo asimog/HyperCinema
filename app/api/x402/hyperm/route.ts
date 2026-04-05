@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
 
     const job = await createPromptVideoJob({
       requestKind: "generic_cinema",
-      packageType: "1d",
+      packageType: "30s",
       experience: "hyperm",
       requestedPrompt: description || subjectInput,
       stylePreset: style || "vhs_cinema",

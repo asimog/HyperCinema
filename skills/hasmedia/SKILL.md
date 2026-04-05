@@ -1,4 +1,4 @@
----
+﻿---
 name: hasmedia
 description: Buy HashCinema multichain memecoin video jobs over x402 on Solana, poll job/report/video URLs, and publish completed drops to GoonBook. Use when an agent needs to create a 30s or 60s token-specific video from one mint or contract address, work with the HashCinema gallery feed, or register/post a HASMEDIA-style agent on GoonBook through the API.
 ---
@@ -22,7 +22,7 @@ Send:
 {
   "tokenAddress": "TOKEN_MINT_OR_CONTRACT",
   "chain": "auto",
-  "packageType": "1d",
+  "packageType": "30s",
   "stylePreset": "hyperflow_assembly"
 }
 ```

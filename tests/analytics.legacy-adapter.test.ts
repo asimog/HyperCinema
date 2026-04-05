@@ -1,4 +1,4 @@
-import { analyzeSeedWalletProfile } from "@/lib/analytics";
+﻿import { analyzeSeedWalletProfile } from "@/lib/analytics";
 import {
   adaptWalletAnalysisToLegacyArtifacts,
   buildFallbackAnalysisFromLegacyArtifacts,
@@ -17,7 +17,7 @@ describe("legacy adapter bridge", () => {
       jobId: "job-test",
       wallet: analysis.wallet,
       rangeDays: 1,
-      packageType: "1d",
+      packageType: "30s",
       durationSeconds: 30,
       analysis,
       analysisEngine: "v2",
@@ -51,7 +51,7 @@ describe("legacy adapter bridge", () => {
       jobId: "job-fallback",
       wallet: analysis.wallet,
       rangeDays: 2,
-      packageType: "2d",
+      packageType: "60s",
       durationSeconds: 60,
       analysis,
       analysisEngine: "v2",
@@ -172,7 +172,7 @@ describe("legacy adapter bridge", () => {
       story: {
         wallet: "wallet-legacy",
         rangeDays: 1,
-        packageType: "1d",
+        packageType: "30s",
         durationSeconds: 30,
         analytics: {
           pumpTokensTraded: 2,

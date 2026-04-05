@@ -1,4 +1,4 @@
-import { generateCinematicScript } from "@/lib/ai/cinematic";
+﻿import { generateCinematicScript } from "@/lib/ai/cinematic";
 import { WalletStory } from "@/lib/types/domain";
 import { describe, expect, it, vi } from "vitest";
 
@@ -12,7 +12,7 @@ function buildStory(): WalletStory {
   return {
     wallet: "8BfH8gV3yZ7d1kY9uJvB3DhR6yQ2pM8P2a8s9s4s4s4s",
     rangeDays: 1,
-    packageType: "1d",
+    packageType: "30s",
     durationSeconds: 30,
     analytics: {
       pumpTokensTraded: 2,

@@ -16,14 +16,14 @@ const STYLE_OPTIONS = [
 ];
 
 // SOL prices for each duration tier
-const PRICE_1D = 0.004;
-const PRICE_2D = 0.007;
+const PRICE_30S = 0.004;
+const PRICE_60S = 0.007;
 
 // Main MythX video generator component
 export default function MythXElizaGeneratorClient() {
   const [profileInput, setProfileInput] = useState("");
   const [selectedStyle, setSelectedStyle] = useState("vhs_cinema");
-  const [duration, setDuration] = useState<"1d" | "2d">("1d");
+  const [duration, setDuration] = useState<"30s" | "60s">("30s");
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState("");
   const [progressStage, setProgressStage] = useState(0);
@@ -150,31 +150,33 @@ export default function MythXElizaGeneratorClient() {
               <span className="text-sm font-medium text-gray-400">Duration</span>
               <div className="grid grid-cols-2 gap-3 mt-2">
                 <button
-                  onClick={() => setDuration("1d")}
+                  type="button"
+                  onClick={() => setDuration("30s")}
                   disabled={isGenerating}
                   className={`p-4 rounded-lg border-2 transition-all ${
-                    duration === "1d"
+                    duration === "30s"
                       ? "border-purple-500 bg-purple-500/20"
                       : "border-gray-700 hover:border-gray-600"
                   }`}
                 >
                   <div className="text-lg font-bold">30 seconds</div>
                   <div className="text-sm text-gray-400">
-                    {isAgent ? "$2.00 USDC" : `${PRICE_1D} SOL`}
+                    {isAgent ? "$1.00 USDC" : `${PRICE_30S} SOL`}
                   </div>
                 </button>
                 <button
-                  onClick={() => setDuration("2d")}
+                  type="button"
+                  onClick={() => setDuration("60s")}
                   disabled={isGenerating}
                   className={`p-4 rounded-lg border-2 transition-all ${
-                    duration === "2d"
+                    duration === "60s"
                       ? "border-purple-500 bg-purple-500/20"
                       : "border-gray-700 hover:border-gray-600"
                   }`}
                 >
                   <div className="text-lg font-bold">60 seconds</div>
                   <div className="text-sm text-gray-400">
-                    {isAgent ? "$3.00 USDC" : `${PRICE_2D} SOL`}
+                    {isAgent ? "$2.00 USDC" : `${PRICE_60S} SOL`}
                   </div>
                 </button>
               </div>
@@ -208,7 +210,7 @@ export default function MythXElizaGeneratorClient() {
               disabled={isGenerating || !profileInput.trim()}
               className="w-full py-4 px-6 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg font-semibold text-lg transition-all"
             >
-              {isGenerating ? "Creating Job..." : isAgent ? "Generate via x402" : `Create Video — ${duration === "1d" ? PRICE_1D : PRICE_2D} SOL`}
+              {isGenerating ? "Creating Job..." : isAgent ? "Generate via x402" : `Create Video — ${duration === "30s" ? PRICE_30S : PRICE_60S} SOL`}
             </button>
 
             {/* Progress */}

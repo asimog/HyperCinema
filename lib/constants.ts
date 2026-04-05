@@ -1,39 +1,29 @@
 import { JobPackage, JobStatus, PackageType } from "@/lib/types/domain";
 
 export const PACKAGE_CONFIG: Record<PackageType, JobPackage> = {
-  "1d": {
-    packageType: "1d",
+  "30s": {
+    packageType: "30s",
     rangeDays: 1,
     priceSol: 0.004,
     priceUsdc: 1,
     videoSeconds: 30,
     enabled: true,
-    label: "30 sec",
-    subtitle: "Fast video trading card",
+    label: "30s",
+    subtitle: "Fast video",
   },
-  "2d": {
-    packageType: "2d",
-    rangeDays: 2,
+  "60s": {
+    packageType: "60s",
+    rangeDays: 1,
     priceSol: 0.007,
     priceUsdc: 2,
     videoSeconds: 60,
     enabled: true,
-    label: "60 sec",
-    subtitle: "Full memecoin short film",
-  },
-  "3d": {
-    packageType: "3d",
-    rangeDays: 3,
-    priceSol: 0.04,
-    priceUsdc: 5,
-    videoSeconds: 90,
-    enabled: false,
-    label: "90 sec",
-    subtitle: "Legacy package",
+    label: "60s",
+    subtitle: "Full short",
   },
 };
 
-export const ACTIVE_PACKAGE_TYPES = ["1d", "2d"] as const satisfies readonly PackageType[];
+export const ACTIVE_PACKAGE_TYPES = ["30s", "60s"] as const satisfies readonly PackageType[];
 
 export const FINAL_JOB_STATUSES: JobStatus[] = ["complete", "failed"];
 

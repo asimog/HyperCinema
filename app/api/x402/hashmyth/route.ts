@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
 
     const job = await createX402PaidTokenVideoJob({
       tokenAddress,
-      packageType: "1d",
+      packageType: "30s",
       subjectChain: chain as any,
       subjectName: tokenAddress,
       transaction: `hashmyth-${Date.now()}`,

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+﻿import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const store = new Map<string, Record<string, unknown>>();
 
@@ -51,7 +51,7 @@ function seedPaymentConfirmedJob(jobId: string) {
   store.set(`jobs/${jobId}`, {
     jobId,
     wallet: "11111111111111111111111111111111",
-    packageType: "1d",
+    packageType: "30s",
     rangeDays: 1,
     priceSol: 0.02,
     videoSeconds: 30,

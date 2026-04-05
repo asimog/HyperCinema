@@ -42,18 +42,18 @@ const CHAIN_OPTIONS = [
 ];
 
 // SOL pricing tiers for video generation
-const PRICE_1D = 0.004;
-const PRICE_2D = 0.007;
+const PRICE_30S = 0.004;
+const PRICE_60S = 0.007;
 // USDC pricing tiers for x402 agents
-const PRICE_USDC_1D = 1.5;
-const PRICE_USDC_2D = 2.5;
+const PRICE_USDC_30S = 1.0;
+const PRICE_USDC_60S = 2.0;
 
 // HashMyth page component with scanner
 export function HashMythPage() {
   const [input, setInput] = useState("");
   const [selectedChain, setSelectedChain] = useState("solana");
   const [selectedStyle, setSelectedStyle] = useState("");
-  const [duration, setDuration] = useState<"1d" | "2d">("1d");
+  const [duration, setDuration] = useState<"30s" | "60s">("30s");
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
   const [isScanning, setIsScanning] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -314,20 +314,22 @@ export function HashMythPage() {
                   <span className="text-sm text-gray-400">Price</span>
                   <div className="flex gap-3">
                     <button
-                      onClick={() => setDuration("1d")}
+                      type="button"
+                      onClick={() => setDuration("30s")}
                       className={`px-3 py-1 rounded text-sm ${
-                        duration === "1d" ? "bg-purple-600 text-white" : "bg-gray-600"
+                        duration === "30s" ? "bg-purple-600 text-white" : "bg-gray-600"
                       }`}
                     >
-                      30s — {isAgent ? `$${PRICE_USDC_1D} USDC` : `${PRICE_1D} SOL`}
+                      30s — {isAgent ? `$${PRICE_USDC_30S} USDC` : `${PRICE_30S} SOL`}
                     </button>
                     <button
-                      onClick={() => setDuration("2d")}
+                      type="button"
+                      onClick={() => setDuration("60s")}
                       className={`px-3 py-1 rounded text-sm ${
-                        duration === "2d" ? "bg-purple-600 text-white" : "bg-gray-600"
+                        duration === "60s" ? "bg-purple-600 text-white" : "bg-gray-600"
                       }`}
                     >
-                      60s — {isAgent ? `$${PRICE_USDC_2D} USDC` : `${PRICE_2D} SOL`}
+                      60s — {isAgent ? `$${PRICE_USDC_60S} USDC` : `${PRICE_60S} SOL`}
                     </button>
                   </div>
                 </div>
@@ -369,7 +371,7 @@ export function HashMythPage() {
                   disabled={isGenerating}
                   className="w-full py-4 px-6 bg-gradient-to-r from-green-600 to-cyan-600 hover:from-green-700 hover:to-cyan-700 disabled:opacity-50 rounded-lg font-semibold text-lg transition-all"
                 >
-                  {isGenerating ? "🎬 Creating Job..." : isAgent ? `Generate via x402 — $${duration === "1d" ? PRICE_USDC_1D : PRICE_USDC_2D} USDC` : `Generate Video — ${duration === "1d" ? PRICE_1D : PRICE_2D} SOL`}
+                  {isGenerating ? "🎬 Creating Job..." : isAgent ? `Generate via x402 — $${duration === "30s" ? PRICE_USDC_30S : PRICE_USDC_60S} USDC` : `Generate Video — ${duration === "30s" ? PRICE_30S : PRICE_60S} SOL`}
                 </button>
 
                 {jobId && (

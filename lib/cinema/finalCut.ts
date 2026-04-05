@@ -74,7 +74,7 @@ function buildVeoPayload(input: {
     storyMetadata: {
       wallet: input.wallet,
       rangeDays: input.pkg.storyState.rangeHours / 24,
-      packageType: "1d",
+      packageType: "30s",
       durationSeconds: input.durationSeconds,
       analytics: {
         pumpTokensTraded: 0,

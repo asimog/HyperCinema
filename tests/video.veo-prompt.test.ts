@@ -1,4 +1,4 @@
-import { buildGoogleVeoRenderPayload } from "@/lib/video/veo";
+﻿import { buildGoogleVeoRenderPayload } from "@/lib/video/veo";
 import { GeneratedCinematicScript, WalletStory } from "@/lib/types/domain";
 
 function buildStory(overrides: Partial<WalletStory> = {}): WalletStory {
@@ -6,7 +6,7 @@ function buildStory(overrides: Partial<WalletStory> = {}): WalletStory {
     wallet: "8BfH8gV3yZ7d1kY9uJvB3DhR6yQ2pM8P2a8s9s4s4s4s",
     storyKind: "token_video",
     rangeDays: 2,
-    packageType: "2d",
+    packageType: "60s",
     durationSeconds: 60,
     analytics: {
       pumpTokensTraded: 2,

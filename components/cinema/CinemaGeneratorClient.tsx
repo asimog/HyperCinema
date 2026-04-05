@@ -96,7 +96,7 @@ export function CinemaGeneratorClient(input: {
   const [subjectDescription, setSubjectDescription] = useState("");
   const [tokenAddress, setTokenAddress] = useState("");
   const [chain, setChain] = useState<RequestedTokenChain>("auto");
-  const [packageType, setPackageType] = useState<PackageType>("1d");
+  const [packageType, setPackageType] = useState<PackageType>("30s");
   const [stylePreset, setStylePreset] = useState<VideoStyleId>(config.defaultStyle);
   const [audioEnabled, setAudioEnabled] = useState(config.defaultAudioEnabled);
   const [storyNotes, setStoryNotes] = useState("");

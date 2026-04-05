@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+﻿import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { NormalizedRenderRequest, RenderJobRecord } from "../video-service/src/types";
 
 const repositoryMocks = vi.hoisted(() => ({
@@ -68,7 +68,7 @@ function buildRequest(jobId: string): NormalizedRenderRequest {
       storyMetadata: {
         wallet: "wallet",
         rangeDays: 1,
-        packageType: "1d",
+        packageType: "30s",
         durationSeconds: 30,
         analytics: {},
       },

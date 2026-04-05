@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+﻿import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { FastifyInstance } from "fastify";
 import { buildVideoService, RenderServicePort } from "../video-service/src/server";
 import { parseRenderRequest } from "../video-service/src/types";
@@ -110,7 +110,7 @@ function buildPayload(jobId: string) {
       storyMetadata: {
         wallet: "wallet",
         rangeDays: 1,
-        packageType: "1d",
+        packageType: "30s",
         durationSeconds: 30,
         analytics: {},
       },

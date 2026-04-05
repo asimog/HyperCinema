@@ -5,7 +5,7 @@ import type {
   WalletAnalysisResult,
 } from "@/lib/analytics/types";
 
-export type PackageType = "1d" | "2d" | "3d";
+export type PackageType = "30s" | "60s";
 
 export type JobRequestKind =
   | "wallet_recap"

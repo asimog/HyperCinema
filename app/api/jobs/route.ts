@@ -36,7 +36,7 @@ import {
 export const runtime = "nodejs";
 
 const sharedCinemaSchema = z.object({
-  packageType: z.enum(["1d", "2d"]),
+  packageType: z.enum(["30s", "60s"]),
   stylePreset: videoStyleSchema.optional(),
   requestedPrompt: z.string().max(4_000).optional(),
   audioEnabled: z.boolean().optional(),

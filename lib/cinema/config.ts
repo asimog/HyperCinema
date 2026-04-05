@@ -50,54 +50,42 @@ const BASE_PACKAGE_META: Record<
   PackageType,
   Pick<JobPackage, "packageType" | "rangeDays" | "videoSeconds" | "enabled" | "label" | "subtitle">
 > = {
-  "1d": {
-    packageType: "1d",
+  "30s": {
+    packageType: "30s",
     rangeDays: 1,
     videoSeconds: 30,
     enabled: true,
-    label: "30 sec",
+    label: "30s",
     subtitle: "Fast assembly cut",
   },
-  "2d": {
-    packageType: "2d",
-    rangeDays: 2,
+  "60s": {
+    packageType: "60s",
+    rangeDays: 1,
     videoSeconds: 60,
     enabled: true,
-    label: "60 sec",
+    label: "60s",
     subtitle: "Full short-form sequence",
-  },
-  "3d": {
-    packageType: "3d",
-    rangeDays: 3,
-    videoSeconds: 90,
-    enabled: false,
-    label: "90 sec",
-    subtitle: "Legacy package",
   },
 };
 
 const PUBLIC_SOL_PRICES: Record<PackageType, number> = {
-  "1d": 0.004,
-  "2d": 0.007,
-  "3d": 0.04,
+  "30s": 0.004,
+  "60s": 0.007,
 };
 
 const PRIVATE_SOL_PRICES: Record<PackageType, number> = {
-  "1d": 0.004,
-  "2d": 0.007,
-  "3d": 0.04,
+  "30s": 0.004,
+  "60s": 0.007,
 };
 
 const PUBLIC_USDC_PRICES: Record<PackageType, number> = {
-  "1d": 1,
-  "2d": 2,
-  "3d": 5,
+  "30s": 1,
+  "60s": 2,
 };
 
 const PRIVATE_USDC_PRICES: Record<PackageType, number> = {
-  "1d": 10,
-  "2d": 17,
-  "3d": 40,
+  "30s": 10,
+  "60s": 17,
 };
 
 export function getCinemaPackageConfig(input: {
@@ -117,7 +105,7 @@ export function getCinemaPackageConfig(input: {
   };
 }
 
-export const CINEMA_PACKAGE_TYPES = ["1d", "2d"] as const satisfies readonly PackageType[];
+export const CINEMA_PACKAGE_TYPES = ["30s", "60s"] as const satisfies readonly PackageType[];
 
 export const CINEMA_PAGE_CONFIGS: Record<CinemaPageId, CinemaPageConfig> = {
   hypercinema: {

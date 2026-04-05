@@ -1,4 +1,4 @@
-import { buildSceneChunks } from "../video-service/src/pipeline/scene-plan";
+﻿import { buildSceneChunks } from "../video-service/src/pipeline/scene-plan";
 import { buildConcatManifest } from "../video-service/src/pipeline/media";
 import { NormalizedRenderRequest } from "../video-service/src/types";
 
@@ -37,7 +37,7 @@ function buildRequest(): NormalizedRenderRequest {
       storyMetadata: {
         wallet: "wallet",
         rangeDays: 1,
-        packageType: "1d",
+        packageType: "30s",
         durationSeconds: 60,
         analytics: {},
       },

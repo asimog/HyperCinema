@@ -34,7 +34,7 @@ interface GenerateResponse {
 
 export function AmberVaultsStudio() {
   const [requestKind, setRequestKind] = useState<RequestKind>("generic_cinema");
-  const [packageType, setPackageType] = useState<PackageType>("1d");
+  const [packageType, setPackageType] = useState<PackageType>("30s");
   const [stylePreset, setStylePreset] = useState<VideoStyleId>("hyperflow_assembly");
   const [audioEnabled, setAudioEnabled] = useState(false);
 

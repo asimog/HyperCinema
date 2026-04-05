@@ -215,7 +215,7 @@ function buildInitialConversationState(initialExperienceId?: CinemaPageId | null
         tokenAddress: "",
         chain: "auto" as RequestedTokenChain,
         description: "",
-        packageType: "1d" as PackageType,
+        packageType: "30s" as PackageType,
         audioEnabled: false,
         stylePreset: null,
         discountCode: "",
@@ -248,7 +248,7 @@ function buildInitialConversationState(initialExperienceId?: CinemaPageId | null
       tokenAddress: "",
       chain: "auto" as RequestedTokenChain,
       description: "",
-      packageType: "1d" as PackageType,
+      packageType: "30s" as PackageType,
       audioEnabled: config.defaultAudioEnabled,
       stylePreset: null,
       discountCode: "",
@@ -306,8 +306,8 @@ function parseExperience(input: string): CinemaPageId | null {
 
 function parsePackage(input: string): PackageType | null {
   const normalized = input.toLowerCase();
-  if (normalized.includes("60") || normalized.includes("2d")) return "2d";
-  if (normalized.includes("30") || normalized.includes("1d")) return "1d";
+  if (normalized.includes("60") || normalized.includes("60s")) return "60s";
+  if (normalized.includes("30") || normalized.includes("30s")) return "30s";
   return null;
 }
 
@@ -522,8 +522,8 @@ export function CinemaConciergeChat(input: CinemaConciergeChatProps) {
 
     if (step === "package") {
       return [
-        { value: "1d", label: "30 sec" },
-        { value: "2d", label: "60 sec" },
+        { value: "30s", label: "30 sec" },
+        { value: "60s", label: "60 sec" },
       ];
     }
 
@@ -689,7 +689,7 @@ export function CinemaConciergeChat(input: CinemaConciergeChatProps) {
       tokenAddress: "",
       chain: "auto",
       description: "",
-      packageType: "1d",
+      packageType: "30s",
       audioEnabled: config.defaultAudioEnabled,
       stylePreset: null,
       discountCode: "",

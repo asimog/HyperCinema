@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
     // Create x402-paid job using existing repository function
     const job = await createX402PaidTokenVideoJob({
       tokenAddress: profileInput,
-      packageType: "1d",
+      packageType: "30s",
       subjectChain: "solana",
       subjectName: profileInput,
       transaction: jobId, // x402 transaction will be added during payment

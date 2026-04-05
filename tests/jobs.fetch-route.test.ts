@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+﻿import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   recoverJobIfNeeded: vi.fn(),
@@ -33,7 +33,7 @@ describe("GET /api/jobs/[jobId]", () => {
       job: {
         jobId: "job-1",
         wallet: "wallet-1",
-        packageType: "1d",
+        packageType: "30s",
         rangeDays: 1,
         priceSol: 0.02,
         videoSeconds: 30,
@@ -80,7 +80,7 @@ describe("GET /api/jobs/[jobId]", () => {
       job: {
         jobId: "job-x402",
         wallet: "wallet-2",
-        packageType: "2d",
+        packageType: "60s",
         rangeDays: 2,
         priceSol: 0.03,
         priceUsdc: 3,

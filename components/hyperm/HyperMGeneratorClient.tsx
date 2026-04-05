@@ -118,7 +118,7 @@ export function HyperMGeneratorClient() {
   const [subjectDescription, setSubjectDescription] = useState("");
   const [tweets, setTweets] = useState<XTweet[]>([]);
   const [manualTranscript, setManualTranscript] = useState("");
-  const [packageType, setPackageType] = useState<PackageType>("2d");
+  const [packageType, setPackageType] = useState<PackageType>("30s");
   const [stylePreset, setStylePreset] = useState<VideoStyleId>("hyperflow_assembly");
   const [audioEnabled, setAudioEnabled] = useState(true);
   const [isLoadingTweets, setIsLoadingTweets] = useState(false);
@@ -462,7 +462,7 @@ export function HyperMGeneratorClient() {
                   onChange={(event) => setPackageType(event.target.value as PackageType)}
                   disabled={isSubmitting}
                 >
-                  {(["1d", "2d"] as const).map((item) => {
+                  {(["30s", "60s"] as const).map((item) => {
                     const option = getCinemaPackageConfig({
                       packageType: item,
                       pricingMode: "public",

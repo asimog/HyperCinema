@@ -19,7 +19,7 @@ const agentVideoRequestSchema = z
     chain: z.enum(["auto", "solana", "ethereum", "bsc", "base"]).default("auto"),
     stylePreset: videoStyleSchema.optional(),
     requestedPrompt: z.string().max(240).optional(),
-    packageType: z.enum(["1d", "2d"]).optional(),
+    packageType: z.enum(["30s", "60s"]).optional(),
     durationSeconds: z.union([z.literal(30), z.literal(60)]).optional(),
   })
   .refine((value) => value.packageType || value.durationSeconds, {

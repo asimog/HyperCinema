@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+﻿import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
 const mocks = vi.hoisted(() => ({
@@ -45,7 +45,7 @@ function buildRequest(input?: {
     body: JSON.stringify(
       input?.body ?? {
         tokenAddress: "D1CRgh1Ty3yjDwN9CkwtsRWKmsmKQ2BbRbtKvCTfAN8Z",
-        packageType: "1d",
+        packageType: "30s",
         chain: "solana",
       },
     ),
@@ -109,7 +109,7 @@ describe("POST /api/x402/video", () => {
       jobId: "job-x402-1",
       status: "payment_confirmed",
       progress: "payment_confirmed",
-      packageType: "1d",
+      packageType: "30s",
       rangeDays: 1,
       priceSol: 0.01,
       priceUsdc: 1,
@@ -157,7 +157,7 @@ describe("POST /api/x402/video", () => {
     expect(response.status).toBe(200);
     expect(mocks.createX402PaidTokenVideoJob).toHaveBeenCalledWith({
       tokenAddress: "D1CRgh1Ty3yjDwN9CkwtsRWKmsmKQ2BbRbtKvCTfAN8Z",
-      packageType: "2d",
+      packageType: "60s",
       subjectChain: "solana",
       subjectName: "Hash Token",
       subjectSymbol: "HASH",

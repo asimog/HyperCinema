@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+﻿import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
 const mocks = vi.hoisted(() => ({
@@ -51,7 +51,7 @@ function buildTokenRequest(): NextRequest {
     },
     body: JSON.stringify({
       tokenAddress: "D1CRgh1Ty3yjDwN9CkwtsRWKmsmKQ2BbRbtKvCTfAN8Z",
-      packageType: "1d",
+      packageType: "30s",
       chain: "solana",
       stylePreset: "trench_neon",
     }),
@@ -70,7 +70,7 @@ function buildPromptRequest(): NextRequest {
       subjectDescription: "A minimal route launcher short.",
       sourceMediaUrl: "https://www.youtube.com/watch?v=x55A69SSvsg",
       sourceTranscript: "Open on the hook.\nRide the beat.",
-      packageType: "1d",
+      packageType: "30s",
       pricingMode: "public",
       visibility: "public",
       experience: "hypercinema",
@@ -91,7 +91,7 @@ function buildMythXRequest(): NextRequest {
       sourceMediaUrl: "https://x.com/creator",
       sourceMediaProvider: "x",
       sourceTranscript: "First tweet.\nSecond tweet.",
-      packageType: "1d",
+      packageType: "30s",
       pricingMode: "public",
       visibility: "public",
       audioEnabled: true,
@@ -110,7 +110,7 @@ function buildMusicVideoRequest(): NextRequest {
       requestKind: "music_video",
       subjectName: "Neon Anthem",
       subjectDescription: "A synthwave single gets trailer treatment.",
-      packageType: "1d",
+      packageType: "30s",
       pricingMode: "public",
       visibility: "public",
     }),
@@ -127,7 +127,7 @@ function buildSceneRecreationRequest(): NextRequest {
       requestKind: "scene_recreation",
       subjectName: "The Last Scene",
       subjectDescription: "A source scene gets rebuilt at higher voltage.",
-      packageType: "1d",
+      packageType: "30s",
       pricingMode: "public",
       visibility: "public",
     }),

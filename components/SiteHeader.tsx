@@ -3,6 +3,7 @@
 
 import { usePathname } from "next/navigation";
 import Link from "next/link";
+import { useState } from "react";
 
 import {
   FilmIcon,
@@ -11,7 +12,7 @@ import {
   GetPageIcon,
 } from "@/components/ui/AppIcons";
 
-// Navigation items shown in header
+// Navigation items shown in header (desktop only)
 const NAV_ITEMS = [
   { href: "/", label: "Home" },
   { href: "/MythX", label: "MythX", iconId: "mythx" },
@@ -21,55 +22,85 @@ const NAV_ITEMS = [
   { href: "/gallery", label: "Gallery" },
 ];
 
-// Header component with desktop and mobile nav
+// Header component
 export function SiteHeader() {
   const pathname = usePathname();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
-    <header className="site-header site-header--glass">
-      <div className="site-nav">
-        {/* Brand logo and name */}
-        <Link href="/" className="site-brand">
-          <FilmIcon className="site-brand-icon" aria-hidden="true" />
-          <span className="site-brand-title">HyperMyths</span>
-        </Link>
+    <>
+      {/* Desktop header - floating */}
+      <header className="site-header site-header--glass hidden md:block">
+        <div className="site-nav">
+          {/* Brand logo and name */}
+          <Link href="/" className="site-brand">
+            <FilmIcon className="site-brand-icon" aria-hidden="true" />
+            <span className="site-brand-title">HyperMyths</span>
+          </Link>
 
-        {/* Desktop navigation links */}
-        <nav className="nav-links hidden md:flex">
-          {NAV_ITEMS.map((item) => {
-            const Icon = item.iconId ? GetPageIcon(item.iconId as any) : TrendingIcon;
-            const isActive = pathname === item.href;
-            return (
-              <Link
-                key={item.href}
-                className={`nav-link${isActive ? " nav-link-active" : ""}`}
-                href={item.href}
-              >
-                <Icon className="nav-link-icon" aria-hidden="true" />
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
+          {/* Desktop navigation links */}
+          <nav className="nav-links">
+            {NAV_ITEMS.map((item) => {
+              const Icon = item.iconId ? GetPageIcon(item.iconId as any) : TrendingIcon;
+              const isActive = pathname === item.href;
+              return (
+                <Link
+                  key={item.href}
+                  className={`nav-link${isActive ? " nav-link-active" : ""}`}
+                  href={item.href}
+                >
+                  <Icon className="nav-link-icon" aria-hidden="true" />
+                  {item.label}
+                </Link>
+              );
+            })}
+          </nav>
+        </div>
+      </header>
 
-        {/* Mobile navigation - horizontal scroll */}
-        <nav className="nav-links md:hidden flex overflow-x-auto gap-1 pb-1">
-          {NAV_ITEMS.map((item) => {
-            const Icon = item.iconId ? GetPageIcon(item.iconId as any) : TrendingIcon;
-            const isActive = pathname === item.href;
-            return (
-              <Link
-                key={item.href}
-                className={`nav-link whitespace-nowrap${isActive ? " nav-link-active" : ""}`}
-                href={item.href}
-              >
-                <Icon className="nav-link-icon" aria-hidden="true" />
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
-      </div>
-    </header>
+      {/* Mobile header - integrated, no floating nav */}
+      <header className="site-header-mobile md:hidden">
+        <div className="site-header-mobile-inner">
+          <Link href="/" className="site-brand-mobile">
+            <FilmIcon className="site-brand-icon-mobile" aria-hidden="true" />
+            <span className="site-brand-title-mobile">HyperMyths</span>
+          </Link>
+
+          {/* Mobile menu toggle */}
+          <button
+            type="button"
+            className="mobile-menu-toggle"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            aria-label="Toggle menu"
+            aria-expanded={mobileMenuOpen}
+          >
+            <span className={`mobile-menu-toggle-line ${mobileMenuOpen ? "open" : ""}`} />
+            <span className={`mobile-menu-toggle-line ${mobileMenuOpen ? "open" : ""}`} />
+            <span className={`mobile-menu-toggle-line ${mobileMenuOpen ? "open" : ""}`} />
+          </button>
+        </div>
+
+        {/* Mobile menu - integrated into page flow */}
+        {mobileMenuOpen && (
+          <nav className="mobile-menu">
+            {NAV_ITEMS.map((item) => {
+              const Icon = item.iconId ? GetPageIcon(item.iconId as any) : TrendingIcon;
+              const isActive = pathname === item.href;
+              return (
+                <Link
+                  key={item.href}
+                  className={`mobile-menu-link${isActive ? " mobile-menu-link-active" : ""}`}
+                  href={item.href}
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <Icon className="mobile-menu-link-icon" aria-hidden="true" />
+                  <span>{item.label}</span>
+                </Link>
+              );
+            })}
+          </nav>
+        )}
+      </header>
+    </>
   );
 }

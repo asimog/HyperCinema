@@ -102,6 +102,7 @@ async function analyzeFromNormalizedTrades(input: {
     personality: personality.primary.displayName,
     modifiers: modifiers.map((modifier) => modifier.displayName),
     normalizedTrades: input.normalizedTrades,
+    nonce: Date.now().toString(),
   });
 
   const sceneStateSequence = buildSceneStateSequence({

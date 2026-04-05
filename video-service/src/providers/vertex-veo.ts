@@ -67,15 +67,32 @@ export function isVertexPromptPolicyError(status: number, body: string): boolean
 
 export function sanitizePromptForPolicyRetry(prompt: string): string {
   const replacements: Array<[RegExp, string]> = [
+    // Body descriptions that trigger policy filters
     [
       /\b(?:(?:stocky|heavyset|chubby|fat|skinny|obese|slim|short|tall|square[- ]built)\s+)+(?:man|woman|person|guy|girl|boy|figure)\b/gi,
       "adult protagonist",
     ],
     [/\bnot\s+fat\b/gi, "warm and approachable"],
     [/\b(?:stocky|heavyset|chubby|fat|skinny|obese|slim|short|tall|square[- ]built)\b/gi, ""],
-    [/\b(?:ugly|hideous|deformed)\b/gi, "distinctive"],
+    [/\b(?:ugly|hideous|deformed|grotesque|monstrous)\b/gi, "distinctive"],
+    // Violence-related terms
+    [/\b(?:kill|murder|shoot|stab|slash|cut|bleed|blood|wound|injure|attack|fight|violence|weapon|gun|knife|bomb|explode|die|death|dead|corpse|corpse|skeleton|skull|grave|tomb)\b/gi, "depart"],
+    // Explicit content terms
+    [/\b(?:naked|nude|naked|sexy|sexual|porn|explicit|adult|nsfw|bare|barely clothed|scantily clad)\b/gi, "elegant"],
+    // Substance-related
+    [/\b(?:drug|drugs|weed|marijuana|cocaine|heroin|alcohol|beer|wine|drunk|high|intoxicated|stoned)\b/gi, "herbal"],
+    // Self-harm terms
+    [/\b(?:suicide|self-harm|self harm|cutting|hang|jump)\b/gi, "reflect"],
+    // Hate speech indicators
+    [/\b(?:hate|hate speech|racist|bigot|slur|discriminate|genocide)\b/gi, "differ"],
+    // Song lyrics protection
     [/\blyrics?\s+or\s+song\s+notes\s*:/gi, "Music cue:"],
     [/\bhappy birthday to you\b/gi, "a birthday singalong"],
+    // Additional safe alternatives for common triggers
+    [/\bbattle|war|combat|conflict|struggle\b/gi, "contest"],
+    [/\bblood|bloody|gore|gory|gruesome|grisly\b/gi, "dramatic"],
+    [/\bscream|shriek|yell|shout|cry|sob|weep|tears\b/gi, "express"],
+    [/\bfear|terrify|terrifying|horror|horrifying|scary|frighten|creepy\b/gi, "intense"],
   ];
 
   let rewritten = prompt;
@@ -263,6 +280,9 @@ export class VertexVeoClient {
     const useApiKeyAuth = Boolean(env.VERTEX_API_KEY);
     const authHeader = useApiKeyAuth ? undefined : await this.getAuthHeader();
 
+    // Proactively sanitize prompt BEFORE first attempt to avoid policy violations
+    const sanitizedPrompt = sanitizePromptForPolicyRetry(input.prompt);
+
     const endpoint = this.withApiKey(
       this.buildPredictEndpoint({
         projectId: env.VERTEX_PROJECT_ID,
@@ -305,8 +325,9 @@ export class VertexVeoClient {
     const imageUrl = normalizeImageUrl(input.imageUrl);
     let startResponse: Response | null = null;
     let lastStartFailure: { status: number; body: string } | null = null;
+    // Start with sanitized prompt to avoid policy violations
     const startQueue: Array<{ prompt: string; imageUrl?: string }> = [
-      { prompt: input.prompt, imageUrl },
+      { prompt: sanitizedPrompt, imageUrl },
     ];
     const seenStarts = new Set<string>();
 
@@ -331,11 +352,15 @@ export class VertexVeoClient {
         startQueue.push({ prompt: attempt.prompt, imageUrl: undefined });
       }
 
+      // Retry with further sanitization if policy violation still occurs
       if (isVertexPromptPolicyError(response.status, body)) {
         const rewrittenPrompt = sanitizePromptForPolicyRetry(attempt.prompt);
-        startQueue.push({ prompt: rewrittenPrompt, imageUrl: attempt.imageUrl });
-        if (attempt.imageUrl) {
-          startQueue.push({ prompt: rewrittenPrompt, imageUrl: undefined });
+        // Only retry if prompt actually changed
+        if (rewrittenPrompt !== attempt.prompt) {
+          startQueue.push({ prompt: rewrittenPrompt, imageUrl: attempt.imageUrl });
+          if (attempt.imageUrl) {
+            startQueue.push({ prompt: rewrittenPrompt, imageUrl: undefined });
+          }
         }
       }
     }

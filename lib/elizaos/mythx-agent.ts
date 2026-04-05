@@ -327,6 +327,38 @@ async function generateVideoViaElizaOS(
 /**
  * STEP 4: Upload to Firebase & save for Gallery
  */
+async function uploadVideoToFirebaseStorage(
+  jobId: string,
+  videoUrl: string
+): Promise<string | null> {
+  try {
+    const { getBucket } = await import("@/lib/firebase/admin");
+    const bucket = getBucket();
+    const storagePath = `videos/${jobId}/mythx-eliza.mp4`;
+
+    // Download the video as a buffer
+    const response = await fetch(videoUrl);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch video: ${response.status}`);
+    }
+    const buffer = Buffer.from(await response.arrayBuffer());
+
+    // Upload to Firebase Storage
+    const file = bucket.file(storagePath);
+    await file.save(buffer, {
+      metadata: { contentType: "video/mp4" },
+      resumable: false,
+    });
+
+    // Make publicly readable and return public URL
+    await file.makePublic();
+    return `https://storage.googleapis.com/${bucket.name}/${storagePath}`;
+  } catch (error) {
+    console.warn("[MythXEliza] Firebase Storage upload failed, using source URL:", error);
+    return null;
+  }
+}
+
 async function uploadToFirebaseAndSave(
   jobId: string,
   videoUrls: string[],
@@ -340,9 +372,10 @@ async function uploadToFirebaseAndSave(
   const primaryVideoUrl = videoUrls[0] || null;
   const galleryUrl = `${getEnv().APP_BASE_URL}/job/${jobId}`;
 
-  // TODO: Implement Firebase upload when video URLs are ready
-  // For now, use the ElizaOS video URL directly
-  // In production, you'd download and re-upload to Firebase Storage
+  // Upload video to Firebase Storage (re-host from ElizaOS URL)
+  const firebaseStorageUrl = primaryVideoUrl
+    ? await uploadVideoToFirebaseStorage(jobId, primaryVideoUrl)
+    : null;
 
   // Save video metadata to Firestore
   try {
@@ -381,7 +414,7 @@ async function uploadToFirebaseAndSave(
   }
 
   return {
-    firebaseStorageUrl: primaryVideoUrl,
+    firebaseStorageUrl: firebaseStorageUrl ?? primaryVideoUrl,
     galleryUrl,
   };
 }

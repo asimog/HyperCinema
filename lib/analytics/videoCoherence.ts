@@ -366,12 +366,14 @@ export function buildVideoIdentitySheet(input: {
   personality: string;
   modifiers: string[];
   normalizedTrades: NormalizedTrade[];
+  nonce?: string;
 }): VideoIdentitySheet {
   const seed = hashString(
     [
       input.wallet,
       input.personality,
       ...[...input.modifiers].sort((left, right) => left.localeCompare(right)),
+      input.nonce ?? "",
     ].join("|"),
   );
   const signals = deriveEmotionalSignals(input.metrics);
@@ -386,7 +388,8 @@ export function buildVideoIdentitySheet(input: {
   const tokenAnchors = buildTokenAnchors(input.normalizedTrades);
   const symbolCanon = unique(
     [
-      ...VIDEO_VISUAL_SYMBOLS.slice(0, 2),
+      pick(VIDEO_VISUAL_SYMBOLS, seed + 3),
+      pick(VIDEO_VISUAL_SYMBOLS, seed + 19),
       pick(VIDEO_VISUAL_SYMBOLS, seed + 31),
       pick(VIDEO_VISUAL_SYMBOLS, seed + 47),
       tokenAnchors[0]?.symbol ? `${tokenAnchors[0].symbol} shrine iconography` : undefined,

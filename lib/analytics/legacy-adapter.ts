@@ -692,6 +692,7 @@ export function buildFallbackAnalysisFromLegacyArtifacts(input: {
         personality: payload.personality.primary.displayName,
         modifiers: payload.modifiers.map((modifier) => modifier.displayName),
         normalizedTrades: payload.normalizedTrades,
+        nonce: Date.now().toString(),
       });
     const sceneStateSequence =
       payload.sceneStateSequence?.length
@@ -851,6 +852,7 @@ export function buildFallbackAnalysisFromLegacyArtifacts(input: {
       personality: report.walletPersonality ?? "The Casino Tourist",
       modifiers: report.walletModifiers ?? [],
       normalizedTrades,
+      nonce: Date.now().toString(),
     });
   const sceneStateSequence =
     input.story.sceneStateSequence?.length

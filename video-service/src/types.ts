@@ -102,7 +102,7 @@ const storyMetadataSchema = z.object({
   sourceEmbedUrl: z.string().url().nullable().optional(),
   sourceMediaProvider: z.string().nullable().optional(),
   rangeDays: z.number().int().positive(),
-  packageType: z.enum(["30s", "60s"]),
+  packageType: z.enum(["1d", "2d", "3d", "30s", "60s"]),
   durationSeconds: z.number().int().positive(),
   analytics: analyticsSchema.partial().optional(),
 });

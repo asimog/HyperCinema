@@ -26,7 +26,7 @@ const serviceEnvSchema = z.object({
     .int()
     .min(1_000)
     .default(30_000),
-  RENDER_STALE_MS: z.coerce.number().int().min(60_000).default(20 * 60_000),
+  RENDER_STALE_MS: z.coerce.number().int().min(60_000).default(5 * 60_000),
   RENDER_RECOVERY_BATCH_LIMIT: z.coerce.number().int().positive().default(20),
   FFMPEG_PATH: z.string().min(1).default("ffmpeg"),
   FIREBASE_PROJECT_ID: z.string().min(1),

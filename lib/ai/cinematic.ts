@@ -292,18 +292,20 @@ export function buildFallbackCinematicScript(
           });
     const sceneCount = Math.min(4, Math.max(3, cards.length));
     const duration = Math.max(2, Math.round(story.durationSeconds / sceneCount));
+    const defaultNarrationFallback = `${story.subjectName ?? "The scene"} opens with a clear emotional hook that pulls the audience straight into the world, setting up a compelling arc that builds toward a memorable payoff.`;
     const roughScenes: CinematicScene[] = Array.from({ length: sceneCount }, (_, index) => {
       const card = cards[index] ?? cards[cards.length - 1];
+      const narrationCandidate =
+        card?.narrationCue ??
+        card?.teaser ??
+        story.narrativeSummary ??
+        defaultNarrationFallback;
       return {
         sceneNumber: index + 1,
         visualPrompt:
           card?.visualCue ??
           `${creativeStoryLabel(story.storyKind)} opening image with a clear emotional hook.`,
-        narration:
-          card?.narrationCue ??
-          card?.teaser ??
-          story.narrativeSummary ??
-          "The brief keeps moving toward a memorable landing frame.",
+        narration: narrationCandidate.length >= 10 ? narrationCandidate : defaultNarrationFallback,
         durationSeconds: duration,
         imageUrl: null,
         stateRef: `creative-${story.storyKind ?? "cinema"}-scene-${index + 1}`,
@@ -321,6 +323,13 @@ export function buildFallbackCinematicScript(
 
   const directives = buildSceneDirectiveRefs(story, 3);
   const promptScenes = story.videoPromptSequence ?? [];
+  const safeDefaultNarration = [
+    story.narrativeSummary ?? "The room knew this session would not stay calm.",
+    story.behaviorPatterns?.[0] ??
+      "Momentum and emotion kept taking turns holding the wheel.",
+    story.funObservations?.[0] ??
+      "The final beat landed like trench folklore instead of a spreadsheet.",
+  ].map((n) => n.length >= 10 ? n : "A quiet moment settles over the trading floor as the session winds down.");
   const roughScenes: CinematicScene[] = Array.from({ length: 3 }, (_, index) => {
     const promptScene = directives[index]?.promptScene ?? promptScenes[index];
     const defaultVisuals = [
@@ -328,20 +337,13 @@ export function buildFallbackCinematicScript(
       "Push into the volatile middle act with continuity-first motion and token anchors still in frame.",
       "Close on an aftermath tableau that feels earned, bruised, and strangely triumphant.",
     ];
-    const defaultNarration = [
-      story.narrativeSummary ?? "The room knew this session would not stay calm.",
-      story.behaviorPatterns?.[0] ??
-        "Momentum and emotion kept taking turns holding the wheel.",
-      story.funObservations?.[0] ??
-        "The final beat landed like trench folklore instead of a spreadsheet.",
-    ];
 
     return {
       sceneNumber: index + 1,
       visualPrompt:
         promptScene?.providerPrompts.veo ?? promptScene?.visualStyle ?? defaultVisuals[index]!,
       narration:
-        promptScene?.narrationHook ?? defaultNarration[index]!,
+        promptScene?.narrationHook ?? safeDefaultNarration[index]!,
       durationSeconds: Math.max(2, Math.round(story.durationSeconds / 3)),
       imageUrl: tokenImageReferences[index]?.imageUrl ?? null,
       stateRef: directives[index]?.stateRef,

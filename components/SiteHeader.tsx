@@ -14,12 +14,12 @@ import {
 
 // Navigation items shown in header (desktop only)
 const NAV_ITEMS = [
-  { href: "/", label: "Home" },
+  { href: "/", label: "Home", iconId: "home" },
   { href: "/MythX", label: "MythX", iconId: "mythx" },
   { href: "/HyperM", label: "HyperM", iconId: "hyperm" },
   { href: "/HashMyth", label: "HashMyth", iconId: "hashmyth" },
-  { href: "/trending", label: "Trending" },
-  { href: "/gallery", label: "Gallery" },
+  { href: "/trending", label: "Trending", iconId: "trending" },
+  { href: "/gallery", label: "Gallery", iconId: "gallery" },
 ];
 
 // Header component

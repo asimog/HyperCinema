@@ -275,8 +275,13 @@ textarea {
   gap: 0.5rem;
   min-width: 0;
   overflow-x: auto;
-  scrollbar-width: thin;
+  overflow-y: hidden;
+  scrollbar-width: none;
   padding-bottom: 0.1rem;
+}
+
+.nav-links::-webkit-scrollbar {
+  display: none;
 }
 
 .nav-link {

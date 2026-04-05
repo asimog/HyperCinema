@@ -1,5 +1,6 @@
 import type { ComponentPropsWithoutRef, ReactNode } from "react";
 import type { CinemaPageId } from "@/lib/cinema/config";
+import { PixetIcon, type PixetIconId } from "./PixetIcon";
 import type { RequestedTokenChain } from "@/lib/types/domain";
 
 type IconProps = ComponentPropsWithoutRef<"svg"> & {
@@ -181,28 +182,24 @@ export function PaletteIcon(props: IconProps) {
 }
 
 export function GetPageIcon(id: CinemaPageId) {
-  switch (id) {
-    case "hashmyth":
-      return HashIcon;
-    case "hypercinema":
-      return PaletteIcon;
-    case "hyperm":
-      return SparkIcon;
-    case "mythx":
-      return FilmRollIcon;
-    case "lovex":
-      return HeartIcon;
-    case "trenchcinema":
-      return TrendingIcon;
-    case "funcinema":
-      return SparkIcon;
-    case "familycinema":
-      return HomeIcon;
-    case "musicvideo":
-      return FilmRollIcon;
-    default:
-      return FilmIcon;
-  }
+  const PAGE_ICON_MAP: Partial<Record<CinemaPageId, PixetIconId>> = {
+    hashmyth: "hashmyth",
+    hypercinema: "gallery",
+    hyperm: "hyperm",
+    mythx: "mythx",
+    lovex: "home",
+    trenchcinema: "trending",
+    funcinema: "hyperm",
+    familycinema: "home",
+    musicvideo: "gallery",
+    gallery: "gallery",
+    trending: "trending",
+  };
+
+  const mapped = PAGE_ICON_MAP[id] ?? "trending";
+  return function WrappedPixetIcon(props: ComponentPropsWithoutRef<"svg">) {
+    return <PixetIcon id={mapped} {...props} />;
+  };
 }
 
 export function ChainBadgeIcon(chain: RequestedTokenChain) {

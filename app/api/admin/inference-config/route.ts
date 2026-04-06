@@ -42,8 +42,8 @@ export async function POST(request: NextRequest) {
   }
 
   const body = (await request.json()) as {
-    text?: { provider?: string; model?: string | null; baseUrl?: string | null };
-    video?: { provider?: string; model?: string | null; baseUrl?: string | null };
+    text?: { provider?: string; model?: string | null; baseUrl?: string | null; apiKey?: string | null };
+    video?: { provider?: string; model?: string | null; baseUrl?: string | null; apiKey?: string | null };
   };
 
   const textProvider = body.text?.provider;
@@ -63,6 +63,7 @@ export async function POST(request: NextRequest) {
             provider: textProvider as TextInferenceProviderId,
             model: trimOrNull(body.text.model),
             baseUrl: trimOrNull(body.text.baseUrl),
+            apiKey: trimOrNull(body.text.apiKey),
           }
         : undefined,
     video:
@@ -71,6 +72,7 @@ export async function POST(request: NextRequest) {
             provider: videoProvider as VideoInferenceProviderId,
             model: trimOrNull(body.video.model),
             baseUrl: trimOrNull(body.video.baseUrl),
+            apiKey: trimOrNull(body.video.apiKey),
           }
         : undefined,
     updatedBy: "cockpit",

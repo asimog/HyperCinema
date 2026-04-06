@@ -101,6 +101,7 @@ const envSchema = z.object({
     .enum(["google_veo", "xai", "openai", "replicate", "huggingface", "ollama", "others"])
     .default("google_veo"),
   VIDEO_INFERENCE_MODEL: z.string().min(1).optional(),
+  VIDEO_INFERENCE_API_KEY: z.string().min(1).optional(),
   OPENROUTER_APP_NAME: z.string().default("HYPERCINEMA"),
   OPENROUTER_SITE_URL: z.string().url().optional(),
   VIDEO_API_BASE_URL: z.string().url().optional(),

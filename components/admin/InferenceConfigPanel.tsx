@@ -31,9 +31,11 @@ export function InferenceConfigPanel({
   const [textProvider, setTextProvider] = useState(initialConfig.text.provider);
   const [textModel, setTextModel] = useState(initialConfig.text.model ?? "");
   const [textBaseUrl, setTextBaseUrl] = useState(initialConfig.text.baseUrl ?? "");
+  const [textApiKey, setTextApiKey] = useState(initialConfig.text.apiKey ?? "");
   const [videoProvider, setVideoProvider] = useState(initialConfig.video.provider);
   const [videoModel, setVideoModel] = useState(initialConfig.video.model ?? "");
   const [videoBaseUrl, setVideoBaseUrl] = useState(initialConfig.video.baseUrl ?? "");
+  const [videoApiKey, setVideoApiKey] = useState(initialConfig.video.apiKey ?? "");
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -63,11 +65,13 @@ export function InferenceConfigPanel({
             provider: textProvider,
             model: textModel.trim() || null,
             baseUrl: textBaseUrl.trim() || null,
+            apiKey: textApiKey.trim() || null,
           },
           video: {
             provider: videoProvider,
             model: videoModel.trim() || null,
             baseUrl: videoBaseUrl.trim() || null,
+            apiKey: videoApiKey.trim() || null,
           },
         }),
       });
@@ -128,6 +132,18 @@ export function InferenceConfigPanel({
               placeholder={selectedTextOption?.envHint ?? "Optional"}
             />
           </label>
+          <label className="field">
+            <span>API key (stored server-side)</span>
+            <input
+              type="password"
+              value={textApiKey}
+              onChange={(event) => setTextApiKey(event.target.value)}
+              placeholder={selectedTextOption?.envHint ?? "Add or override provider key"}
+            />
+            <p className="route-summary compact">
+              If empty, runtime uses env defaults (e.g. OPENROUTER_API_KEY, TEXT_INFERENCE_API_KEY).
+            </p>
+          </label>
         </div>
       </section>
 
@@ -171,6 +187,18 @@ export function InferenceConfigPanel({
               onChange={(event) => setVideoBaseUrl(event.target.value)}
               placeholder={selectedVideoOption?.envHint ?? "Optional"}
             />
+          </label>
+          <label className="field">
+            <span>Video API key</span>
+            <input
+              type="password"
+              value={videoApiKey}
+              onChange={(event) => setVideoApiKey(event.target.value)}
+              placeholder={selectedVideoOption?.envHint ?? "Override env key for this provider"}
+            />
+            <p className="route-summary compact">
+              If blank, runtime uses env defaults (VIDEO_API_KEY, XAI_API_KEY, REPLICATE/HF).
+            </p>
           </label>
         </div>
       </section>

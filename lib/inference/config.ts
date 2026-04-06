@@ -13,6 +13,7 @@ export interface InferenceRuntimeSelection {
   provider: string;
   model: string | null;
   baseUrl: string | null;
+  apiKey: string | null;
 }
 
 export interface InferenceRuntimeConfig {
@@ -36,16 +37,33 @@ function trimOrNull(value: string | null | undefined): string | null {
 
 function defaultsFromEnv(): InferenceRuntimeConfig {
   const env = getEnv();
+  const resolveTextApiKey = (): string | null =>
+    trimOrNull(env.TEXT_INFERENCE_API_KEY) ??
+    trimOrNull(env.OPENROUTER_API_KEY) ??
+    trimOrNull(env.OPENAI_API_KEY) ??
+    trimOrNull(env.ANTHROPIC_API_KEY) ??
+    trimOrNull(env.XAI_API_KEY);
+
+  const resolveVideoApiKey = (): string | null =>
+    trimOrNull(env.VIDEO_INFERENCE_API_KEY) ??
+    trimOrNull(env.VIDEO_API_KEY) ??
+    trimOrNull(env.XAI_API_KEY) ??
+    trimOrNull(env.OPENAI_API_KEY) ??
+    trimOrNull(env.REPLICATE_API_TOKEN) ??
+    trimOrNull(env.HUGGINGFACE_API_TOKEN);
+
   return {
     text: {
       provider: env.TEXT_INFERENCE_PROVIDER,
       model: trimOrNull(env.TEXT_INFERENCE_MODEL) ?? null,
       baseUrl: trimOrNull(env.TEXT_INFERENCE_BASE_URL),
+      apiKey: resolveTextApiKey(),
     },
     video: {
       provider: env.VIDEO_INFERENCE_PROVIDER,
       model: trimOrNull(env.VIDEO_INFERENCE_MODEL) ?? trimOrNull(env.VIDEO_VEO_MODEL),
       baseUrl: trimOrNull(env.VIDEO_API_BASE_URL),
+      apiKey: resolveVideoApiKey(),
     },
     updatedAt: null,
     updatedBy: null,
@@ -63,11 +81,13 @@ function normalizeSelection(
     : fallback.provider;
   const model = trimOrNull(selection.model) ?? fallback.model;
   const baseUrl = trimOrNull(selection.baseUrl) ?? fallback.baseUrl;
+  const apiKey = trimOrNull(selection.apiKey) ?? fallback.apiKey;
 
   return {
     provider,
     model,
     baseUrl,
+    apiKey,
   };
 }
 

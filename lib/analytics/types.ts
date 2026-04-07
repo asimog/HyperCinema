@@ -298,6 +298,7 @@ export interface WalletMoments {
   fumbleMoment?: WalletMoment;
   goblinHourMoment?: WalletMoment;
   convictionMoment?: WalletMoment;
+  recoveryMoment?: WalletMoment;
   hadToBeThereMoment?: WalletMoment;
   escapeMoment?: WalletMoment;
   overcookedMoment?: WalletMoment;

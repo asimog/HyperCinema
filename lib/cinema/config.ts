@@ -13,9 +13,11 @@ export type CinemaPageId =
   | "funcinema"
   | "familycinema"
   | "musicvideo"
-  | "recreator"
   | "hashmyth"
-  | "lovex";
+  | "lovex"
+  | "recreator"
+  | "gallery"
+  | "trending";
 
 export interface CinemaPageConfig {
   id: CinemaPageId;
@@ -378,5 +380,49 @@ export const CINEMA_PAGE_CONFIGS: Record<CinemaPageId, CinemaPageConfig> = {
     supportsChain: false,
     themeTone: "memory-first films for family moments that deserve a polished finish",
     heroChips: ["family moments", "no narration", "memory-first"],
+  },
+  gallery: {
+    id: "gallery",
+    route: "/gallery",
+    title: "Gallery",
+    eyebrow: "Browse",
+    summary: "Browse all completed videos.",
+    requestKind: "generic_cinema",
+    pricingMode: "public",
+    visibility: "public",
+    requiresAuth: false,
+    subjectLabel: "Title",
+    subjectPlaceholder: "Video title",
+    subjectDescriptionLabel: "Brief",
+    subjectDescriptionPlaceholder: "What should this video do?",
+    defaultStyle: "hyperflow_assembly",
+    styleOptions: [],
+    defaultAudioEnabled: false,
+    audioMode: "optional",
+    supportsChain: false,
+    themeTone: "",
+    heroChips: [],
+  },
+  trending: {
+    id: "trending",
+    route: "/trending",
+    title: "Trending",
+    eyebrow: "Explore",
+    summary: "Explore trending videos.",
+    requestKind: "generic_cinema",
+    pricingMode: "public",
+    visibility: "public",
+    requiresAuth: false,
+    subjectLabel: "Title",
+    subjectPlaceholder: "Video title",
+    subjectDescriptionLabel: "Brief",
+    subjectDescriptionPlaceholder: "What should this video do?",
+    defaultStyle: "hyperflow_assembly",
+    styleOptions: [],
+    defaultAudioEnabled: false,
+    audioMode: "optional",
+    supportsChain: false,
+    themeTone: "",
+    heroChips: [],
   },
 };

@@ -197,8 +197,9 @@ export function GetPageIcon(id: CinemaPageId) {
   };
 
   const mapped = PAGE_ICON_MAP[id] ?? "trending";
+
   return function WrappedPixetIcon(props: ComponentPropsWithoutRef<"svg">) {
-    return <PixetIcon id={mapped} {...props} />;
+    return <PixetIcon id={mapped as any} {...props} />;
   };
 }
 

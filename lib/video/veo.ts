@@ -57,7 +57,7 @@ export interface VeoCoherenceMetadata {
 
 export interface GoogleVeoRenderPayload {
   provider: "google_veo";
-  model: string;
+  model?: string;
   resolution: "720p" | "1080p";
   generateAudio: boolean;
   prompt: string;

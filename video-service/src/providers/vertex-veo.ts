@@ -274,21 +274,21 @@ export class VertexVeoClient {
     videoBytesBase64: string[];
   }> {
     const env = getVideoServiceEnv();
-    if (input.model !== ALLOWED_VEO_MODEL) {
-      throw new Error(`Only ${ALLOWED_VEO_MODEL} is allowed.`);
-    }
     const useApiKeyAuth = Boolean(env.VERTEX_API_KEY);
     const authHeader = useApiKeyAuth ? undefined : await this.getAuthHeader();
 
     // Proactively sanitize prompt BEFORE first attempt to avoid policy violations
     const sanitizedPrompt = sanitizePromptForPolicyRetry(input.prompt);
 
+    // Let API decide model if not specified
+    const modelParams: { projectId: string; location: string; model?: string } = {
+      projectId: env.VERTEX_PROJECT_ID,
+      location: env.VERTEX_LOCATION,
+      model: input.model || undefined,
+    };
+
     const endpoint = this.withApiKey(
-      this.buildPredictEndpoint({
-        projectId: env.VERTEX_PROJECT_ID,
-        location: env.VERTEX_LOCATION,
-        model: input.model,
-      }),
+      this.buildPredictEndpoint(modelParams as { projectId: string; location: string; model: string }),
       env.VERTEX_API_KEY,
     );
 

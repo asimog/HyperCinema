@@ -50,9 +50,9 @@ const ALLOWED_VEO_MODEL = "veo-3.1-fast-generate-001" as const;
 
 function normalizeVeoModel(
   value: unknown,
-  fallback: typeof ALLOWED_VEO_MODEL,
-): typeof ALLOWED_VEO_MODEL {
-  return value === ALLOWED_VEO_MODEL ? ALLOWED_VEO_MODEL : fallback;
+  fallback: string,
+): string {
+  return typeof value === "string" && value.length > 0 ? value : fallback;
 }
 
 function normalizeResolution(
@@ -68,9 +68,9 @@ function normalizeResolution(
 export function resolveRenderConfig(input: {
   metadata?: { model?: unknown; resolution?: unknown } | null;
   requestResolution?: unknown;
-  envModel: typeof ALLOWED_VEO_MODEL;
+  envModel: string;
   envResolution: "720p" | "1080p";
-}): { model: typeof ALLOWED_VEO_MODEL; resolution: "720p" | "1080p" } {
+}): { model: string; resolution: "720p" | "1080p" } {
   return {
     model: normalizeVeoModel(input.metadata?.model, input.envModel),
     resolution: normalizeResolution(

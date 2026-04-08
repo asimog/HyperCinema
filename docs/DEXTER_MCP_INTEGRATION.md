@@ -114,7 +114,7 @@ import {
   agentAnalyzeWallet,
   agentSearchPumpfun,
   agentWebSearch,
-} from "@/lib/elizaos/mythx-agent";
+} from "@/lib/mythx-backend/agent";
 
 // Resolve token
 const resolved = await agentResolveToken("BONK");

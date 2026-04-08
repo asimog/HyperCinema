@@ -98,7 +98,7 @@ const envSchema = z.object({
   OPENROUTER_MODEL: z.string().min(1).optional(),
   // Video generation provider
   VIDEO_INFERENCE_PROVIDER: z
-    .enum(["google_veo", "xai", "openai", "replicate", "huggingface", "ollama", "others"])
+    .enum(["google_veo", "xai", "openmontage", "openai", "replicate", "huggingface", "ollama", "others"])
     .default("google_veo"),
   VIDEO_INFERENCE_MODEL: z.string().min(1).optional(),
   VIDEO_INFERENCE_API_KEY: z.string().min(1).optional(),
@@ -118,11 +118,11 @@ const envSchema = z.object({
   // MoltBook AI social network
   MOLTBOOK_API_BASE_URL: z.string().url().optional(),
   MOLTBOOK_AGENT_API_KEY: z.string().optional(),
-  MOLTBOOK_AGENT_HANDLE: z.string().default("mythxeliza"),
-  MOLTBOOK_AGENT_DISPLAY_NAME: z.string().default("MythXEliza"),
+  MOLTBOOK_AGENT_HANDLE: z.string().default("mythxmythx"),
+  MOLTBOOK_AGENT_DISPLAY_NAME: z.string().default("MythX"),
   MOLTBOOK_AGENT_BIO: z
     .string()
-    .default("MythXEliza creates AI autobiographical videos from X profiles and posts them to MoltBook."),
+    .default("MythX creates AI autobiographical videos from X profiles and posts them to MoltBook."),
   MOLTBOOK_SYNC_BATCH_LIMIT: z.coerce.number().int().positive().default(12),
   MOLTBOOK_VERIFICATION_SOLVER: z.enum(["manual", "auto"]).default("manual"),
   // Wallet sweep config
@@ -132,22 +132,12 @@ const envSchema = z.object({
   ANALYTICS_ENGINE_MODE: z
     .enum(["v2_fallback_legacy", "v2", "legacy"])
     .default("v2_fallback_legacy"),
-  // MoonPay fiat on-ramp
-  MOONPAY_API_KEY: z.string().min(1).optional(),
-  MOONPAY_WEBHOOK_SHARED_TOKEN: z.string().min(1).optional(),
-  NEXT_PUBLIC_MOONPAY_PAYLINK_ID: z.string().min(1).optional(),
-  NEXT_PUBLIC_MOONPAY_NETWORK: z.enum(["main", "test"]).optional(),
-  // Crossmint wallet auth
-  CROSSMINT_SERVER_API_KEY: z.string().min(1).optional(),
-  NEXT_PUBLIC_CROSSMINT_API_KEY: z.string().min(1).optional(),
-  CROSSMINT_COOKIE_DOMAIN: z.string().min(1).optional(),
-  CROSSMINT_ADMIN_ALLOWLIST: z.string().optional(),
   // Cockpit admin panel auth
   COCKPIT_USERNAME: z.string().default("soboltoshi"),
   COCKPIT_PASSWORD: z.string().default("Kamina6%"),
-  // ElizaOS AI agent platform
-  ELIZAOS_API_KEY: z.string().min(1).optional(),
-  ELIZAOS_BASE_URL: z.string().url().default("https://cloud.milady.ai/api/v1"),
+  // MythX AI agent platform
+  MYTHX_API_KEY: z.string().min(1).optional(),
+  MYTHX_BASE_URL: z.string().url().default("https://cloud.milady.ai"),
   // Poly MCP system tools (73 tools)
   POLY_MCP_URL: z.string().url().default("http://localhost:8000/mcp"),
   POLY_MCP_TRANSPORT: z.enum(["stdio", "http"]).default("http"),
@@ -197,27 +187,6 @@ export function getEnv(): AppEnv {
     HUGGINGFACE_TEXT_BASE_URL: trimEnvValue(process.env.HUGGINGFACE_TEXT_BASE_URL),
     OLLAMA_BASE_URL: trimEnvValue(process.env.OLLAMA_BASE_URL),
     X402_FACILITATOR_URL: trimEnvValue(process.env.X402_FACILITATOR_URL),
-    CROSSMINT_SERVER_API_KEY: trimOptionalEnvValue(process.env.CROSSMINT_SERVER_API_KEY),
-    MOONPAY_API_KEY: trimOptionalEnvValue(process.env.MOONPAY_API_KEY),
-    MOONPAY_WEBHOOK_SHARED_TOKEN: trimOptionalEnvValue(
-      process.env.MOONPAY_WEBHOOK_SHARED_TOKEN,
-    ),
-    NEXT_PUBLIC_MOONPAY_PAYLINK_ID: trimOptionalEnvValue(
-      process.env.NEXT_PUBLIC_MOONPAY_PAYLINK_ID,
-    ),
-    NEXT_PUBLIC_MOONPAY_NETWORK:
-      process.env.NEXT_PUBLIC_MOONPAY_NETWORK === "test"
-        ? "test"
-        : process.env.NEXT_PUBLIC_MOONPAY_NETWORK === "main"
-          ? "main"
-          : undefined,
-    NEXT_PUBLIC_CROSSMINT_API_KEY: trimOptionalEnvValue(
-      process.env.NEXT_PUBLIC_CROSSMINT_API_KEY,
-    ),
-    CROSSMINT_COOKIE_DOMAIN: trimOptionalEnvValue(process.env.CROSSMINT_COOKIE_DOMAIN),
-    CROSSMINT_ADMIN_ALLOWLIST: trimOptionalEnvValue(
-      process.env.CROSSMINT_ADMIN_ALLOWLIST,
-    ),
     COCKPIT_USERNAME: trimOptionalEnvValue(process.env.COCKPIT_USERNAME),
     COCKPIT_PASSWORD: trimOptionalEnvValue(process.env.COCKPIT_PASSWORD),
     VIDEO_INFERENCE_PROVIDER: trimEnvValue(process.env.VIDEO_INFERENCE_PROVIDER),
@@ -229,8 +198,8 @@ export function getEnv(): AppEnv {
       /\\n/g,
       "\n",
     ),
-    ELIZAOS_API_KEY: trimOptionalEnvValue(process.env.ELIZAOS_API_KEY),
-    ELIZAOS_BASE_URL: trimEnvValue(process.env.ELIZAOS_BASE_URL),
+    MYTHX_API_KEY: trimOptionalEnvValue(process.env.MYTHX_API_KEY),
+    MYTHX_BASE_URL: trimEnvValue(process.env.MYTHX_BASE_URL),
     POLY_MCP_URL: trimEnvValue(process.env.POLY_MCP_URL),
     POLY_MCP_TRANSPORT: trimEnvValue(process.env.POLY_MCP_TRANSPORT),
     POLY_MCP_API_KEY: trimOptionalEnvValue(process.env.POLY_MCP_API_KEY),
@@ -246,12 +215,12 @@ export function getEnv(): AppEnv {
     MOLTBOOK_API_BASE_URL: trimOptionalEnvValue(process.env.MOLTBOOK_API_BASE_URL),
     MOLTBOOK_AGENT_API_KEY: trimOptionalEnvValue(process.env.MOLTBOOK_AGENT_API_KEY),
     MOLTBOOK_AGENT_HANDLE:
-      trimOptionalEnvValue(process.env.MOLTBOOK_AGENT_HANDLE) ?? "mythxeliza",
+      trimOptionalEnvValue(process.env.MOLTBOOK_AGENT_HANDLE) ?? "mythxmythx",
     MOLTBOOK_AGENT_DISPLAY_NAME:
-      trimOptionalEnvValue(process.env.MOLTBOOK_AGENT_DISPLAY_NAME) ?? "MythXEliza",
+      trimOptionalEnvValue(process.env.MOLTBOOK_AGENT_DISPLAY_NAME) ?? "MythX",
     MOLTBOOK_AGENT_BIO:
       trimOptionalEnvValue(process.env.MOLTBOOK_AGENT_BIO) ??
-      "MythXEliza creates AI autobiographical videos from X profiles and posts them to MoltBook.",
+      "MythX creates AI autobiographical videos from X profiles and posts them to MoltBook.",
     MOLTBOOK_VERIFICATION_SOLVER: trimEnvValue(process.env.MOLTBOOK_VERIFICATION_SOLVER),
   });
 

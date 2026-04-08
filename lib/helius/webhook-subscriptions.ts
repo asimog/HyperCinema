@@ -37,6 +37,19 @@ function uniq(values: string[]): string[] {
   return [...new Set(values)];
 }
 
+function shouldBypassWebhookSubscriptionForLocalDev(appBaseUrl: string): boolean {
+  try {
+    const url = new URL(appBaseUrl);
+    return (
+      url.hostname === "localhost" ||
+      url.hostname === "127.0.0.1" ||
+      url.hostname === "0.0.0.0"
+    );
+  } catch {
+    return false;
+  }
+}
+
 function buildTargetWebhookUrl(appBaseUrl: string): string {
   return new URL("/api/helius-webhook", appBaseUrl).toString();
 }
@@ -88,6 +101,7 @@ export interface HeliusWebhookSubscriptionResult {
   webhookId: string;
   created: boolean;
   alreadySubscribed: boolean;
+  skipped?: boolean;
 }
 
 export async function ensurePaymentAddressSubscribedToHeliusWebhook(
@@ -98,6 +112,15 @@ export async function ensurePaymentAddressSubscribedToHeliusWebhook(
   }
 
   const env = getEnv();
+  if (shouldBypassWebhookSubscriptionForLocalDev(env.APP_BASE_URL)) {
+    return {
+      webhookId: "local-dev-bypass",
+      created: false,
+      alreadySubscribed: false,
+      skipped: true,
+    };
+  }
+
   if (!env.HELIUS_WEBHOOK_SECRET) {
     throw new Error("HELIUS_WEBHOOK_SECRET is required for webhook subscription");
   }

@@ -22,6 +22,7 @@ export function DiscountCodePanel({
   const [code, setCode] = useState("");
   const [label, setLabel] = useState("");
   const [pending, setPending] = useState(false);
+  const [clearing, setClearing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
@@ -38,6 +39,41 @@ export function DiscountCodePanel({
       window.setTimeout(() => setCopiedCode(null), 1_200);
     } catch {
       setError("Clipboard copy failed.");
+    }
+  }
+
+  async function clearCodes() {
+    const confirmed = window.confirm(
+      "Delete every existing discount code record? This clears available and consumed codes.",
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    setClearing(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const response = await fetch("/api/admin/discount-codes", {
+        method: "DELETE",
+      });
+
+      const payload = (await response.json()) as { error?: string; deletedCount?: number };
+      if (!response.ok) {
+        throw new Error(payload.error ?? "Failed to delete discount codes.");
+      }
+
+      setSuccess(`Deleted ${payload.deletedCount ?? 0} discount codes.`);
+      router.refresh();
+    } catch (deleteError) {
+      setError(
+        deleteError instanceof Error
+          ? deleteError.message
+          : "Failed to delete discount codes.",
+      );
+    } finally {
+      setClearing(false);
     }
   }
 
@@ -87,7 +123,7 @@ export function DiscountCodePanel({
 
         <p className="route-summary">
           Leave the code blank to generate one automatically, or type your own alphanumeric
-          code and save it to Firestore.
+          code and save it as a one-time Firestore record.
         </p>
 
         <div className="mt-4 grid gap-3 md:grid-cols-[1fr,1fr,auto] md:items-end">
@@ -113,13 +149,21 @@ export function DiscountCodePanel({
             type="button"
             onClick={() => void issueCode()}
             className="button button-secondary whitespace-nowrap md:self-end"
-            disabled={pending}
+            disabled={pending || clearing}
           >
             {pending ? "Issuing..." : "Issue code"}
           </button>
         </div>
 
         <div className="mt-3 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => void clearCodes()}
+            className="button button-secondary"
+            disabled={pending || clearing}
+          >
+            {clearing ? "Deleting..." : "Delete all codes"}
+          </button>
           {success ? <p className="inline-note">{success}</p> : null}
           {error ? <p className="inline-error">{error}</p> : null}
           {copiedCode ? <p className="inline-note">Copied {copiedCode}.</p> : null}
@@ -140,7 +184,7 @@ export function DiscountCodePanel({
           {records.map((record) => (
             <article key={record.code} className="surface-card module-tile">
               <p className="eyebrow">
-                {record.origin} - {record.isConsumed ? "used" : "unused"}
+                {record.isConsumed ? "used" : "unused"}
               </p>
               <h3 className="text-2xl tracking-wide">{record.code}</h3>
               <p className="route-summary compact">{record.label ?? "No label"}</p>
@@ -151,7 +195,7 @@ export function DiscountCodePanel({
               <div className="module-preview">
                 <span>Issued</span>
                 <strong>
-                  {record.createdAt ? new Date(record.createdAt).toLocaleString() : "Built-in"}
+                  {record.createdAt ? new Date(record.createdAt).toLocaleString() : "Unknown"}
                 </strong>
               </div>
               <div className="module-preview">

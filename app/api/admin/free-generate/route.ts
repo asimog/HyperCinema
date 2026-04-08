@@ -6,7 +6,7 @@ import {
 } from "@/lib/jobs/repository";
 import { resolveMemecoinMetadata } from "@/lib/memecoins/metadata";
 import { getCinemaPackageConfig } from "@/lib/cinema/config";
-import { getCrossmintSessionFromRequest, isCrossmintAdmin } from "@/lib/crossmint/server";
+import { cockpitSessionCookie } from "@/lib/admin/cockpit-auth";
 import { logger } from "@/lib/logging/logger";
 import {
   CinemaExperience,
@@ -79,15 +79,7 @@ const freeGenerateSchema = z.discriminatedUnion("requestKind", [
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getCrossmintSessionFromRequest(request);
-    if (!session?.userId) {
-      return NextResponse.json({ error: "Authentication required." }, { status: 401 });
-    }
-
-    // Fetch viewer to get email for admin check
-    const { getCrossmintViewerFromCookies } = await import("@/lib/crossmint/server");
-    const viewer = await getCrossmintViewerFromCookies();
-    if (!viewer || !isCrossmintAdmin({ email: viewer.email, userId: viewer.userId })) {
+    if (request.cookies.get(cockpitSessionCookie.name)?.value !== cockpitSessionCookie.value) {
       return NextResponse.json({ error: "Admin access required." }, { status: 403 });
     }
 
@@ -131,7 +123,7 @@ export async function POST(request: NextRequest) {
         pricingMode: "private",
         visibility: "private",
         experience: payload.experience as CinemaExperience | undefined,
-        creatorId: viewer.userId,
+        creatorId: "cockpit-admin",
         priceSol: 0,
         priceUsdc: 0,
         videoSeconds: pkg.videoSeconds,
@@ -154,7 +146,7 @@ export async function POST(request: NextRequest) {
         pricingMode: "private",
         visibility: "private",
         experience: payload.experience as CinemaExperience | undefined,
-        creatorId: viewer.userId,
+        creatorId: "cockpit-admin",
         priceSol: 0,
         priceUsdc: 0,
         videoSeconds: pkg.videoSeconds,
@@ -176,7 +168,7 @@ export async function POST(request: NextRequest) {
       component: "admin_free_generate",
       stage: "dispatch",
       jobId,
-      adminUserId: viewer.userId,
+      adminUserId: "cockpit-admin",
       dispatchStatus: dispatch.status,
     });
 

@@ -19,7 +19,7 @@ ENV NODE_ENV=production
 ENV PORT=8090
 
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends ffmpeg ca-certificates \
+  && apt-get install -y --no-install-recommends ffmpeg ca-certificates git \
   && rm -rf /var/lib/apt/lists/*
 
 COPY package.json package-lock.json ./

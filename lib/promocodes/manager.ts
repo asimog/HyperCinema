@@ -284,9 +284,9 @@ export function getDefaultPromoCodes(): Array<{
       description: "Free MythX video generation - 100 uses",
     },
     {
-      code: "ELIZA-VIP",
+      code: "MYTHX-VIP",
       maxUses: 50,
-      description: "VIP access for ElizaOS community - 50 uses",
+      description: "VIP access for MythX community - 50 uses",
     },
     {
       code: "CINEMA-TRIAL",

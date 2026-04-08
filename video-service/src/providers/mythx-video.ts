@@ -1,9 +1,9 @@
-// ElizaOS video provider for video-service
+// MythX video provider for video-service
 import { setTimeout as sleep } from "timers/promises";
 import { getVideoServiceEnv } from "../env";
 
 // Input for generating a single clip
-export interface GenerateElizaOSClipInput {
+export interface GenerateMythXClipInput {
   model?: string;
   prompt: string;
   durationSeconds: number;
@@ -13,15 +13,15 @@ export interface GenerateElizaOSClipInput {
   onProgress?: () => Promise<void> | void;
 }
 
-// Response from ElizaOS video start
-interface ElizaOSVideoStartResponse {
+// Response from MythX video start
+interface MythXVideoStartResponse {
   id?: string;
   videoUrl?: string;
   status?: string;
 }
 
 // Response from polling video status
-interface ElizaOSVideoStatusResponse {
+interface MythXVideoStatusResponse {
   id?: string;
   status?: string;
   videoUrl?: string;
@@ -37,11 +37,11 @@ function normalizeImageUrl(value?: string | null): string | undefined {
   return trimmed.length ? trimmed : undefined;
 }
 
-function extractVideoUrl(payload: ElizaOSVideoStatusResponse): string | null {
+function extractVideoUrl(payload: MythXVideoStatusResponse): string | null {
   return payload.videoUrl?.trim() || null;
 }
 
-function extractErrorMessage(payload: ElizaOSVideoStatusResponse): string | null {
+function extractErrorMessage(payload: MythXVideoStatusResponse): string | null {
   if (typeof payload.error === "string" && payload.error.trim()) {
     return payload.error.trim();
   }
@@ -51,21 +51,21 @@ function extractErrorMessage(payload: ElizaOSVideoStatusResponse): string | null
   return null;
 }
 
-export class ElizaOSVideoClient {
-  async generateClip(input: GenerateElizaOSClipInput): Promise<{
+export class MythXVideoClient {
+  async generateClip(input: GenerateMythXClipInput): Promise<{
     operationName: string;
     videoUris: string[];
     videoBytesBase64: string[];
   }> {
     const env = getVideoServiceEnv();
-    if (!env.ELIZAOS_API_KEY) {
-      throw new Error("ELIZAOS_API_KEY is required for ElizaOS video generation.");
+    if (!env.MYTHX_API_KEY) {
+      throw new Error("MYTHX_API_KEY is required for MythX video generation.");
     }
 
-    const baseUrl = (env.ELIZAOS_BASE_URL || "https://cloud.milady.ai/api/v1").replace(/\/+$/, "");
+    const baseUrl = normalizeMythXBaseUrl(env.MYTHX_BASE_URL);
     const headers = {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${env.ELIZAOS_API_KEY}`,
+      Authorization: `Bearer ${env.MYTHX_API_KEY}`,
     };
 
     const startResponse = await fetch(`${baseUrl}/api/videos/generations`, {
@@ -73,7 +73,7 @@ export class ElizaOSVideoClient {
       headers,
       body: JSON.stringify({
         prompt: input.prompt,
-        model: input.model || env.ELIZAOS_VIDEO_MODEL,
+        model: input.model || env.MYTHX_VIDEO_MODEL,
         duration: Math.max(1, Math.min(30, Math.floor(input.durationSeconds))),
         aspect_ratio: input.aspectRatio ?? "16:9",
         style: input.style,
@@ -83,15 +83,15 @@ export class ElizaOSVideoClient {
 
     if (!startResponse.ok) {
       const body = await startResponse.text();
-      throw new Error(`ElizaOS video start failed (${startResponse.status}): ${body}`);
+      throw new Error(`MythX video start failed (${startResponse.status}): ${body}`);
     }
 
-    const started = (await startResponse.json()) as ElizaOSVideoStartResponse;
-    const immediateUrl = extractVideoUrl(started as ElizaOSVideoStatusResponse);
+    const started = (await startResponse.json()) as MythXVideoStartResponse;
+    const immediateUrl = extractVideoUrl(started as MythXVideoStatusResponse);
     
     if (immediateUrl) {
       return {
-        operationName: started.id ?? "elizaos-immediate",
+        operationName: started.id ?? "mythx-immediate",
         videoUris: [immediateUrl],
         videoBytesBase64: [],
       };
@@ -99,7 +99,7 @@ export class ElizaOSVideoClient {
 
     const videoId = started.id;
     if (!videoId) {
-      throw new Error("ElizaOS video generation did not return a video id.");
+      throw new Error("MythX video generation did not return a video id.");
     }
 
     const maxAttempts = env.VERTEX_MAX_POLL_ATTEMPTS;
@@ -116,14 +116,14 @@ export class ElizaOSVideoClient {
 
       if (!statusResponse.ok) {
         const body = await statusResponse.text();
-        throw new Error(`ElizaOS video polling failed (${statusResponse.status}): ${body}`);
+        throw new Error(`MythX video polling failed (${statusResponse.status}): ${body}`);
       }
 
-      const statusPayload = (await statusResponse.json()) as ElizaOSVideoStatusResponse;
+      const statusPayload = (await statusResponse.json()) as MythXVideoStatusResponse;
       const status = (statusPayload.status ?? "").trim().toLowerCase();
 
       if (status === "failed" || status === "error" || status === "cancelled") {
-        throw new Error(extractErrorMessage(statusPayload) ?? "ElizaOS video generation failed.");
+        throw new Error(extractErrorMessage(statusPayload) ?? "MythX video generation failed.");
       }
 
       const videoUrl = extractVideoUrl(statusPayload);
@@ -135,7 +135,7 @@ export class ElizaOSVideoClient {
         videoUrl
       ) {
         if (!videoUrl) {
-          throw new Error("ElizaOS video generation completed without a video URL.");
+          throw new Error("MythX video generation completed without a video URL.");
         }
 
         return {
@@ -146,6 +146,12 @@ export class ElizaOSVideoClient {
       }
     }
 
-    throw new Error("Timed out while waiting for ElizaOS video generation.");
+    throw new Error("Timed out while waiting for MythX video generation.");
   }
+}
+
+function normalizeMythXBaseUrl(value?: string): string {
+  const fallback = "https://cloud.milady.ai";
+  const trimmed = (value || fallback).replace(/\/+$/, "");
+  return trimmed.replace(/\/api(?:\/v1)?$/i, "");
 }

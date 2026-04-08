@@ -143,6 +143,17 @@ const xaiMetadataSchema = z.object({
   storyMetadata: storyMetadataSchema,
 });
 
+const openMontageMetadataSchema = z.object({
+  provider: z.literal("openmontage"),
+  compositionId: z.string().min(1).default("CinematicRenderer"),
+  resolution: resolutionSchema.default("1080p"),
+  prompt: z.string().min(1),
+  workerProvider: z.enum(["google_veo", "xai", "mythx"]).optional(),
+  workerModel: z.string().min(1).optional(),
+  sceneMetadata: z.array(sceneMetadataSchema).min(1),
+  storyMetadata: storyMetadataSchema,
+});
+
 export const renderRequestSchema = z.object({
   jobId: z.string().min(1),
   wallet: z.string().min(1),
@@ -151,25 +162,28 @@ export const renderRequestSchema = z.object({
   resolution: resolutionSchema.optional(),
   hookLine: z.string().min(1),
   scenes: z.array(sceneSchema).min(1),
-  videoEngine: z.enum(["google_veo", "xai"]),
+  videoEngine: z.enum(["google_veo", "xai", "openmontage"]),
   provider: z.string().optional(),
   prompt: z.string().optional(),
   metadata: googleVeoMetadataSchema.optional(),
   googleVeo: googleVeoMetadataSchema.optional(),
   xai: xaiMetadataSchema.optional(),
+  openMontage: openMontageMetadataSchema.optional(),
 });
 
 export type RenderRequest = z.infer<typeof renderRequestSchema>;
 export type RenderScene = z.infer<typeof sceneSchema>;
 export type GoogleVeoMetadata = z.infer<typeof googleVeoMetadataSchema>;
 export type XAiMetadata = z.infer<typeof xaiMetadataSchema>;
+export type OpenMontageMetadata = z.infer<typeof openMontageMetadataSchema>;
 
 export interface NormalizedRenderRequest
-  extends Omit<RenderRequest, "metadata" | "googleVeo" | "xai" | "resolution"> {
+  extends Omit<RenderRequest, "metadata" | "googleVeo" | "xai" | "openMontage" | "resolution"> {
   resolution?: "480p" | "720p" | "1080p";
   metadata?: GoogleVeoMetadata;
   googleVeo?: GoogleVeoMetadata;
   xai?: XAiMetadata;
+  openMontage?: OpenMontageMetadata;
 }
 
 export type RenderStatus = "queued" | "processing" | "ready" | "failed";
@@ -217,6 +231,39 @@ export function parseRenderRequest(payload: unknown): NormalizedRenderRequest {
       ...parsed,
       resolution: requestedResolution,
       xai: {
+        ...metadata,
+        resolution: requestedResolution,
+      },
+    };
+  }
+
+  if (parsed.videoEngine === "openmontage") {
+    if (parsed.provider !== "openmontage") {
+      throw new Error("provider must be 'openmontage' when videoEngine=openmontage");
+    }
+
+    const metadata = parsed.openMontage;
+    if (!metadata) {
+      throw new Error("openMontage metadata is required when videoEngine=openmontage");
+    }
+
+    if (!metadata.sceneMetadata?.length || !metadata.storyMetadata) {
+      throw new Error(
+        "openMontage.sceneMetadata and openMontage.storyMetadata are required for OpenMontage renders",
+      );
+    }
+
+    const requestedResolution = parsed.resolution ?? metadata.resolution;
+    if (parsed.resolution && parsed.resolution !== requestedResolution) {
+      throw new Error(
+        "resolution mismatch between request.resolution and openMontage.resolution.",
+      );
+    }
+
+    return {
+      ...parsed,
+      resolution: requestedResolution,
+      openMontage: {
         ...metadata,
         resolution: requestedResolution,
       },

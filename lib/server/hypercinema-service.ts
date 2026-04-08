@@ -2,7 +2,6 @@ import { ACTIVE_PACKAGE_TYPES, PACKAGE_CONFIG } from "@/lib/constants";
 import { getEnv } from "@/lib/env";
 import { createHyperCinemaCardsAgent } from "@/packages/adapters/src/cards/remotion";
 import { TOKEN_VIDEO_STYLE_PRESETS } from "@/lib/memecoins/styles";
-import { createHyperCinemaMoonpayAdapter } from "@/packages/adapters/src/payments/moonpay";
 import { createHyperCinemaX402Adapter } from "@/packages/adapters/src/payments/x402";
 import { InterfaceAdapterServiceManifest } from "@/packages/core/src/protocol";
 
@@ -14,7 +13,7 @@ export function getHyperCinemaServiceManifest(): InterfaceAdapterServiceManifest
     id: "hypercinema.multichain-memecoin-video",
     name: "TrenchMyths",
     summary:
-      "HyperMyths memecoin video generation from a single mint or contract address with manual SOL checkout, MoonPay Commerce checkout, x402/USDC settlement, or CardsAgent text decks, title pages, and motion adapters.",
+      "HyperMyths memecoin video generation from a single mint or contract address with manual SOL checkout, x402/USDC settlement, or CardsAgent text decks, title pages, and motion adapters.",
     primaryMode: "token_video",
     supportedChains: ["solana", "ethereum", "bsc", "base"],
     inputSchema: {
@@ -47,7 +46,6 @@ export function getHyperCinemaServiceManifest(): InterfaceAdapterServiceManifest
         network: "solana",
         endpoint: new URL("/api/jobs", baseUrl).toString(),
       },
-      createHyperCinemaMoonpayAdapter(baseUrl),
       createHyperCinemaX402Adapter(baseUrl),
     ],
     cardsAgent: createHyperCinemaCardsAgent(baseUrl),

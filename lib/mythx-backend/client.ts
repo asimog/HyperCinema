@@ -1,10 +1,10 @@
-// ElizaOS Cloud API client
+// MythX Cloud API client
 // Handles agents, chat, video, knowledge
 
 import { getEnv } from "@/lib/env";
 
 // Agent identity and status
-export interface ElizaOSAgent {
+export interface MythXAgent {
   id: string;
   name: string;
   character?: Record<string, unknown>;
@@ -14,22 +14,22 @@ export interface ElizaOSAgent {
 }
 
 // Chat message for completions API
-export interface ElizaOSChatMessage {
+export interface MythXChatMessage {
   role: "user" | "assistant" | "system";
   content: string;
 }
 
 // Chat request payload
-export interface ElizaOSChatCompletionRequest {
+export interface MythXChatCompletionRequest {
   model?: string;
-  messages: ElizaOSChatMessage[];
+  messages: MythXChatMessage[];
   temperature?: number;
   max_tokens?: number;
   agentId?: string;
 }
 
 // Chat response from API
-export interface ElizaOSChatCompletionResponse {
+export interface MythXChatCompletionResponse {
   id: string;
   choices: Array<{
     message: {
@@ -46,7 +46,7 @@ export interface ElizaOSChatCompletionResponse {
 }
 
 // Video generation request
-export interface ElizaOSVideoGenerationRequest {
+export interface MythXVideoGenerationRequest {
   prompt: string;
   model?: string;
   duration?: number;
@@ -56,7 +56,7 @@ export interface ElizaOSVideoGenerationRequest {
 }
 
 // Video generation response
-export interface ElizaOSVideoGenerationResponse {
+export interface MythXVideoGenerationResponse {
   id: string;
   status: "pending" | "processing" | "completed" | "failed";
   videoUrl?: string;
@@ -66,14 +66,14 @@ export interface ElizaOSVideoGenerationResponse {
 }
 
 // Knowledge base query
-export interface ElizaOSKnowledgeRequest {
+export interface MythXKnowledgeRequest {
   query: string;
   agentId?: string;
   topK?: number;
 }
 
 // Knowledge base results
-export interface ElizaOSKnowledgeResponse {
+export interface MythXKnowledgeResponse {
   results: Array<{
     content: string;
     score: number;
@@ -81,22 +81,22 @@ export interface ElizaOSKnowledgeResponse {
   }>;
 }
 
-// ElizaOS API client class
-export class ElizaOSClient {
+// MythX API client class
+export class MythXClient {
   private baseUrl: string;
   private apiKey: string;
 
   // Load config from environment
   constructor() {
     const env = getEnv();
-    this.baseUrl = (env.ELIZAOS_BASE_URL || "https://cloud.milady.ai/api/v1").replace(/\/+$/, "");
-    this.apiKey = env.ELIZAOS_API_KEY || "";
+    this.baseUrl = normalizeMythXBaseUrl(env.MYTHX_BASE_URL);
+    this.apiKey = env.MYTHX_API_KEY || "";
   }
 
   // Throw if API key missing
   private ensureConfigured(): void {
     if (!this.apiKey) {
-      throw new Error("ELIZAOS_API_KEY is required. Set your ElizaOS API key in environment variables.");
+      throw new Error("MYTHX_API_KEY is required. Set your MythX API key in environment variables.");
     }
   }
 
@@ -115,7 +115,7 @@ export class ElizaOSClient {
     agentId: string;
     name: string;
     character: Record<string, unknown>;
-  }): Promise<ElizaOSAgent> {
+  }): Promise<MythXAgent> {
     this.ensureConfigured();
     const response = await fetch(`${this.baseUrl}/api/agents/${input.agentId}`, {
       method: "PUT",
@@ -128,14 +128,14 @@ export class ElizaOSClient {
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`Failed to create/update ElizaOS agent (${response.status}): ${errorText}`);
+      throw new Error(`Failed to create/update MythX agent (${response.status}): ${errorText}`);
     }
 
-    return (await response.json()) as ElizaOSAgent;
+    return (await response.json()) as MythXAgent;
   }
 
   // Fetch agent details by ID
-  async getAgent(agentId: string): Promise<ElizaOSAgent> {
+  async getAgent(agentId: string): Promise<MythXAgent> {
     this.ensureConfigured();
     const response = await fetch(`${this.baseUrl}/api/agents/${agentId}`, {
       headers: this.getHeaders(),
@@ -143,16 +143,16 @@ export class ElizaOSClient {
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`Failed to get ElizaOS agent (${response.status}): ${errorText}`);
+      throw new Error(`Failed to get MythX agent (${response.status}): ${errorText}`);
     }
 
-    return (await response.json()) as ElizaOSAgent;
+    return (await response.json()) as MythXAgent;
   }
 
   // Send chat messages to agent
   async chatCompletion(
-    input: ElizaOSChatCompletionRequest
-  ): Promise<ElizaOSChatCompletionResponse> {
+    input: MythXChatCompletionRequest
+  ): Promise<MythXChatCompletionResponse> {
     this.ensureConfigured();
     const response = await fetch(`${this.baseUrl}/api/chat/completions`, {
       method: "POST",
@@ -168,16 +168,16 @@ export class ElizaOSClient {
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`ElizaOS chat completion failed (${response.status}): ${errorText}`);
+      throw new Error(`MythX chat completion failed (${response.status}): ${errorText}`);
     }
 
-    return (await response.json()) as ElizaOSChatCompletionResponse;
+    return (await response.json()) as MythXChatCompletionResponse;
   }
 
   // Generate video from prompt
   async generateVideo(
-    input: ElizaOSVideoGenerationRequest
-  ): Promise<ElizaOSVideoGenerationResponse> {
+    input: MythXVideoGenerationRequest
+  ): Promise<MythXVideoGenerationResponse> {
     this.ensureConfigured();
     const response = await fetch(`${this.baseUrl}/api/videos/generations`, {
       method: "POST",
@@ -194,14 +194,14 @@ export class ElizaOSClient {
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`ElizaOS video generation failed (${response.status}): ${errorText}`);
+      throw new Error(`MythX video generation failed (${response.status}): ${errorText}`);
     }
 
-    return (await response.json()) as ElizaOSVideoGenerationResponse;
+    return (await response.json()) as MythXVideoGenerationResponse;
   }
 
   // Poll video generation status
-  async getVideoStatus(videoId: string): Promise<ElizaOSVideoGenerationResponse> {
+  async getVideoStatus(videoId: string): Promise<MythXVideoGenerationResponse> {
     const response = await fetch(`${this.baseUrl}/api/videos/${videoId}`, {
       headers: this.getHeaders(),
     });
@@ -211,13 +211,13 @@ export class ElizaOSClient {
       throw new Error(`Failed to get video status (${response.status}): ${errorText}`);
     }
 
-    return (await response.json()) as ElizaOSVideoGenerationResponse;
+    return (await response.json()) as MythXVideoGenerationResponse;
   }
 
   // Query agent knowledge base
   async queryKnowledge(
-    input: ElizaOSKnowledgeRequest
-  ): Promise<ElizaOSKnowledgeResponse> {
+    input: MythXKnowledgeRequest
+  ): Promise<MythXKnowledgeResponse> {
     const response = await fetch(`${this.baseUrl}/api/knowledge/query`, {
       method: "POST",
       headers: this.getHeaders(),
@@ -230,10 +230,10 @@ export class ElizaOSClient {
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`ElizaOS knowledge query failed (${response.status}): ${errorText}`);
+      throw new Error(`MythX knowledge query failed (${response.status}): ${errorText}`);
     }
 
-    return (await response.json()) as ElizaOSKnowledgeResponse;
+    return (await response.json()) as MythXKnowledgeResponse;
   }
 
   // Upload document to knowledge base
@@ -262,12 +262,18 @@ export class ElizaOSClient {
 }
 
 // Global singleton for reuse
-let elizaOSClientInstance: ElizaOSClient | null = null;
+let mythxClientInstance: MythXClient | null = null;
 
 // Get or create client instance
-export function getElizaOSClient(): ElizaOSClient {
-  if (!elizaOSClientInstance) {
-    elizaOSClientInstance = new ElizaOSClient();
+export function getMythXClient(): MythXClient {
+  if (!mythxClientInstance) {
+    mythxClientInstance = new MythXClient();
   }
-  return elizaOSClientInstance;
+  return mythxClientInstance;
+}
+
+function normalizeMythXBaseUrl(value?: string): string {
+  const fallback = "https://cloud.milady.ai";
+  const trimmed = (value || fallback).replace(/\/+$/, "");
+  return trimmed.replace(/\/api(?:\/v1)?$/i, "");
 }

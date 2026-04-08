@@ -5,7 +5,6 @@ import { useEffect, useMemo, useState } from "react";
 
 import { PaymentInstructionsCard } from "@/components/PaymentInstructionsCard";
 import { CinemaConciergeChat } from "@/components/chat/CinemaConciergeChat";
-import { MoonPayHostedPaymentButton } from "@/components/payments/MoonPayHostedPaymentButton";
 import { HyperflowAssemblyScaffold } from "@/components/shell/HyperflowAssemblyScaffold";
 import { ArrowRightIcon, SparkIcon } from "@/components/ui/AppIcons";
 import { buildDirectorPrompt } from "@/lib/cinema/directorPrompt";
@@ -562,15 +561,10 @@ export function CinemaGeneratorClient(input: {
                 </Link>
               </div>
             </div>
-            <div className="button-row">
-              <MoonPayHostedPaymentButton
-                amountSol={jobStatus?.payment?.amountSol ?? jobPayment.amountSol}
-                jobId={jobPayment.jobId}
-                paymentAddress={jobStatus?.payment?.paymentAddress ?? jobPayment.paymentAddress}
-                label="Pay with MoonPay"
-              />
-            </div>
             <div className="stack-section">
+              <p className="route-summary compact">
+                Send SOL to the payment address below. Hosted card checkout has been removed.
+              </p>
               <PaymentInstructionsCard
                 jobId={jobPayment.jobId}
                 amountSol={jobStatus?.payment?.amountSol ?? jobPayment.amountSol}

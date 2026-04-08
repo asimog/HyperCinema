@@ -2,22 +2,30 @@
 import { NextRequest } from "next/server";
 
 const mocks = vi.hoisted(() => ({
+  createDiscountWaivedTokenVideoJob: vi.fn(),
+  createDiscountWaivedPromptVideoJob: vi.fn(),
   createTokenVideoJob: vi.fn(),
   createPromptVideoJob: vi.fn(),
   findRecentReusableTokenJob: vi.fn(),
   rollbackUnpaidJob: vi.fn(),
+  dispatchSingleJob: vi.fn(),
   ensurePaymentAddressSubscribedToHeliusWebhook: vi.fn(),
   enforceRateLimit: vi.fn(),
   getRequestIp: vi.fn(),
   resolveMemecoinMetadata: vi.fn(),
-  getCrossmintSessionFromRequest: vi.fn(),
 }));
 
 vi.mock("@/lib/jobs/repository", () => ({
+  createDiscountWaivedTokenVideoJob: mocks.createDiscountWaivedTokenVideoJob,
+  createDiscountWaivedPromptVideoJob: mocks.createDiscountWaivedPromptVideoJob,
   createTokenVideoJob: mocks.createTokenVideoJob,
   createPromptVideoJob: mocks.createPromptVideoJob,
   findRecentReusableTokenJob: mocks.findRecentReusableTokenJob,
   rollbackUnpaidJob: mocks.rollbackUnpaidJob,
+}));
+
+vi.mock("@/lib/jobs/dispatch", () => ({
+  dispatchSingleJob: mocks.dispatchSingleJob,
 }));
 
 vi.mock("@/lib/helius/webhook-subscriptions", () => ({
@@ -37,10 +45,6 @@ vi.mock("@/lib/memecoins/metadata", () => ({
   resolveMemecoinMetadata: mocks.resolveMemecoinMetadata,
 }));
 
-vi.mock("@/lib/crossmint/server", () => ({
-  getCrossmintSessionFromRequest: mocks.getCrossmintSessionFromRequest,
-}));
-
 import { POST } from "@/app/api/jobs/route";
 
 function buildTokenRequest(): NextRequest {
@@ -54,6 +58,22 @@ function buildTokenRequest(): NextRequest {
       packageType: "30s",
       chain: "solana",
       stylePreset: "trench_neon",
+    }),
+  });
+}
+
+function buildDiscountedTokenRequest(): NextRequest {
+  return new NextRequest("http://localhost/api/jobs", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      tokenAddress: "D1CRgh1Ty3yjDwN9CkwtsRWKmsmKQ2BbRbtKvCTfAN8Z",
+      packageType: "30s",
+      chain: "solana",
+      stylePreset: "trench_neon",
+      discountCode: "fresh123",
     }),
   });
 }
@@ -144,6 +164,10 @@ describe("POST /api/jobs", () => {
       rolledBack: true,
       job: null,
     });
+    mocks.dispatchSingleJob.mockResolvedValue({
+      jobId: "job-discount-1",
+      status: "dispatched",
+    });
     mocks.resolveMemecoinMetadata.mockResolvedValue({
       address: "D1CRgh1Ty3yjDwN9CkwtsRWKmsmKQ2BbRbtKvCTfAN8Z",
       chain: "solana",
@@ -174,6 +198,21 @@ describe("POST /api/jobs", () => {
       visibility: "public",
       experience: "legacy",
     });
+    mocks.createDiscountWaivedTokenVideoJob.mockResolvedValue({
+      jobId: "job-discount-1",
+      priceSol: 0.01,
+      paymentAddress: "",
+      requiredLamports: 0,
+      subjectChain: "solana",
+      subjectName: "Hash Token",
+      subjectSymbol: "HASH",
+      stylePreset: "trench_neon",
+      pricingMode: "legacy",
+      visibility: "public",
+      experience: "hashmyth",
+      paymentWaived: true,
+      discountCode: "FRESH123",
+    });
     mocks.createPromptVideoJob.mockResolvedValue({
       jobId: "job-prompt-1",
       priceSol: 0.004,
@@ -189,7 +228,6 @@ describe("POST /api/jobs", () => {
       created: false,
       alreadySubscribed: false,
     });
-    mocks.getCrossmintSessionFromRequest.mockResolvedValue(null);
   });
 
   it("creates a token video job and subscribes the payment address to Helius", async () => {
@@ -203,6 +241,23 @@ describe("POST /api/jobs", () => {
     expect(mocks.ensurePaymentAddressSubscribedToHeliusWebhook).toHaveBeenCalledWith(
       "11111111111111111111111111111111",
     );
+  });
+
+  it("creates and dispatches a discount-waived token job without requiring payment", async () => {
+    const response = await POST(buildDiscountedTokenRequest());
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.jobId).toBe("job-discount-1");
+    expect(body.paymentRequired).toBe(false);
+    expect(body.discountCode).toBe("FRESH123");
+    expect(mocks.createDiscountWaivedTokenVideoJob).toHaveBeenCalledWith(
+      expect.objectContaining({
+        discountCode: "FRESH123",
+      }),
+    );
+    expect(mocks.dispatchSingleJob).toHaveBeenCalledWith("job-discount-1");
+    expect(mocks.ensurePaymentAddressSubscribedToHeliusWebhook).not.toHaveBeenCalled();
   });
 
   it("reuses an existing recent token job for same token/package/style", async () => {

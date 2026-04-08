@@ -20,7 +20,7 @@ const PRICE_30S = 0.004;
 const PRICE_60S = 0.007;
 
 // Main MythX video generator component
-export default function MythXElizaGeneratorClient() {
+export default function MythXGeneratorClient() {
   const [profileInput, setProfileInput] = useState("");
   const [selectedStyle, setSelectedStyle] = useState("vhs_cinema");
   const [duration, setDuration] = useState<"30s" | "60s">("30s");
@@ -28,6 +28,7 @@ export default function MythXElizaGeneratorClient() {
   const [progress, setProgress] = useState("");
   const [progressStage, setProgressStage] = useState(0);
   const [jobId, setJobId] = useState<string | null>(null);
+  const [discountCode, setDiscountCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isAgent, setIsAgent] = useState(false);
 
@@ -53,7 +54,7 @@ export default function MythXElizaGeneratorClient() {
     setError(null);
     setJobId(null);
     setProgressStage(0);
-    setProgress("Initializing MythXEliza agent...");
+    setProgress("Initializing MythX agent...");
 
     try {
       // Step 1: Create job via API
@@ -73,6 +74,7 @@ export default function MythXElizaGeneratorClient() {
           stylePreset: selectedStyle,
           audioEnabled: true,
           experience: "mythx",
+          discountCode: discountCode.trim() || undefined,
         }),
       });
 
@@ -92,7 +94,7 @@ export default function MythXElizaGeneratorClient() {
       setError(err instanceof Error ? err.message : "An unexpected error occurred");
       setIsGenerating(false);
     }
-  }, [profileInput, selectedStyle, duration, isAgent]);
+  }, [profileInput, selectedStyle, duration, discountCode]);
 
   return (
     <div className="cinema-shell cinema-noise min-h-[100dvh] overflow-hidden px-4 py-6 text-[#f4efe8] md:px-8 md:py-8">
@@ -105,7 +107,7 @@ export default function MythXElizaGeneratorClient() {
             <p className="eyebrow">MythX — Autobiographical Cinema</p>
             <h1 className="font-display">Turn an X profile into a movie.</h1>
             <p className="route-summary">
-              Last 42 tweets. One cinematic story. Powered by ElizaOS AI agents.
+              Last 42 tweets. One cinematic story. Powered by MythX AI agents.
             </p>
           </section>
 
@@ -205,6 +207,21 @@ export default function MythXElizaGeneratorClient() {
             </div>
 
             {/* Generate */}
+            <div className="field">
+              <span>Discount code</span>
+              <input
+                type="text"
+                value={discountCode}
+                onChange={(e) => setDiscountCode(e.target.value)}
+                placeholder="Enter discount code or leave blank"
+                className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                disabled={isGenerating}
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Apply a code before generating. If no code is provided, payment will be requested after creation.
+              </p>
+            </div>
+
             <button
               onClick={handleGenerate}
               disabled={isGenerating || !profileInput.trim()}

@@ -11,6 +11,7 @@ export type TextInferenceProviderId =
 export type VideoInferenceProviderId =
   | "google_veo"
   | "xai"
+  | "openmontage"
   | "openai"
   | "replicate"
   | "huggingface"
@@ -107,6 +108,15 @@ export const VIDEO_INFERENCE_PROVIDER_OPTIONS: ProviderOption<VideoInferenceProv
     implemented: true,
     defaultModel: "grok-imagine-video",
     envHint: "XAI_API_KEY",
+  },
+  {
+    id: "openmontage",
+    label: "OpenMontage",
+    description:
+      "Compose rendered clips through OpenMontage Remotion timelines for stronger editorial control.",
+    implemented: true,
+    defaultModel: "CinematicRenderer",
+    envHint: "OPENMONTAGE_REPO_DIR",
   },
   {
     id: "openai",

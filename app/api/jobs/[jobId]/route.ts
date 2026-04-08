@@ -2,6 +2,7 @@ import { getJobArtifacts } from "@/lib/jobs/repository";
 import { recoverJobIfNeeded } from "@/lib/jobs/recovery";
 import { buildPaymentInstructions } from "@/lib/payments/instructions";
 import { NextResponse } from "next/server";
+import { assertFirestoreEmulatorAvailable } from "@/lib/firebase/emulator";
 
 export const runtime = "nodejs";
 
@@ -12,6 +13,20 @@ type Context = {
 export async function GET(_: Request, context: Context) {
   const { jobId } = await context.params;
   let recoveryWarning: string | null = null;
+
+  try {
+    await assertFirestoreEmulatorAvailable();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Firestore emulator is unavailable.";
+    return NextResponse.json(
+      {
+        error: "Firestore emulator unavailable",
+        message,
+        details: "Start the local Firestore emulator before opening MythX jobs.",
+      },
+      { status: 503 },
+    );
+  }
 
   try {
     await recoverJobIfNeeded(jobId);

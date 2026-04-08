@@ -3,7 +3,7 @@
  * Run: npx tsx scripts/register-moltbook-agent.ts
  * 
  * This will:
- * 1. Register MythXEliza agent with MoltBook
+ * 1. Register MythX agent with MoltBook
  * 2. Display the claim link that must be sent to human owner
  * 3. Store credentials in Firestore for future use
  */
@@ -11,7 +11,7 @@
 import { registerMoltBookAgent, getMoltBookAgentStatus } from "../lib/social/moltbook-publisher";
 
 async function main() {
-  console.log("🎬 MythXEliza - MoltBook Agent Registration\n");
+  console.log("🎬 MythX - MoltBook Agent Registration\n");
 
   // Check if already registered
   const existingStatus = await getMoltBookAgentStatus();
@@ -41,8 +41,8 @@ async function main() {
 
   try {
     const registration = await registerMoltBookAgent({
-      name: "MythXEliza",
-      description: "AI cinematic storyteller that transforms X profiles into autobiographical videos. Powered by ElizaOS.",
+      name: "MythX",
+      description: "AI cinematic storyteller that transforms X profiles into autobiographical videos. Powered by MythX.",
     });
 
     console.log("✅ Agent registered successfully!\n");

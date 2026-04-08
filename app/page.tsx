@@ -10,7 +10,7 @@ const MAIN_PAGES = [
     id: "mythx" as const,
     href: "/MythX",
     title: "MythX",
-    summary: "Autobiographical cinema from 42 tweets. Powered by ElizaOS AI.",
+    summary: "Autobiographical cinema from 42 tweets. Powered by MythX AI.",
   },
   {
     id: "hyperm" as const,

@@ -9,9 +9,11 @@ import { listModerationJobArtifacts } from "@/lib/jobs/repository";
 export default async function ModerationPage({
   searchParams,
 }: {
-  searchParams: { [key: string]: string | string[] | undefined };
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
-  const error = searchParams.error as string;
+  const resolvedSearchParams = await searchParams;
+  const error =
+    typeof resolvedSearchParams.error === "string" ? resolvedSearchParams.error : undefined;
   const isAuthed = await hasCockpitAccess();
 
   if (!isAuthed) {

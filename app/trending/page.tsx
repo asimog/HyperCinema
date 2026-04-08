@@ -41,8 +41,8 @@ async function getLast8Jobs(): Promise<JobCard[]> {
 // Custom video creator cards shown on trending page
 const CUSTOM_CREATORS = [
   {
-    id: "mythx-eliza",
-    title: "MythX Eliza",
+    id: "mythx",
+    title: "MythX MythX",
     description: "Turn any X profile into an autobiographical video. AI scrapes 42 tweets and generates cinema.",
     href: "/MythX",
     icon: "🎬",

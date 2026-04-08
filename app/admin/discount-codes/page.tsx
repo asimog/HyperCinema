@@ -9,9 +9,11 @@ import { listDiscountCodeAdminRecords } from "@/lib/jobs/repository";
 export default async function DiscountCodesPage({
   searchParams,
 }: {
-  searchParams: { [key: string]: string | string[] | undefined };
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
-  const error = searchParams.error as string;
+  const resolvedSearchParams = await searchParams;
+  const error =
+    typeof resolvedSearchParams.error === "string" ? resolvedSearchParams.error : undefined;
   const isAuthed = await hasCockpitAccess();
 
   if (!isAuthed) {
@@ -39,8 +41,8 @@ export default async function DiscountCodesPage({
           </div>
         </div>
         <p className="route-summary">
-          View the three built-in codes, see which ones have been consumed, and issue new
-          one-time codes into Firestore.
+          Issue one-time codes into Firestore, inspect which ones were consumed, and clear the
+          table when you need a fresh local run.
         </p>
       </section>
     </div>

@@ -127,4 +127,27 @@ describe("helius webhook subscription management", () => {
       alreadySubscribed: true,
     });
   });
+
+  it("skips webhook subscription entirely for localhost app urls", async () => {
+    mocks.getEnv.mockReturnValue({
+      APP_BASE_URL: "http://localhost:3000",
+      HELIUS_WEBHOOK_SECRET: undefined,
+      HELIUS_WEBHOOK_ID: undefined,
+    });
+
+    const result = await ensurePaymentAddressSubscribedToHeliusWebhook(
+      PAYMENT_ADDRESS,
+    );
+
+    expect(mocks.webhooksGet).not.toHaveBeenCalled();
+    expect(mocks.webhooksGetAll).not.toHaveBeenCalled();
+    expect(mocks.webhooksCreate).not.toHaveBeenCalled();
+    expect(mocks.webhooksUpdate).not.toHaveBeenCalled();
+    expect(result).toEqual({
+      webhookId: "local-dev-bypass",
+      created: false,
+      alreadySubscribed: false,
+      skipped: true,
+    });
+  });
 });

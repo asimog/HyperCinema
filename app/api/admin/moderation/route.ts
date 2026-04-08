@@ -1,4 +1,4 @@
-import { getCrossmintViewerFromCookies, isCrossmintAdmin } from "@/lib/crossmint/server";
+import { cockpitSessionCookie } from "@/lib/admin/cockpit-auth";
 import { updateJobModeration } from "@/lib/jobs/repository";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -11,8 +11,7 @@ const moderationSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
-  const viewer = await getCrossmintViewerFromCookies();
-  if (!viewer || !isCrossmintAdmin({ email: viewer.email, userId: viewer.userId })) {
+  if (request.cookies.get(cockpitSessionCookie.name)?.value !== cockpitSessionCookie.value) {
     return NextResponse.json({ error: "Admin access required." }, { status: 403 });
   }
 

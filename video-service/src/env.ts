@@ -33,9 +33,24 @@ const serviceEnvSchema = z.object({
   FIREBASE_CLIENT_EMAIL: z.string().min(1).optional(),
   FIREBASE_PRIVATE_KEY: z.string().min(1).optional(),
   FIREBASE_STORAGE_BUCKET: z.string().optional(),
-  ELIZAOS_API_KEY: z.string().min(1).optional(),
-  ELIZAOS_BASE_URL: z.string().url().default("https://cloud.milady.ai/api/v1"),
-  ELIZAOS_VIDEO_MODEL: z.string().min(1).default("default"),
+  MYTHX_API_KEY: z.string().min(1).optional(),
+  MYTHX_BASE_URL: z.string().url().default("https://cloud.milady.ai"),
+  MYTHX_VIDEO_MODEL: z.string().min(1).default("default"),
+  OPENMONTAGE_REPO_DIR: z.string().min(1).default("/tmp/openmontage"),
+  OPENMONTAGE_GIT_URL: z
+    .string()
+    .url()
+    .default("https://github.com/calesthio/OpenMontage.git"),
+  OPENMONTAGE_RUN_COMMAND: z.string().optional(),
+  OPENMONTAGE_OUTPUT_ROOT: z.string().min(1).default("/tmp/openmontage-renders"),
+  OPENMONTAGE_COMPOSITION_ID: z.string().min(1).default("CinematicRenderer"),
+  OPENMONTAGE_NODE_BIN: z.string().min(1).default("npx"),
+  OPENMONTAGE_FFMPEG_PATH: z.string().min(1).default("ffmpeg"),
+  OPENMONTAGE_VIDEO_WORKER_PROVIDER: z
+    .enum(["google_veo", "xai", "mythx"])
+    .default("google_veo"),
+  OPENMONTAGE_VIDEO_WORKER_MODEL: z.string().optional(),
+  OPENMONTAGE_RENDER_TIMEOUT_MS: z.coerce.number().int().min(30_000).default(900_000),
 });
 
 export type VideoServiceEnv = z.infer<typeof serviceEnvSchema>;
@@ -52,8 +67,17 @@ export function getVideoServiceEnv(): VideoServiceEnv {
     VERTEX_VEO_MODEL: trimEnvValue(process.env.VERTEX_VEO_MODEL),
     VEO_OUTPUT_RESOLUTION: trimEnvValue(process.env.VEO_OUTPUT_RESOLUTION),
     FIREBASE_PRIVATE_KEY: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
-    ELIZAOS_API_KEY: trimEnvValue(process.env.ELIZAOS_API_KEY),
-    ELIZAOS_BASE_URL: trimEnvValue(process.env.ELIZAOS_BASE_URL),
+    MYTHX_API_KEY: trimEnvValue(process.env.MYTHX_API_KEY),
+    MYTHX_BASE_URL: trimEnvValue(process.env.MYTHX_BASE_URL),
+    OPENMONTAGE_REPO_DIR: trimEnvValue(process.env.OPENMONTAGE_REPO_DIR),
+    OPENMONTAGE_GIT_URL: trimEnvValue(process.env.OPENMONTAGE_GIT_URL),
+    OPENMONTAGE_RUN_COMMAND: trimEnvValue(process.env.OPENMONTAGE_RUN_COMMAND),
+    OPENMONTAGE_OUTPUT_ROOT: trimEnvValue(process.env.OPENMONTAGE_OUTPUT_ROOT),
+    OPENMONTAGE_COMPOSITION_ID: trimEnvValue(process.env.OPENMONTAGE_COMPOSITION_ID),
+    OPENMONTAGE_NODE_BIN: trimEnvValue(process.env.OPENMONTAGE_NODE_BIN),
+    OPENMONTAGE_FFMPEG_PATH: trimEnvValue(process.env.OPENMONTAGE_FFMPEG_PATH),
+    OPENMONTAGE_VIDEO_WORKER_PROVIDER: trimEnvValue(process.env.OPENMONTAGE_VIDEO_WORKER_PROVIDER),
+    OPENMONTAGE_VIDEO_WORKER_MODEL: trimEnvValue(process.env.OPENMONTAGE_VIDEO_WORKER_MODEL),
   });
 
   if (!parsed.success) {

@@ -33,7 +33,7 @@ export function AdapterBoxCard({ service }: AdapterBoxCardProps) {
         <article className="rail-card">
           <p className="eyebrow">Create</p>
           <strong>{service.endpoints.createJob}</strong>
-          <span>Manual SOL checkout plus MoonPay Commerce for the same packages.</span>
+          <span>Manual SOL checkout surface for the same packages.</span>
         </article>
         <article className="rail-card">
           <p className="eyebrow">x402</p>

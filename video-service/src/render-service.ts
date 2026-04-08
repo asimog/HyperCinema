@@ -19,8 +19,11 @@ import {
   stageClipFiles,
   uploadLocalFile,
 } from "./pipeline/media";
+import { MythXVideoClient } from "./providers/mythx-video";
+import { OpenMontageRenderer } from "./providers/openmontage";
 import { GenerateClipInput, VertexVeoClient } from "./providers/vertex-veo";
 import { GenerateXAiClipInput, XAiVideoClient } from "./providers/xai-video";
+import { OpenMontageMetadata, RenderScene } from "./types";
 
 export interface RenderServiceResultSync {
   mode: "sync";
@@ -52,7 +55,10 @@ function normalizeVeoModel(
   value: unknown,
   fallback: string,
 ): string {
-  return typeof value === "string" && value.length > 0 ? value : fallback;
+  if (value === ALLOWED_VEO_MODEL) {
+    return value;
+  }
+  return fallback;
 }
 
 function normalizeResolution(
@@ -86,6 +92,8 @@ export class RenderService {
   constructor(
     private readonly clipGenerator: ClipGenerator = new VertexVeoClient(),
     private readonly xaiClipGenerator: XAiVideoClient = new XAiVideoClient(),
+    private readonly mythxClipGenerator: MythXVideoClient = new MythXVideoClient(),
+    private readonly openMontageRenderer: OpenMontageRenderer = new OpenMontageRenderer(),
   ) {}
 
   async startOrGet(request: NormalizedRenderRequest): Promise<RenderServiceStartResult> {
@@ -196,7 +204,19 @@ export class RenderService {
 
   private async processRender(record: RenderJobRecord): Promise<void> {
     const env = getVideoServiceEnv();
-    const provider = record.request.provider === "xai" ? "xai" : "google_veo";
+    const provider =
+      record.request.provider === "xai" ||
+      record.request.provider === "openmontage"
+        ? record.request.provider
+        : "google_veo";
+
+    if (provider === "openmontage") {
+      if (!record.request.openMontage) {
+        throw new Error("OpenMontage render requested without openMontage metadata.");
+      }
+      await this.processOpenMontageRender(record, record.request.openMontage);
+      return;
+    }
 
     const metadata = record.request.metadata ?? record.request.googleVeo;
     const xaiMetadata = record.request.xai;
@@ -293,6 +313,120 @@ export class RenderService {
       });
     } finally {
       await fs.rm(directory, { recursive: true, force: true });
+    }
+  }
+
+  private async processOpenMontageRender(
+    record: RenderJobRecord,
+    openMontage: OpenMontageMetadata,
+  ): Promise<void> {
+    const env = getVideoServiceEnv();
+    const chunks = buildSceneChunks({
+      request: record.request,
+      maxClipSeconds: env.VEO_MAX_CLIP_SECONDS,
+    });
+
+    if (!chunks.length) {
+      throw new Error("No scene chunks available for OpenMontage rendering.");
+    }
+
+    const workerProvider =
+      openMontage.workerProvider ?? env.OPENMONTAGE_VIDEO_WORKER_PROVIDER;
+    const workerModel =
+      openMontage.workerModel ?? env.OPENMONTAGE_VIDEO_WORKER_MODEL ?? undefined;
+    const clipUris: string[] = [];
+
+    for (const chunk of chunks) {
+      const clip =
+        workerProvider === "xai"
+          ? await this.xaiClipGenerator.generateClip({
+              model: workerModel ?? env.XAI_VIDEO_MODEL,
+              resolution: "720p",
+              prompt: chunk.prompt,
+              durationSeconds: chunk.durationSeconds,
+              imageUrl: chunk.imageUrl,
+              aspectRatio: "16:9",
+              onProgress: () => touchRenderJob(record.id),
+            } satisfies GenerateXAiClipInput)
+          : workerProvider === "mythx"
+            ? await this.mythxClipGenerator.generateClip({
+                model: workerModel ?? env.MYTHX_VIDEO_MODEL,
+                prompt: chunk.prompt,
+                durationSeconds: chunk.durationSeconds,
+                aspectRatio: "16:9",
+                onProgress: () => touchRenderJob(record.id),
+              })
+            : await this.clipGenerator.generateClip({
+                model: (workerModel ?? env.VERTEX_VEO_MODEL) as GenerateClipInput["model"],
+                resolution: openMontage.resolution,
+                prompt: chunk.prompt,
+                durationSeconds: chunk.durationSeconds,
+                imageUrl: chunk.imageUrl,
+                styleHints: ["openmontage", "editorial-composition"],
+                generateAudio: false,
+                storageUri: `gs://${env.FIREBASE_STORAGE_BUCKET}/video-renders/${record.jobId}/openmontage/${chunk.chunkId}`,
+                onProgress: () => touchRenderJob(record.id),
+              });
+      const uri = clip.videoUris[0];
+      const inlineVideo = clip.videoBytesBase64[0];
+      if (uri) {
+        clipUris.push(uri);
+      } else if (inlineVideo) {
+        clipUris.push(`data:video/mp4;base64,${inlineVideo}`);
+      } else {
+        throw new Error(
+          `OpenMontage source clip ${chunk.chunkId} completed without a video asset.`,
+        );
+      }
+      await touchRenderJob(record.id);
+    }
+
+    const { directory, clipPaths } = await stageClipFiles({ clipUris });
+    const renderDirectory = path.resolve(env.OPENMONTAGE_OUTPUT_ROOT, record.jobId);
+
+    try {
+      const outputVideoPath = await this.openMontageRenderer.render({
+        jobId: record.jobId,
+        outputDirectory: renderDirectory,
+        compositionId: openMontage.compositionId,
+        openingTitle:
+          record.request.hookLine || openMontage.storyMetadata.subjectName || null,
+        scenes: chunks.map((chunk, index) => ({
+          clipPath: clipPaths[index]!,
+          sceneNumber: chunk.sceneNumber,
+          durationSeconds: chunk.durationSeconds,
+          narration: chunk.narration,
+          visualPrompt: chunk.visualPrompt,
+        })),
+      });
+      const outputThumbPath = path.join(renderDirectory, "thumbnail.jpg");
+
+      await generateThumbnail({
+        videoPath: outputVideoPath,
+        outputPath: outputThumbPath,
+        workingDir: renderDirectory,
+      });
+
+      const [videoUrl, thumbnailUrl] = await Promise.all([
+        uploadLocalFile({
+          localPath: outputVideoPath,
+          storagePath: `video-renders/${record.jobId}/final.mp4`,
+          contentType: "video/mp4",
+        }),
+        uploadLocalFile({
+          localPath: outputThumbPath,
+          storagePath: `video-renders/${record.jobId}/thumbnail.jpg`,
+          contentType: "image/jpeg",
+        }),
+      ]);
+
+      await markRenderReady(record.id, {
+        videoUrl,
+        thumbnailUrl,
+      });
+    } finally {
+      await fs.rm(directory, { recursive: true, force: true });
+      await fs.rm(renderDirectory, { recursive: true, force: true });
     }
   }
 }

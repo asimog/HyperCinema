@@ -7,6 +7,7 @@ import {
   withRetry,
 } from "@/lib/network/retry";
 import { GeneratedCinematicScript } from "@/lib/types/domain";
+import { OpenMontageRenderPayload } from "@/lib/video/openmontage";
 import { GoogleVeoRenderPayload } from "@/lib/video/veo";
 import { XAiVideoRenderPayload } from "@/lib/video/xai";
 
@@ -37,6 +38,7 @@ export async function renderCinematicVideo(params: {
   script: GeneratedCinematicScript;
   googleVeo?: GoogleVeoRenderPayload;
   xai?: XAiVideoRenderPayload;
+  openMontage?: OpenMontageRenderPayload;
 }): Promise<{ videoUrl: string; thumbnailUrl: string | null }> {
   const env = getEnv();
   const inferenceConfig = await getInferenceRuntimeConfig();
@@ -52,9 +54,21 @@ export async function renderCinematicVideo(params: {
     includeAudio: params.googleVeo?.generateAudio ?? false,
   }));
   const isXaiProvider = Boolean(params.xai);
-  const withSound = params.googleVeo?.generateAudio ?? false;
-  const provider = isXaiProvider ? "xai" : inferenceConfig.video.provider;
-  const videoEngine = isXaiProvider ? "xai" : env.VIDEO_ENGINE;
+  const isOpenMontageProvider = Boolean(params.openMontage);
+  const withSound =
+    params.googleVeo?.generateAudio ??
+    params.openMontage?.storyMetadata.audioEnabled ??
+    false;
+  const provider = isXaiProvider
+    ? "xai"
+    : isOpenMontageProvider
+      ? "openmontage"
+      : inferenceConfig.video.provider;
+  const videoEngine = isXaiProvider
+    ? "xai"
+    : isOpenMontageProvider
+      ? "openmontage"
+      : env.VIDEO_ENGINE;
   const baseRequestPayload = {
     jobId: params.jobId,
     wallet: params.wallet,
@@ -79,6 +93,14 @@ export async function renderCinematicVideo(params: {
         prompt: params.xai?.prompt ?? params.script.hookLine,
         xai: params.xai,
       }
+    : isOpenMontageProvider
+      ? {
+          ...baseRequestPayload,
+          provider: "openmontage",
+          videoEngine: "openmontage",
+          prompt: params.openMontage?.prompt ?? params.script.hookLine,
+          openMontage: params.openMontage,
+        }
     : provider === "google_veo"
       ? {
           ...baseRequestPayload,

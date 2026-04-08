@@ -6,7 +6,7 @@ export const publicHyperCinemaServiceManifest: InterfaceAdapterServiceManifest =
   id: "hypercinema.multichain-memecoin-video",
   name: "TrenchMyths",
   summary:
-    "HyperMyths memecoin video generation from one mint or contract address, packaged for direct UI use, MoonPay Commerce checkout, x402 agent calls, or CardsAgent text decks, title pages, and motion adapters.",
+    "HyperMyths memecoin video generation from one mint or contract address, packaged for direct UI use, manual SOL checkout, x402 agent calls, or CardsAgent text decks, title pages, and motion adapters.",
   primaryMode: "token_video",
   supportedChains: ["solana", "ethereum", "bsc", "base"],
   inputSchema: {
@@ -32,14 +32,6 @@ export const publicHyperCinemaServiceManifest: InterfaceAdapterServiceManifest =
       id: "hypercinema-manual-sol",
       label: "Manual SOL",
       kind: "manual",
-      currency: "SOL",
-      network: "solana",
-      endpoint: "/api/jobs",
-    },
-    {
-      id: "hypercinema-moonpay",
-      label: "MoonPay Commerce",
-      kind: "hosted_checkout",
       currency: "SOL",
       network: "solana",
       endpoint: "/api/jobs",

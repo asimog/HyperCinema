@@ -1,9 +1,7 @@
 // Dexter MCP tweet scraper - fallback when X API is unavailable
 import {
   agentWebSearch,
-  agentResolveToken,
-  agentGetTrendingTokens,
-} from "@/lib/elizaos/mythx-agent";
+} from "@/lib/mythx-backend/agent";
 
 export interface ScrapedTweet {
   id: string;
@@ -50,29 +48,7 @@ export async function scrapeTweetsViaDexter(
   const searchQuery = `site:x.com ${username} tweets`;
   const searchResult = await agentWebSearch(searchQuery);
 
-  // Step 2: Get trending tokens for context (optional DeFi enrichment)
-  let trendingContext = "";
-  try {
-    const trending = await agentGetTrendingTokens("24h");
-    trendingContext = JSON.stringify(trending).slice(0, 500);
-  } catch {
-    // Trending context is optional
-  }
-
-  // Step 3: Try to resolve if username is a token symbol
-  let tokenContext = "";
-  try {
-    const resolved = await agentResolveToken(username);
-    tokenContext = JSON.stringify(resolved).slice(0, 300);
-  } catch {
-    // Not a token, that's fine
-  }
-
-  // Step 4: Fetch profile page for metadata
-  // Profile URL is used for context in the search results
-  const profileMeta = `Profile: ${profileUrl}`;
-
-  // Step 5: Parse search results into tweet-like objects
+  // Step 2: Parse search results into tweet-like objects
   const tweets: ScrapedTweet[] = [];
   const content = typeof searchResult === "string"
     ? searchResult
@@ -105,7 +81,7 @@ export async function scrapeTweetsViaDexter(
     displayName: `@${username}`,
     username,
     profileUrl,
-    description: tokenContext || `X profile: @${username}`,
+    description: `X profile: @${username}`,
     profileImageUrl: null,
   };
 

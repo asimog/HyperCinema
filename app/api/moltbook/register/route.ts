@@ -1,6 +1,6 @@
 /**
  * POST /api/moltbook/register
- * Register MythXEliza agent with MoltBook and get claim link
+ * Register MythX agent with MoltBook and get claim link
  * Requires ADMIN_SECRET authentication
  *
  * GET /api/moltbook/status
@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const name = body?.name || "MythXEliza";
+    const name = body?.name || "MythX";
     const description = body?.description || "AI cinematic storyteller that transforms X profiles into autobiographical videos.";
 
     logger.info("moltbook_registration_requested", {

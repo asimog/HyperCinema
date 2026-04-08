@@ -26,7 +26,7 @@ import {
 } from "@/lib/types/domain";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { getCrossmintSessionFromRequest } from "@/lib/crossmint/server";
+import { assertFirestoreEmulatorAvailable } from "@/lib/firebase/emulator";
 import { getCinemaPackageConfig } from "@/lib/cinema/config";
 import {
   getDefaultStylePresetForExperience,
@@ -217,16 +217,21 @@ function createJobResponse(input: {
   };
 }
 
-async function ensurePrivateSession(request: NextRequest) {
-  const session = await getCrossmintSessionFromRequest(request);
-  if (!session?.userId) {
-    return null;
+export async function POST(request: NextRequest) {
+  try {
+    await assertFirestoreEmulatorAvailable();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Firestore emulator is unavailable.";
+    return NextResponse.json(
+      {
+        error: "Firestore emulator unavailable",
+        message,
+        details: "Start the local Firestore emulator before creating MythX jobs.",
+      },
+      { status: 503 },
+    );
   }
 
-  return session;
-}
-
-export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const parsed = createJobSchema.safeParse(body);
@@ -277,23 +282,15 @@ export async function POST(request: NextRequest) {
       visibility,
     });
 
-    let creatorId: string | null = null;
-    if (visibility === "private") {
-      const session = await ensurePrivateSession(request);
-      if (!session) {
-        return NextResponse.json(
-          { error: "Crossmint login required for private studio access." },
-          { status: 401 },
-        );
-      }
-      creatorId = session.userId;
-    }
+    const creatorId: string | null = null;
 
     const pkg = resolvePricing({
       packageType: payload.packageType as PackageType,
-    pricingMode,
-  });
-    const discountCode = payload.discountCode?.trim() ? normalizeDiscountCode(payload.discountCode) : null;
+      pricingMode,
+    });
+    const discountCode = payload.discountCode?.trim()
+      ? normalizeDiscountCode(payload.discountCode)
+      : null;
     const defaultStylePreset = getDefaultStylePresetForExperience(experience);
 
     if (!isPromptPayload(payload)) {

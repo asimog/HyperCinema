@@ -162,14 +162,24 @@ export function buildSceneChunks(input: {
 }): Array<SceneChunk & { prompt: string }> {
   const basePrompt =
     input.request.metadata?.prompt ??
+    input.request.openMontage?.prompt ??
+    input.request.xai?.prompt ??
     input.request.prompt ??
     input.request.hookLine ??
     "Create a cinematic scene.";
+
+  const sceneMetadataList =
+    input.request.metadata?.sceneMetadata ??
+    input.request.openMontage?.sceneMetadata ??
+    input.request.xai?.sceneMetadata ??
+    [];
 
   const chunks: Array<SceneChunk & { prompt: string }> = [];
 
   for (const scene of input.request.scenes) {
     const sceneMetadata = input.request.metadata?.sceneMetadata.find(
+      (item) => item.sceneNumber === scene.sceneNumber,
+    ) ?? sceneMetadataList.find(
       (item) => item.sceneNumber === scene.sceneNumber,
     );
     const durations = splitDuration(scene.durationSeconds, input.maxClipSeconds);

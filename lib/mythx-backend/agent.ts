@@ -1,14 +1,12 @@
-// MythXEliza agent - video generation pipeline
+// MythX agent - video generation pipeline
 // Scrapes tweets, synthesizes narrative, generates video
 
-import { getElizaOSClient } from "./client";
-import { MYTHX_ELIZA_CHARACTER, MYTHX_ELIZA_AGENT_ID } from "./mythx-character";
+import { getMythXClient } from "./client";
+import { MYTHX_CHARACTER, MYTHX_AGENT_ID } from "./character";
 import { getEnv } from "@/lib/env";
 import { logger } from "@/lib/logging/logger";
 import { getXClient, XClient, XCommandParseResult } from "@/lib/x/client";
-import { validatePromoCode, usePromoCode } from "@/lib/promocodes/manager";
-import { getDexterMCPClient } from "@/lib/dexter-mcp/client";
-import { getPolyMCPClient } from "@/lib/poly-mcp/client";
+import { validatePromoCode, usePromoCode as consumePromoCode } from "@/lib/promocodes/manager";
 import { scrapeTweetsViaDexter } from "@/lib/dexter-mcp/tweet-scraper";
 import {
   agentResolveToken,
@@ -49,7 +47,7 @@ export {
 };
 
 // X profile data for video generation
-export interface MythXElizaProfile {
+export interface MythXProfile {
   displayName: string;
   username: string;
   profileUrl: string;
@@ -58,13 +56,13 @@ export interface MythXElizaProfile {
 }
 
 // Individual tweet from profile
-export interface MythXElizaTweet {
+export interface MythXTweet {
   id: string;
   text: string;
   createdAt: string | null;
 }
 
-export interface MythXElizaRequest {
+export interface MythXRequest {
   profileInput: string;
   style?: string;
   maxTweets?: number;
@@ -75,13 +73,13 @@ export interface MythXElizaRequest {
   replyToTweetId?: string;
 }
 
-export interface MythXElizaResponse {
+export interface MythXResponse {
   jobId: string;
-  profile: MythXElizaProfile;
-  tweets: MythXElizaTweet[];
+  profile: MythXProfile;
+  tweets: MythXTweet[];
   transcript: string;
   narrative: string;
-  scenes: MythXElizaScene[];
+  scenes: MythXScene[];
   videoUrl: string | null;
   firebaseStorageUrl: string | null;
   galleryUrl: string;
@@ -96,7 +94,7 @@ export interface MythXElizaResponse {
   };
 }
 
-export interface MythXElizaScene {
+export interface MythXScene {
   sceneNumber: number;
   visualPrompt: string;
   narration?: string;
@@ -115,8 +113,8 @@ async function scrapeTweets(
   maxTweets: number,
   onStatus?: StatusCallback
 ): Promise<{
-  profile: MythXElizaProfile;
-  tweets: MythXElizaTweet[];
+  profile: MythXProfile;
+  tweets: MythXTweet[];
   transcript: string;
 }> {
   await onStatus?.("📊 Scraping tweets from profile...", 10);
@@ -157,7 +155,7 @@ async function scrapeTweets(
     };
   } catch (dexterError) {
     logger.warn("dexter_tweet_scrape_failed", {
-      component: "mythx_eliza",
+      component: "mythx",
       errorCode: "dexter_tweet_scrape_failed",
       errorMessage: dexterError instanceof Error ? dexterError.message : "Unknown error",
     });
@@ -170,18 +168,18 @@ async function scrapeTweets(
  * STEP 2: Narrator synthesizes tweets into cinematic prompt
  */
 async function synthesizeNarrative(
-  profile: MythXElizaProfile,
-  tweets: MythXElizaTweet[],
+  profile: MythXProfile,
+  tweets: MythXTweet[],
   transcript: string,
   style: string,
   onStatus?: StatusCallback
 ): Promise<{
   narrative: string;
-  scenes: MythXElizaScene[];
+  scenes: MythXScene[];
 }> {
   await onStatus?.("✍️ Narrator synthesizing cinematic narrative...", 30);
 
-  const client = getElizaOSClient();
+  const client = getMythXClient();
 
   const styleHints: Record<string, string> = {
     hyperflow_assembly: "Fluid, interconnected visual flow with seamless transitions",
@@ -197,7 +195,7 @@ async function synthesizeNarrative(
   const styleDescription = styleHints[style] || styleHints.vhs_cinema;
 
   const response = await client.chatCompletion({
-    agentId: MYTHX_ELIZA_AGENT_ID,
+    agentId: MYTHX_AGENT_ID,
     messages: [
       {
         role: "system",
@@ -248,7 +246,13 @@ ${transcript}`,
 
   const parsed = JSON.parse(jsonMatch[0]);
 
-  const scenes: MythXElizaScene[] = (parsed.scenes || []).map((scene: any) => ({
+  const parsedScenes = Array.isArray(parsed.scenes) ? parsed.scenes : [];
+  const scenes: MythXScene[] = parsedScenes.map((scene: {
+    sceneNumber?: number;
+    visualPrompt?: string;
+    narration?: string;
+    durationSeconds?: number;
+  }) => ({
     sceneNumber: scene.sceneNumber || 1,
     visualPrompt: scene.visualPrompt || "",
     narration: scene.narration || undefined,
@@ -265,16 +269,16 @@ ${transcript}`,
 }
 
 /**
- * STEP 3: Generate video via ElizaOS
+ * STEP 3: Generate video via MythX
  */
-async function generateVideoViaElizaOS(
-  scenes: MythXElizaScene[],
+async function generateVideoViaMythX(
+  scenes: MythXScene[],
   agentId: string,
   onStatus?: StatusCallback
 ): Promise<string[]> {
-  await onStatus?.("🎥 Generating video clips via ElizaOS...", 50);
+  await onStatus?.("🎥 Generating video clips via MythX...", 50);
 
-  const client = getElizaOSClient();
+  const client = getMythXClient();
   const videoUrls: string[] = [];
 
   for (let i = 0; i < scenes.length; i++) {
@@ -309,13 +313,13 @@ async function generateVideoViaElizaOS(
           }
 
           if (status.status === "failed") {
-            console.error(`[MythXEliza] Scene ${scene.sceneNumber} failed`);
+            console.error(`[MythX] Scene ${scene.sceneNumber} failed`);
             break;
           }
         }
       }
     } catch (error) {
-      console.error(`[MythXEliza] Error generating scene ${scene.sceneNumber}:`, error);
+      console.error(`[MythX] Error generating scene ${scene.sceneNumber}:`, error);
     }
   }
 
@@ -334,7 +338,7 @@ async function uploadVideoToFirebaseStorage(
   try {
     const { getBucket } = await import("@/lib/firebase/admin");
     const bucket = getBucket();
-    const storagePath = `videos/${jobId}/mythx-eliza.mp4`;
+    const storagePath = `videos/${jobId}/mythx.mp4`;
 
     // Download the video as a buffer
     const response = await fetch(videoUrl);
@@ -354,7 +358,7 @@ async function uploadVideoToFirebaseStorage(
     await file.makePublic();
     return `https://storage.googleapis.com/${bucket.name}/${storagePath}`;
   } catch (error) {
-    console.warn("[MythXEliza] Firebase Storage upload failed, using source URL:", error);
+    console.warn("[MythX] Firebase Storage upload failed, using source URL:", error);
     return null;
   }
 }
@@ -362,17 +366,20 @@ async function uploadVideoToFirebaseStorage(
 async function uploadToFirebaseAndSave(
   jobId: string,
   videoUrls: string[],
-  scenes: MythXElizaScene[],
-  profile: MythXElizaProfile,
+  scenes: MythXScene[],
+  profile: MythXProfile,
   style: string
 ): Promise<{
   firebaseStorageUrl: string | null;
   galleryUrl: string;
 }> {
   const primaryVideoUrl = videoUrls[0] || null;
+  if (!primaryVideoUrl) {
+    throw new Error("MythX generation finished without any completed video clips.");
+  }
   const galleryUrl = `${getEnv().APP_BASE_URL}/job/${jobId}`;
 
-  // Upload video to Firebase Storage (re-host from ElizaOS URL)
+  // Upload video to Firebase Storage (re-host from MythX URL)
   const firebaseStorageUrl = primaryVideoUrl
     ? await uploadVideoToFirebaseStorage(jobId, primaryVideoUrl)
     : null;
@@ -398,7 +405,7 @@ async function uploadToFirebaseAndSave(
       style,
       scenes: scenes.length,
       createdAt: Timestamp.now(),
-      source: "mythx-eliza",
+      source: "mythx",
     });
 
     // Update job document
@@ -410,7 +417,7 @@ async function uploadToFirebaseAndSave(
       completedAt: Timestamp.now(),
     });
   } catch (error) {
-    console.warn("[MythXEliza] Failed to save to Firebase:", error);
+    console.warn("[MythX] Failed to save to Firebase:", error);
   }
 
   return {
@@ -423,7 +430,7 @@ async function uploadToFirebaseAndSave(
  * STEP 5: Post to X (Twitter)
  */
 async function postToTwitter(
-  profile: MythXElizaProfile,
+  profile: MythXProfile,
   style: string,
   galleryUrl: string,
   replyToTweetId?: string
@@ -438,7 +445,7 @@ async function postToTwitter(
     // Check if OAuth 1.0a credentials are available for posting
     if (!xClient.canPost()) {
       logger.warn("mythx_twitter_posting_not_configured", {
-        component: "mythx_eliza",
+        component: "mythx",
         profile: profile.username,
       });
       return {
@@ -472,7 +479,7 @@ async function postToTwitter(
     };
   } catch (error) {
     logger.error("mythx_twitter_post_failed", {
-      component: "mythx_eliza",
+      component: "mythx",
       errorCode: "twitter_post_failed",
       errorMessage: error instanceof Error ? error.message : "Unknown error",
     });
@@ -487,14 +494,14 @@ async function postToTwitter(
 /**
  * MAIN ORCHESTRATOR: Full pipeline
  */
-export async function generateMythXElizaVideo(
-  request: MythXElizaRequest,
+export async function generateMythXVideo(
+  request: MythXRequest,
   onStatus?: StatusCallback
-): Promise<MythXElizaResponse> {
+): Promise<MythXResponse> {
   const startTime = Date.now();
-  const jobId = request.jobId || `mythx-eliza-${randomUUID()}`;
+  const jobId = request.jobId || `mythx-${randomUUID()}`;
 
-  await onStatus?.(`🎬 MythXEliza starting: ${request.profileInput}`, 0);
+  await onStatus?.(`🎬 MythX starting: ${request.profileInput}`, 0);
 
   // Validate promo code if provided
   let promoCodeUsed: string | null = null;
@@ -504,20 +511,20 @@ export async function generateMythXElizaVideo(
       promoCodeUsed = validation.code;
       await onStatus?.(`🎟️ Promo code ${validation.code} validated`, 5);
     } else {
-      console.warn(`[MythXEliza] Invalid promo code: ${request.promoCode}`);
+      console.warn(`[MythX] Invalid promo code: ${request.promoCode}`);
     }
   }
 
-  // Initialize ElizaOS agent
+  // Initialize MythX agent
   try {
-    const client = getElizaOSClient();
+    const client = getMythXClient();
     await client.createOrUpdateAgent({
-      agentId: MYTHX_ELIZA_AGENT_ID,
-      name: MYTHX_ELIZA_CHARACTER.name,
-      character: MYTHX_ELIZA_CHARACTER as unknown as Record<string, unknown>,
+      agentId: MYTHX_AGENT_ID,
+      name: MYTHX_CHARACTER.name,
+      character: MYTHX_CHARACTER as unknown as Record<string, unknown>,
     });
   } catch (error) {
-    console.warn("[MythXEliza] Agent update skipped:", error);
+    console.warn("[MythX] Agent update skipped:", error);
   }
 
   // STEP 1: Scrape tweets
@@ -542,7 +549,10 @@ export async function generateMythXElizaVideo(
   );
 
   // STEP 3: Generate video
-  const videoUrls = await generateVideoViaElizaOS(scenes, MYTHX_ELIZA_AGENT_ID, onStatus);
+  const videoUrls = await generateVideoViaMythX(scenes, MYTHX_AGENT_ID, onStatus);
+  if (videoUrls.length === 0) {
+    throw new Error("MythX could not produce a finished clip for any planned scene.");
+  }
 
   // STEP 4: Upload & save
   const { firebaseStorageUrl, galleryUrl } = await uploadToFirebaseAndSave(
@@ -570,7 +580,7 @@ export async function generateMythXElizaVideo(
 
   // Use promo code if valid
   if (promoCodeUsed && request.wallet) {
-    await usePromoCode({
+    await consumePromoCode({
       code: promoCodeUsed,
       jobId,
       wallet: request.wallet || "anonymous",
@@ -612,18 +622,18 @@ export async function handleTwitterCommand(
   authorUsername: string
 ): Promise<{
   replyText: string;
-  videoResult?: MythXElizaResponse;
+  videoResult?: MythXResponse;
 }> {
   if (!command.isCommand) {
     return {
-      replyText: "Hey! To generate a video, use: @MythXEliza generate @username [style] [promoCode]",
+      replyText: "Hey! To generate a video, use: @MythX generate @username [style] [promoCode]",
     };
   }
 
   switch (command.action) {
     case "generate": {
       try {
-        const result = await generateMythXElizaVideo(
+        const result = await generateMythXVideo(
           {
             profileInput: command.profileInput!,
             style: command.style || undefined,
@@ -634,7 +644,7 @@ export async function handleTwitterCommand(
             wallet: `twitter-${authorUsername}`,
           },
           async (status, progress) => {
-            console.log(`[MythXEliza][${progress}%] ${status}`);
+            console.log(`[MythX][${progress}%] ${status}`);
             // Optionally tweet progress updates here
           }
         );
@@ -660,25 +670,25 @@ export async function handleTwitterCommand(
 
     case "help":
       return {
-        replyText: `🎬 MythXEliza Help:
+        replyText: `🎬 MythX Help:
 
-Generate video: @MythXEliza generate @username [style] [promoCode]
+Generate video: @MythX generate @username [style] [promoCode]
 
 Styles: vhs_cinema, black_and_white_noir, hyperflow_assembly, double_exposure, glitch_digital, found_footage_raw, split_screen_diptych, film_grain_70s
 
-Promo codes: MYTHX-FREE, ELIZA-VIP, CINEMA-TRIAL
+Promo codes: MYTHX-FREE, MYTHX-VIP, CINEMA-TRIAL
 
-Example: @MythXEliza generate @elonmusk vhs_cinema MYTHX-FREE`,
+Example: @MythX generate @elonmusk vhs_cinema MYTHX-FREE`,
       };
 
     case "status":
       return {
-        replyText: "🤖 MythXEliza is online and generating videos! Check the gallery: /gallery",
+        replyText: "🤖 MythX is online and generating videos! Check the gallery: /gallery",
       };
 
     default:
       return {
-        replyText: "👋 Mention @MythXEliza generate @username to create an autobiographical video!",
+        replyText: "👋 Mention @MythX generate @username to create an autobiographical video!",
       };
   }
 }
@@ -718,7 +728,7 @@ export async function processTwitterMentions(
       // Mark as processed
       processedTweetIds.add(mention.id);
     } catch (error) {
-      console.error(`[MythXEliza] Failed to process mention ${mention.id}:`, error);
+      console.error(`[MythX] Failed to process mention ${mention.id}:`, error);
 
       results.push({
         tweetId: mention.id,

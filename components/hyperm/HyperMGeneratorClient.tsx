@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
-import { MoonPayHostedPaymentButton } from "@/components/payments/MoonPayHostedPaymentButton";
 import { PaymentInstructionsCard } from "@/components/PaymentInstructionsCard";
 import { HyperflowAssemblyScaffold } from "@/components/shell/HyperflowAssemblyScaffold";
 import {
@@ -543,15 +542,10 @@ export function HyperMGeneratorClient() {
                 </Link>
               </div>
             </div>
-            <div className="button-row">
-              <MoonPayHostedPaymentButton
-                amountSol={jobStatus?.payment?.amountSol ?? jobPayment.amountSol}
-                jobId={jobPayment.jobId}
-                paymentAddress={jobStatus?.payment?.paymentAddress ?? jobPayment.paymentAddress}
-                label="Pay with MoonPay"
-              />
-            </div>
             <div className="stack-section">
+              <p className="route-summary compact">
+                Send SOL to the payment address below. Hosted card checkout has been removed.
+              </p>
               <PaymentInstructionsCard
                 jobId={jobPayment.jobId}
                 amountSol={jobStatus?.payment?.amountSol ?? jobPayment.amountSol}

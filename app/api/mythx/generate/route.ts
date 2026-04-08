@@ -1,25 +1,30 @@
-// MythXEliza generation endpoint with rate limits
+// MythX generation endpoint with rate limits
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { generateMythXElizaVideo } from "@/lib/elizaos/mythx-agent";
+import {
+  createDiscountWaivedPromptVideoJob,
+  createPromptVideoJob,
+} from "@/lib/jobs/repository";
 import { videoStyleSchema } from "@/lib/styles/video-style-validation";
 import { validatePromoCode } from "@/lib/promocodes/manager";
 import { logger } from "@/lib/logging/logger";
 import { randomUUID } from "crypto";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { getRequestIp } from "@/lib/security/request-ip";
+import { dispatchSingleJob } from "@/lib/jobs/dispatch";
 
 export const runtime = "nodejs";
 
 // Rate limit rules for generation requests
-const MYTHX_ELIZA_RATE_LIMIT_RULES = [
-  { name: "mythx_eliza_per_10min", windowSec: 600, limit: 3 },
-  { name: "mythx_eliza_per_hour", windowSec: 3600, limit: 10 },
+const MYTHX_RATE_LIMIT_RULES = [
+  { name: "mythx_per_10min", windowSec: 600, limit: 3 },
+  { name: "mythx_per_hour", windowSec: 3600, limit: 10 },
 ] as const;
 
 // Zod schema for request validation
-const mythxElizaRequestSchema = z.object({
+const mythxRequestSchema = z.object({
   profileInput: z.string().min(1, "X profile handle or URL is required"),
+  packageType: z.enum(["30s", "60s"]).default("60s"),
   style: videoStyleSchema.optional(),
   maxTweets: z.coerce.number().int().min(1).max(100).default(42),
   promoCode: z.string().optional(),
@@ -33,9 +38,9 @@ export async function POST(request: NextRequest) {
 
     // Check rate limits before processing
     const rateLimit = await enforceRateLimit({
-      scope: "api_mythx_eliza_generate",
+      scope: "api_mythx_generate",
       key: ip,
-      rules: [...MYTHX_ELIZA_RATE_LIMIT_RULES],
+      rules: [...MYTHX_RATE_LIMIT_RULES],
     });
 
     if (!rateLimit.allowed) {
@@ -50,7 +55,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const validation = mythxElizaRequestSchema.safeParse(body);
+    const validation = mythxRequestSchema.safeParse(body);
 
     if (!validation.success) {
       return NextResponse.json(
@@ -62,7 +67,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { profileInput, style, maxTweets, promoCode, wallet } = validation.data;
+    const { profileInput, packageType, style, maxTweets, promoCode, wallet } = validation.data;
 
     // Check promo code validity if provided
     if (promoCode) {
@@ -78,9 +83,9 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    logger.info("mythx_eliza_generation_started", {
+    logger.info("mythx_generation_started", {
       component: "api",
-      route: "/api/mythx-eliza/generate",
+      route: "/api/mythx/generate",
       profileInput,
       style,
       maxTweets,
@@ -88,40 +93,59 @@ export async function POST(request: NextRequest) {
       ip,
     });
 
-    // Generate video via ElizaOS
-    const result = await generateMythXElizaVideo({
-      profileInput,
-      style,
-      maxTweets,
-      promoCode,
-      wallet: wallet || `web-${randomUUID()}`,
-      jobId: `mythx-web-${randomUUID()}`,
-    });
+    const jobInput = {
+      requestKind: "mythx" as const,
+      packageType,
+      subjectName: profileInput,
+      subjectDescription: `Autobiography generated from the latest ${maxTweets} tweets.`,
+      sourceMediaUrl: profileInput.startsWith("http")
+        ? profileInput
+        : `https://x.com/${profileInput.replace(/^@/, "")}`,
+      sourceMediaProvider: "x",
+      stylePreset: style ?? "vhs_cinema",
+      requestedPrompt: `Build a MythX autobiographical cut from ${maxTweets} recent tweets.`,
+      audioEnabled: true,
+      visibility: "public" as const,
+      pricingMode: "public" as const,
+      experience: "mythx" as const,
+      creatorId: wallet || `web-${randomUUID()}`,
+    };
 
-    logger.info("mythx_eliza_generation_completed", {
+    const job = promoCode
+      ? await createDiscountWaivedPromptVideoJob({
+          ...jobInput,
+          discountCode: promoCode,
+        })
+      : await createPromptVideoJob(jobInput);
+
+    if (promoCode) {
+      await dispatchSingleJob(job.jobId);
+    }
+
+    logger.info("mythx_generation_completed", {
       component: "api",
       profileInput,
-      style,
-      totalScenes: result.metadata.totalScenes,
-      totalDuration: result.metadata.totalDurationSeconds,
-      processingTime: result.metadata.processingTimeMs,
+      style: job.stylePreset,
+      queued: true,
+      paymentRequired: !job.paymentWaived,
     });
 
     return NextResponse.json({
       success: true,
-      jobId: result.jobId,
-      videoUrl: result.videoUrl,
-      galleryUrl: result.galleryUrl,
-      scenes: result.scenes,
-      metadata: result.metadata,
-      postedToTwitter: result.postedToTwitter,
-      twitterPostUrl: result.twitterPostUrl,
-      promoCodeUsed: result.promoCodeUsed,
+      mode: "queued",
+      jobId: job.jobId,
+      galleryUrl: `/job/${job.jobId}`,
+      status: job.status,
+      progress: job.progress,
+      paymentRequired: !job.paymentWaived,
+      paymentAddress: job.paymentAddress,
+      amountSol: job.priceSol,
+      promoCodeUsed: job.discountCode,
     });
   } catch (error) {
-    logger.error("mythx_eliza_generation_failed", {
+    logger.error("mythx_generation_failed", {
       component: "api",
-      errorCode: "mythx_eliza_generation_failed",
+      errorCode: "mythx_generation_failed",
       errorMessage: error instanceof Error ? error.message : "Unknown error",
       error,
     });
@@ -130,38 +154,6 @@ export async function POST(request: NextRequest) {
       {
         error: "Failed to generate MythX video",
         message: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 500 }
-    );
-  }
-}
-
-/**
- * GET /api/mythx-eliza/status
- * Check ElizaOS agent status and configuration
- */
-export async function GET(request: NextRequest) {
-  try {
-    const { getElizaOSClient } = await import("@/lib/elizaos/client");
-    const { MYTHX_ELIZA_AGENT_ID } = await import("@/lib/elizaos/mythx-character");
-
-    const client = getElizaOSClient();
-    const agent = await client.getAgent(MYTHX_ELIZA_AGENT_ID);
-
-    return NextResponse.json({
-      success: true,
-      agent: {
-        id: agent.id,
-        name: agent.name,
-        status: agent.status,
-      },
-    });
-  } catch (error) {
-    return NextResponse.json(
-      {
-        error: "Failed to get agent status",
-        message: error instanceof Error ? error.message : "Unknown error",
-        agentStatus: "unavailable",
       },
       { status: 500 }
     );

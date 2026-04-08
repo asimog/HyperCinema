@@ -187,7 +187,7 @@ export class XClient {
    */
   async getMentions(input?: XMentionInput): Promise<XMention[]> {
     const maxResults = input?.maxResults || 20;
-    const url = `${this.baseUrl}/tweets/search/recent?query=@MythXEliza&max_results=${maxResults}&tweet.fields=author_id,created_at`;
+    const url = `${this.baseUrl}/tweets/search/recent?query=@MythX&max_results=${maxResults}&tweet.fields=author_id,created_at`;
 
     const response = await fetch(url, {
       headers: this.getHeaders(),
@@ -231,17 +231,17 @@ export class XClient {
   /**
    * Parse command from tweet text
    * Recognizes patterns like:
-   * - "@MythXEliza generate @username"
-   * - "@MythXEliza generate @username vhs_cinema"
-   * - "@MythXEliza generate @username style CODE123"
-   * - "@MythXEliza help"
-   * - "@MythXEliza status"
+   * - "@MythX generate @username"
+   * - "@MythX generate @username vhs_cinema"
+   * - "@MythX generate @username style CODE123"
+   * - "@MythX help"
+   * - "@MythX status"
    */
   parseCommand(text: string): XCommandParseResult {
     const normalized = text.trim();
 
-    // Check if it's directed at MythXEliza
-    const isCommand = /@MythXEliza/i.test(normalized);
+    // Check if it's directed at MythX
+    const isCommand = /@MythX/i.test(normalized);
 
     if (!isCommand) {
       return {
@@ -256,7 +256,7 @@ export class XClient {
 
     // Parse "generate" command
     const generateMatch = normalized.match(
-      /@MythXEliza\s+generate\s+([@\w][^\s]+)(?:\s+([\w]+))?(?:\s+([\w-]+))?/i
+      /@MythX\s+generate\s+([@\w][^\s]+)(?:\s+([\w]+))?(?:\s+([\w-]+))?/i
     );
 
     if (generateMatch) {
@@ -298,7 +298,7 @@ export class XClient {
     }
 
     // Parse "help" command
-    if (/@MythXEliza\s+help/i.test(normalized)) {
+    if (/@MythX\s+help/i.test(normalized)) {
       return {
         isCommand: true,
         action: "help",
@@ -310,7 +310,7 @@ export class XClient {
     }
 
     // Parse "status" command
-    if (/@MythXEliza\s+status/i.test(normalized)) {
+    if (/@MythX\s+status/i.test(normalized)) {
       return {
         isCommand: true,
         action: "status",
@@ -360,7 +360,7 @@ An autobiographical video in "${styleLabel}" style, crafted from 42 tweets by AI
 
 Watch: ${input.galleryUrl}
 
-#MythX #ElizaOS #AICinema #Autobiographical`;
+#MythX #AICinema #Autobiographical`;
   }
 
   /**
@@ -377,7 +377,7 @@ Watch: ${input.galleryUrl}
       scraping: `📊 Scraping 42 tweets from @${input.profileUsername}...`,
       synthesizing: `✍️ Synthesizing cinematic narrative from tweets...`,
       generating: `🎥 Generating video clips for each scene...`,
-      completed: `✅ Video complete! Watch @${input.profileUsername}'s autobiographical cinema here: ${input.videoUrl || "link pending"}\n\n#MythX #ElizaOS`,
+      completed: `✅ Video complete! Watch @${input.profileUsername}'s autobiographical cinema here: ${input.videoUrl || "link pending"}\n\n#MythX`,
       failed: `❌ Video generation failed for @${input.profileUsername}: ${input.errorMessage || "Unknown error"}\n\nPlease try again or contact support.`,
     };
 

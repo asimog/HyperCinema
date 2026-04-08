@@ -2,7 +2,7 @@
 
 ## Overview
 
-The MythXEliza agent can automatically post generated videos to X. To enable this, you need **OAuth 1.0a credentials** from the X Developer Portal. Bearer tokens are read-only — posting requires OAuth 1.0a signing.
+The MythX agent can automatically post generated videos to X. To enable this, you need **OAuth 1.0a credentials** from the X Developer Portal. Bearer tokens are read-only — posting requires OAuth 1.0a signing.
 
 ## Step 1: Get X Developer Access
 
@@ -15,7 +15,7 @@ The MythXEliza agent can automatically post generated videos to X. To enable thi
 
 1. In the Developer Portal, go to **Projects & Apps**
 2. Click **"+ Add App"**
-3. Name it (e.g., `MythXEliza Poster`)
+3. Name it (e.g., `MythX Poster`)
 4. Note your **API Key** and **API Key Secret** (these become `X_API_CONSUMER_KEY` and `X_API_CONSUMER_SECRET`)
 
 ## Step 3: Enable OAuth 1.0a Permissions
@@ -79,7 +79,7 @@ Test that posting works:
 npm run dev
 
 # Check if OAuth is configured
-curl http://localhost:3000/api/mythx-eliza/status
+curl http://localhost:3000/api/mythx/status
 ```
 
 Then generate a video with `triggerFromTwitter: true` or via Twitter mention. The agent will:
@@ -119,7 +119,7 @@ An autobiographical video in "VHS Cinema" style, crafted from 42 tweets...
 
 Watch: https://yoursite.com/job/...
 
-#MythX #ElizaOS #AICinema #Autobiographical
+#MythX #AICinema #Autobiographical
 ```
 
 ## Security Notes

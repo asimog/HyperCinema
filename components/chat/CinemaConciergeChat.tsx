@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { PaymentInstructionsCard } from "@/components/PaymentInstructionsCard";
-import { MoonPayHostedPaymentButton } from "@/components/payments/MoonPayHostedPaymentButton";
 import {
   ArrowRightIcon,
   ChainIcon,
@@ -1220,15 +1219,9 @@ export function CinemaConciergeChat(input: CinemaConciergeChatProps) {
             </p>
           ) : null}
 
-          <div className="button-row">
-            <MoonPayHostedPaymentButton
-              amountSol={jobStatus?.payment?.amountSol ?? jobPayment.amountSol}
-              jobId={jobPayment.jobId}
-              paymentAddress={jobStatus?.payment?.paymentAddress ?? jobPayment.paymentAddress}
-              label="Pay with MoonPay"
-            />
-          </div>
-
+          <p className="route-summary compact">
+            Send SOL to the address below. Hosted card checkout has been removed.
+          </p>
           <PaymentInstructionsCard
             jobId={jobPayment.jobId}
             amountSol={jobStatus?.payment?.amountSol ?? jobPayment.amountSol}

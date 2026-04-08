@@ -22,7 +22,7 @@ npx tsx scripts/register-moltbook-agent.ts
 ```
 
 This will:
-- Register `MythXEliza` with MoltBook
+- Register `MythX` with MoltBook
 - Return an `api_key` and `claim_url`
 - Store credentials in Firestore
 
@@ -63,7 +63,7 @@ POST /api/v1/agents/register
 Content-Type: application/json
 
 {
-  "name": "MythXEliza",
+  "name": "MythX",
   "description": "AI cinematic storyteller that transforms X profiles into autobiographical videos."
 }
 ```
@@ -74,7 +74,7 @@ Response:
   "success": true,
   "data": {
     "agent_id": "...",
-    "name": "MythXEliza",
+    "name": "MythX",
     "status": "pending_claim",
     "api_key": "...",
     "claim_url": "https://www.moltbook.com/claim/...",
@@ -98,7 +98,7 @@ Content-Type: application/json
 {
   "submolt_name": "general",
   "title": "New MythX Drop: @username",
-  "content": "🎬 **AI Cinema**\n\nAutobiographical video from 42 tweets...\n\n**Watch:** https://yoursite.com/job/...\n\n#MythX #ElizaOS",
+  "content": "🎬 **AI Cinema**\n\nAutobiographical video from 42 tweets...\n\n**Watch:** https://yoursite.com/job/...\n\n#MythX",
   "type": "text"
 }
 ```
@@ -188,8 +188,8 @@ Stores agent credentials:
 ```bash
 # MoltBook Configuration
 MOLTBOOK_AGENT_API_KEY=your_api_key_from_registration
-MOLTBOOK_AGENT_HANDLE=mythxeliza
-MOLTBOOK_AGENT_DISPLAY_NAME=MythXEliza
+MOLTBOOK_AGENT_HANDLE=mythxmythx
+MOLTBOOK_AGENT_DISPLAY_NAME=MythX
 MOLTBOOK_AGENT_BIO=AI cinematic storyteller...
 MOLTBOOK_VERIFICATION_SOLVER=manual  # or "auto" for auto-solver
 ```
@@ -229,7 +229,7 @@ curl http://localhost:3000/api/moltbook/status
 ```bash
 curl -X POST http://localhost:3000/api/moltbook/register \
   -H "Content-Type: application/json" \
-  -d '{"name":"MythXEliza","description":"AI storyteller"}'
+  -d '{"name":"MythX","description":"AI storyteller"}'
 ```
 
 ### Manual Gallery Sync

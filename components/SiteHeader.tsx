@@ -5,16 +5,12 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { useState } from "react";
 
-import {
-  FilmIcon,
-  HomeIcon,
-  TrendingIcon,
-} from "@/components/ui/AppIcons";
+import { FilmIcon, HomeIcon, TrendingIcon } from "@/components/ui/AppIcons";
 
 // 3-page navigation
 const NAV_ITEMS = [
-  { href: "/", label: "Chat", Icon: HomeIcon },
-  { href: "/creator", label: "Media", Icon: FilmIcon },
+  { href: "/", label: "HyperM", Icon: HomeIcon },
+  { href: "/creator", label: "MythOS", Icon: FilmIcon },
   { href: "/autonomous", label: "Autonomous", Icon: TrendingIcon },
 ];
 
@@ -37,7 +33,8 @@ export function SiteHeader() {
           {/* Desktop navigation links */}
           <nav className="nav-links">
             {NAV_ITEMS.map((item) => {
-              const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+              const isActive =
+                pathname === item.href || pathname.startsWith(item.href + "/");
               return (
                 <Link
                   key={item.href}
@@ -85,7 +82,8 @@ export function SiteHeader() {
         {mobileMenuOpen && (
           <nav className="mobile-menu">
             {NAV_ITEMS.map((item) => {
-              const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+              const isActive =
+                pathname === item.href || pathname.startsWith(item.href + "/");
               return (
                 <Link
                   key={item.href}
@@ -93,7 +91,10 @@ export function SiteHeader() {
                   href={item.href}
                   onClick={() => setMobileMenuOpen(false)}
                 >
-                  <item.Icon className="mobile-menu-link-icon" aria-hidden="true" />
+                  <item.Icon
+                    className="mobile-menu-link-icon"
+                    aria-hidden="true"
+                  />
                   <span>{item.label}</span>
                 </Link>
               );

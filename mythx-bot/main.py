@@ -2,7 +2,7 @@
 HyperMythsX bot — @HyperMythsX on X
 https://x.com/HyperMythX
 
-Production v5.8 — Two-tier CRT: Holographic (default) + Truman Show (>100 likes).
+Production v6.2 — Two-tier CRT + Premium creative direction (>=100 likes) + Technical Prompting Bible v6.2 (3-Act storytelling).
 ONLY posts replies, never standalone tweets.
 
 FLOW:
@@ -10,11 +10,13 @@ FLOW:
   2. User B replies "mythx" (or "mythx japanese/chinese/russian") to User A's tweet
   3. Bot detects "mythx" in User B's reply
   4. Bot fetches User A's last 16 tweets (the person being replied TO)
-  5. Bot checks if any tweet has >100 likes → picks visual tier:
-     - Default: Holographic CRT (anime hero in arena)
-     - >100 likes: Truman Show Two-Layer (anime chars watching reality TV)
-  6. Bot generates 3×10s clips → stitches to ~30s CRT DBZ autobiography
-  7. Bot replies in the thread with the video
+  5. Bot checks visual tier:
+     - Any of User A's tweets >100 likes → Truman Show Two-Layer
+     - Otherwise → Holographic CRT (default)
+  6. Bot checks premium: if the mythx reply itself has >=100 likes
+     → appends "ultra-cinematic masterpiece" creative direction
+  7. Bot generates 3×10s clips → stitches to ~30s CRT DBZ autobiography
+  8. Bot replies in the thread with the video
 
 Trigger: Just "mythx" as a reply to any tweet. No @mention needed.
 Target: The author of the tweet being replied TO (not the person who typed mythx).
@@ -139,10 +141,15 @@ def process_mention(tweet: dict) -> None:
     # Detect language command
     language = detect_language_command(mythx_text)
 
+    # Check likes for premium creative direction
+    like_count = tweet.get("public_metrics", {}).get("like_count", 0)
+    is_premium = like_count >= 100
+
     # Acknowledge immediately
     lang_label = f" ({language})" if language != "english" else ""
+    premium_label = " [PREMIUM]" if is_premium else ""
     ack_text = (
-        f"@{requester_username} 🎬 Generating MythX autobiography{lang_label}… "
+        f"@{requester_username} 🎬 Generating MythX autobiography{lang_label}{premium_label}… "
         f"Will reply with the video shortly."
     )
     reply_to_tweet(mythx_tweet_id, ack_text)
@@ -164,9 +171,11 @@ def process_mention(tweet: dict) -> None:
         # Core engine — sentiment analysis + 3-slice prompts + combo
         style_label = "TRUMAN SHOW" if has_viral else "HOLOGRAPHIC CRT"
         print(f"[MythX] Running {style_label} engine for user {target_user_id} "
-              f"(language={language}, viral={has_viral})…")
+              f"(language={language}, viral={has_viral}, premium={is_premium}, "
+              f"likes={like_count})…")
         p1, p2, p3, combo = engine.generate_3_slice_prompts(
-            tweets_text, target_handle, language, has_viral=has_viral
+            tweets_text, target_handle, language, has_viral=has_viral,
+            is_premium=is_premium,
         )
 
         print(f"[MythX] Combo: {combo['theme']} | {combo['arena']} | "
@@ -231,11 +240,12 @@ def on_tweet(tweet: dict) -> None:
 
 
 def main():
-    print(f"[HyperMythsX] Bot v5.8 starting — @{BOT_USERNAME}")
+    print(f"[HyperMythsX] Bot v6.2 starting — @{BOT_USERNAME}")
     print(f"[HyperMythsX] X profile: {BOT_X_URL}")
     print(f"[HyperMythsX] Stream rule: (mythx) -is:retweet is:reply")
-    print(f"[HyperMythsX] 3×10s 1:1 480p · CRT DBZ · 16 anime sub-styles")
-    print(f"[HyperMythsX] HOLOGRAPHIC CRT (default) · TRUMAN SHOW (>100 likes)")
+    print(f"[HyperMythsX] 3x10s 1:1 480p | CRT DBZ | 16 anime sub-styles | 3-Act storytelling")
+    print(f"[HyperMythsX] HOLOGRAPHIC CRT (default) | TRUMAN SHOW (user tweets >100 likes)")
+    print(f"[HyperMythsX] PREMIUM boost (mythx reply itself >=100 likes)")
     print(f"[HyperMythsX] Languages: english (default), japanese, chinese, russian")
     print(f"[HyperMythsX] Bot ONLY posts replies. User replies 'mythx' to trigger.")
 

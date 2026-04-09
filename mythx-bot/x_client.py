@@ -127,7 +127,7 @@ def stream_mentions(on_tweet):
 
     url = "https://api.x.com/2/tweets/search/stream"
     params = {
-        "tweet.fields": "author_id,text,created_at,in_reply_to_user_id,referenced_tweets",
+        "tweet.fields": "author_id,text,created_at,in_reply_to_user_id,referenced_tweets,public_metrics",
         "expansions": "author_id",
         "user.fields": "username,name",
     }

@@ -9,11 +9,11 @@
   --line-strong: rgba(255, 255, 255, 0.25);
   --muted: #666666;
   --text-subtle: #999999;
-  --accent: #FFE500;
-  --accent-strong: #E6CE00;
-  --accent-soft: #FFF9CC;
-  --warning: #FFE500;
-  --danger: #FF3333;
+  --accent: #ffe500;
+  --accent-strong: #e6ce00;
+  --accent-soft: #fff9cc;
+  --warning: #ffe500;
+  --danger: #ff3333;
   --font-display: var(--font-syne);
 }
 
@@ -204,12 +204,12 @@ textarea {
 
 .mobile-menu-link-active {
   background: rgba(255, 229, 0, 0.1);
-  color: #FFE500;
+  color: #ffe500;
   box-shadow: none;
 }
 
 .mobile-menu-link-active .mobile-menu-link-icon {
-  color: #FFE500;
+  color: #ffe500;
   opacity: 1;
 }
 
@@ -312,9 +312,9 @@ textarea {
 }
 
 .nav-link-active {
-  border-color: #FFE500;
+  border-color: #ffe500;
   background: rgba(255, 229, 0, 0.1);
-  color: #FFE500;
+  color: #ffe500;
   box-shadow: none;
 }
 
@@ -517,7 +517,7 @@ textarea {
 }
 
 .selector-card--selected {
-  border-color: #FFE500;
+  border-color: #ffe500;
   background: rgba(255, 229, 0, 0.06);
   box-shadow: none;
 }
@@ -654,7 +654,11 @@ textarea {
   min-height: 2rem;
   padding: 0.42rem 0.72rem;
   border: 1px solid rgba(255, 170, 112, 0.2);
-  background: linear-gradient(180deg, rgba(255, 170, 112, 0.12), rgba(255, 170, 112, 0.05));
+  background: linear-gradient(
+    180deg,
+    rgba(255, 170, 112, 0.12),
+    rgba(255, 170, 112, 0.05)
+  );
   color: #ffe8d8;
   font-family: var(--font-ibm-plex-mono), monospace;
   font-size: 0.64rem;
@@ -683,7 +687,10 @@ textarea {
   font-size: 0.75rem;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  transition: border-color 120ms ease, background 120ms ease, color 120ms ease;
+  transition:
+    border-color 120ms ease,
+    background 120ms ease,
+    color 120ms ease;
 }
 
 .button:disabled,
@@ -696,14 +703,14 @@ textarea {
 .button:hover,
 .cinema-primary-button:hover,
 .cinema-secondary-button:hover {
-  border-color: #FFE500;
-  color: #FFE500;
+  border-color: #ffe500;
+  color: #ffe500;
 }
 
 .button-primary,
 .cinema-primary-button {
-  background: #FFE500;
-  border-color: #FFE500;
+  background: #ffe500;
+  border-color: #ffe500;
   color: #000;
   font-weight: 700;
 }
@@ -840,7 +847,7 @@ textarea::placeholder {
 input:focus,
 select:focus,
 textarea:focus {
-  border-color: #FFE500;
+  border-color: #ffe500;
   box-shadow: none;
 }
 
@@ -926,7 +933,11 @@ select {
   height: 28rem;
   right: -10rem;
   top: -14rem;
-  background: radial-gradient(circle, rgba(255, 181, 91, 0.4), rgba(255, 181, 91, 0));
+  background: radial-gradient(
+    circle,
+    rgba(255, 181, 91, 0.4),
+    rgba(255, 181, 91, 0)
+  );
 }
 
 .home-hero-refined::after {
@@ -934,7 +945,11 @@ select {
   height: 22rem;
   left: -8rem;
   bottom: -12rem;
-  background: radial-gradient(circle, rgba(106, 221, 255, 0.34), rgba(106, 221, 255, 0));
+  background: radial-gradient(
+    circle,
+    rgba(106, 221, 255, 0.34),
+    rgba(106, 221, 255, 0)
+  );
 }
 
 .home-hero-cta {
@@ -1091,7 +1106,11 @@ select {
   overflow-y: auto;
   border: 1px solid rgba(255, 255, 255, 0.08);
   background:
-    radial-gradient(circle at top left, rgba(255, 170, 112, 0.08), transparent 32%),
+    radial-gradient(
+      circle at top left,
+      rgba(255, 170, 112, 0.08),
+      transparent 32%
+    ),
     rgba(4, 6, 8, 0.78);
   padding: 0.78rem;
   display: grid;
@@ -1116,7 +1135,11 @@ select {
 
 .concierge-bubble-assistant {
   background:
-    linear-gradient(180deg, rgba(255, 170, 112, 0.09), rgba(255, 170, 112, 0.04)),
+    linear-gradient(
+      180deg,
+      rgba(255, 170, 112, 0.09),
+      rgba(255, 170, 112, 0.04)
+    ),
     rgba(255, 255, 255, 0.03);
 }
 
@@ -1220,7 +1243,11 @@ select {
   padding: 0.95rem 1rem;
   border: 1px solid rgba(255, 255, 255, 0.1);
   background:
-    linear-gradient(180deg, rgba(255, 170, 112, 0.08), rgba(255, 170, 112, 0.03)),
+    linear-gradient(
+      180deg,
+      rgba(255, 170, 112, 0.08),
+      rgba(255, 170, 112, 0.03)
+    ),
     rgba(255, 255, 255, 0.015);
   border-radius: 1rem;
   backdrop-filter: blur(14px) saturate(140%);
@@ -1277,9 +1304,21 @@ select {
   pointer-events: none;
   opacity: 0.08;
   background-image:
-    radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.7) 0 0.6px, transparent 0.8px),
-    radial-gradient(circle at 70% 40%, rgba(255, 255, 255, 0.6) 0 0.7px, transparent 0.9px),
-    radial-gradient(circle at 35% 75%, rgba(255, 255, 255, 0.55) 0 0.5px, transparent 0.8px);
+    radial-gradient(
+      circle at 20% 20%,
+      rgba(255, 255, 255, 0.7) 0 0.6px,
+      transparent 0.8px
+    ),
+    radial-gradient(
+      circle at 70% 40%,
+      rgba(255, 255, 255, 0.6) 0 0.7px,
+      transparent 0.9px
+    ),
+    radial-gradient(
+      circle at 35% 75%,
+      rgba(255, 255, 255, 0.55) 0 0.5px,
+      transparent 0.8px
+    );
   background-size: 180px 180px;
 }
 
@@ -1334,13 +1373,21 @@ select {
 
 .site-header--glass .nav-link:hover {
   border-color: rgba(255, 170, 112, 0.42);
-  background: linear-gradient(180deg, rgba(255, 170, 112, 0.18), rgba(255, 170, 112, 0.1));
+  background: linear-gradient(
+    180deg,
+    rgba(255, 170, 112, 0.18),
+    rgba(255, 170, 112, 0.1)
+  );
   color: #fff4ea;
 }
 
 .site-header--glass .nav-link-active {
   border-color: rgba(255, 170, 112, 0.48);
-  background: linear-gradient(180deg, rgba(255, 170, 112, 0.24), rgba(255, 170, 112, 0.12));
+  background: linear-gradient(
+    180deg,
+    rgba(255, 170, 112, 0.24),
+    rgba(255, 170, 112, 0.12)
+  );
   color: #fff8f1;
 }
 
@@ -1352,7 +1399,11 @@ select {
   padding: 0.48rem 0.95rem;
   border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.12);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.04));
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.1),
+    rgba(255, 255, 255, 0.04)
+  );
   color: var(--foreground);
   font-family: var(--font-ibm-plex-mono), monospace;
   font-size: 0.66rem;
@@ -1377,10 +1428,23 @@ select {
   z-index: 0;
   border-radius: 2rem;
   background:
-    radial-gradient(circle at 12% 18%, rgba(56, 82, 154, 0.16), transparent 28%),
-    radial-gradient(circle at 86% 14%, rgba(98, 66, 140, 0.12), transparent 26%),
+    radial-gradient(
+      circle at 12% 18%,
+      rgba(56, 82, 154, 0.16),
+      transparent 28%
+    ),
+    radial-gradient(
+      circle at 86% 14%,
+      rgba(98, 66, 140, 0.12),
+      transparent 26%
+    ),
     radial-gradient(circle at 52% 82%, rgba(37, 54, 61, 0.16), transparent 24%),
-    linear-gradient(180deg, rgba(9, 10, 12, 0.99), rgba(6, 7, 9, 0.99) 56%, rgba(4, 5, 7, 1));
+    linear-gradient(
+      180deg,
+      rgba(9, 10, 12, 0.99),
+      rgba(6, 7, 9, 0.99) 56%,
+      rgba(4, 5, 7, 1)
+    );
   filter: saturate(102%) contrast(105%);
   overflow: hidden;
   box-shadow:
@@ -1461,7 +1525,11 @@ select {
   height: 24rem;
   right: -11rem;
   top: -12rem;
-  background: radial-gradient(circle, rgba(255, 181, 91, 0.28), rgba(255, 181, 91, 0));
+  background: radial-gradient(
+    circle,
+    rgba(255, 181, 91, 0.28),
+    rgba(255, 181, 91, 0)
+  );
 }
 
 .home-hero-shell::after {
@@ -1469,7 +1537,11 @@ select {
   height: 20rem;
   left: -8rem;
   bottom: -11rem;
-  background: radial-gradient(circle, rgba(106, 221, 255, 0.24), rgba(106, 221, 255, 0));
+  background: radial-gradient(
+    circle,
+    rgba(106, 221, 255, 0.24),
+    rgba(106, 221, 255, 0)
+  );
 }
 
 .home-hero-topline {
@@ -1560,7 +1632,11 @@ select {
   border-radius: 0.55rem;
   border: 1px solid rgba(255, 255, 255, 0.2);
   background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.04)),
+    linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.18),
+      rgba(255, 255, 255, 0.04)
+    ),
     rgba(255, 255, 255, 0.03);
   box-shadow:
     0 0 0 1px rgba(0, 0, 0, 0.18) inset,
@@ -1640,8 +1716,16 @@ select {
   border-radius: inherit;
   pointer-events: none;
   background:
-    radial-gradient(circle at top left, rgba(120, 232, 255, 0.14), transparent 26%),
-    radial-gradient(circle at bottom right, rgba(255, 170, 112, 0.09), transparent 24%);
+    radial-gradient(
+      circle at top left,
+      rgba(120, 232, 255, 0.14),
+      transparent 26%
+    ),
+    radial-gradient(
+      circle at bottom right,
+      rgba(255, 170, 112, 0.09),
+      transparent 24%
+    );
 }
 
 .concierge-panel > * {
@@ -1697,7 +1781,11 @@ select {
   overflow-y: auto;
   border: 1px solid rgba(255, 255, 255, 0.1);
   background:
-    radial-gradient(circle at top left, rgba(128, 214, 255, 0.08), transparent 28%),
+    radial-gradient(
+      circle at top left,
+      rgba(128, 214, 255, 0.08),
+      transparent 28%
+    ),
     rgba(7, 10, 12, 0.35);
   padding: 0.85rem;
   display: grid;
@@ -1717,13 +1805,21 @@ select {
 
 .concierge-bubble-assistant {
   background:
-    linear-gradient(180deg, rgba(124, 237, 255, 0.08), rgba(124, 237, 255, 0.04)),
+    linear-gradient(
+      180deg,
+      rgba(124, 237, 255, 0.08),
+      rgba(124, 237, 255, 0.04)
+    ),
     rgba(255, 255, 255, 0.03);
 }
 
 .concierge-bubble-user {
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.04)),
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.08),
+      rgba(255, 255, 255, 0.04)
+    ),
     rgba(255, 255, 255, 0.02);
   border-color: rgba(255, 255, 255, 0.14);
 }
@@ -1753,7 +1849,11 @@ select {
 .button-primary.concierge-send:disabled,
 .cinema-primary-button.concierge-send:disabled {
   opacity: 1;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.04));
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.08),
+    rgba(255, 255, 255, 0.04)
+  );
   border-color: rgba(255, 255, 255, 0.16);
   color: rgba(255, 244, 234, 0.92);
   box-shadow:
@@ -1778,7 +1878,10 @@ select {
 
 @media (min-width: 1100px) {
   .hyperflow-layout--triple {
-    grid-template-columns: minmax(16rem, 19rem) minmax(0, 1fr) minmax(18rem, 22rem);
+    grid-template-columns: minmax(16rem, 19rem) minmax(0, 1fr) minmax(
+        18rem,
+        22rem
+      );
   }
 
   .hyperflow-layout--double {
@@ -1972,7 +2075,11 @@ select {
 
 .home-landing-shell {
   background:
-    radial-gradient(circle at top center, rgba(29, 37, 46, 0.22), transparent 38%),
+    radial-gradient(
+      circle at top center,
+      rgba(29, 37, 46, 0.22),
+      transparent 38%
+    ),
     linear-gradient(180deg, #060708 0%, #040506 100%);
 }
 
@@ -2004,7 +2111,11 @@ select {
   padding: 0.95rem 1rem;
   border: 1px solid rgba(255, 255, 255, 0.08);
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01)),
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.03),
+      rgba(255, 255, 255, 0.01)
+    ),
     rgba(9, 11, 14, 0.88);
   backdrop-filter: blur(18px) saturate(118%);
   -webkit-backdrop-filter: blur(18px) saturate(118%);
@@ -2071,7 +2182,11 @@ select {
   border-radius: 1.5rem;
   border-color: rgba(255, 255, 255, 0.12);
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03)),
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.08),
+      rgba(255, 255, 255, 0.03)
+    ),
     rgba(10, 14, 18, 0.42);
   backdrop-filter: blur(22px) saturate(145%);
   -webkit-backdrop-filter: blur(22px) saturate(145%);
@@ -2099,7 +2214,11 @@ select {
   padding: 1.05rem;
   border: 1px solid rgba(255, 255, 255, 0.14);
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.02)),
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.09),
+      rgba(255, 255, 255, 0.02)
+    ),
     rgba(10, 13, 17, 0.56);
   backdrop-filter: blur(24px) saturate(150%);
   -webkit-backdrop-filter: blur(24px) saturate(150%);
@@ -2145,8 +2264,16 @@ select {
   border-radius: 0.75rem;
   border: 1px solid rgba(255, 255, 255, 0.18);
   background:
-    radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.2), transparent 32%),
-    linear-gradient(135deg, rgba(130, 219, 255, 0.28), rgba(255, 160, 110, 0.16));
+    radial-gradient(
+      circle at 35% 30%,
+      rgba(255, 255, 255, 0.2),
+      transparent 32%
+    ),
+    linear-gradient(
+      135deg,
+      rgba(130, 219, 255, 0.28),
+      rgba(255, 160, 110, 0.16)
+    );
   box-shadow:
     0 0 0 1px rgba(0, 0, 0, 0.12) inset,
     0 10px 18px rgba(0, 0, 0, 0.18);
@@ -2293,7 +2420,11 @@ select {
 .trend-hero--sleek {
   border-color: rgba(255, 255, 255, 0.08);
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.025)),
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.06),
+      rgba(255, 255, 255, 0.025)
+    ),
     rgba(10, 14, 18, 0.36);
   backdrop-filter: blur(16px) saturate(128%);
   -webkit-backdrop-filter: blur(16px) saturate(128%);
@@ -2324,13 +2455,21 @@ select {
 
 .concierge-bubble-assistant {
   background:
-    linear-gradient(180deg, rgba(124, 237, 255, 0.06), rgba(124, 237, 255, 0.03)),
+    linear-gradient(
+      180deg,
+      rgba(124, 237, 255, 0.06),
+      rgba(124, 237, 255, 0.03)
+    ),
     rgba(255, 255, 255, 0.025);
 }
 
 .concierge-bubble-user {
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.03)),
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.06),
+      rgba(255, 255, 255, 0.03)
+    ),
     rgba(255, 255, 255, 0.016);
   border-color: rgba(255, 255, 255, 0.1);
 }
@@ -2475,5 +2614,73 @@ select {
 
   .home-concierge-home .concierge-send {
     min-width: 0;
+  }
+}
+
+/* ── Site Footer ───────────────────────────────────────────────────── */
+
+.site-footer {
+  border-top: 1px solid #1a1a1a;
+  background: #000;
+  padding: 0.75rem 1.5rem;
+  margin-top: auto;
+}
+
+.site-footer-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.footer-brand {
+  font-family: var(--font-ibm-plex-mono), monospace;
+  font-size: 0.7rem;
+  color: #555;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.footer-divider {
+  color: #333;
+}
+
+.footer-link {
+  color: #ffe500;
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.footer-link:hover {
+  color: #fff;
+}
+
+.footer-nav {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.footer-nav-link {
+  font-family: var(--font-ibm-plex-mono), monospace;
+  font-size: 0.7rem;
+  color: #555;
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.footer-nav-link:hover {
+  color: #ffe500;
+}
+
+@media (max-width: 640px) {
+  .site-footer-inner {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.35rem;
   }
 }

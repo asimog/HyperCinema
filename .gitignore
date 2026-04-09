@@ -49,3 +49,4 @@ tmp-ve.txt
 next-env.d.ts
 
 /lib/generated/prisma
+.env.local

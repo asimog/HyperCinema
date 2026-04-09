@@ -1,9 +1,11 @@
 """
-MythX Engine — Production v5.8
-Two-tier CRT system: Holographic CRT (default) or Truman Show Two-Layer (>100 likes).
+MythX Engine — Production v6.2
+Two-tier CRT system: Holographic CRT (default) or Truman Show Two-Layer (user tweets >100 likes).
+Premium creative direction: appended when the mythx mention tweet itself has >=100 likes.
+Technical Prompting Bible v6.2: 3-Act storytelling structure, flexible artistic approach, emotional arc.
 CRT recording effect as absolute core + 16 classic 90s anime sub-styles.
 Sentiment-aware sampling via Grok chat call for cinematic coherence.
-16×16×16×16×2 = 131,072 combo variations (2 visual tiers).
+16×16×16×16×2 = 131,072 combo variations (2 visual tiers) + premium boost.
 """
 import random
 import json
@@ -20,32 +22,18 @@ def _get_sentiment_client() -> Client:
     return _sentiment_client
 
 
-# === CORE: HOLOGRAPHIC REAL-WORLD CRT SIMULATION ===
-# (physics-accurate camcorder filming CRT displaying a "real" anime world)
-# The anime world feels like a real physical place being holographically broadcast through an old TV.
-HOLOGRAPHIC_CRT_CORE = (
-    "the entire video is captured exactly as if a real 1990s consumer camcorder is filming a CRT television screen "
-    "that is displaying a real physical world event in 90s anime style, "
-    "strong visible horizontal scanlines across the entire frame, intense phosphor glow and bloom on bright areas especially energy blasts and hair, "
+# === FULL CRT PHYSICS BLOCK (repeat verbatim in every single clip) ===
+# This is the compound physical system description the model treats as hard rules.
+CRT_PHYSICS_BLOCK = (
+    "strong visible horizontal scanlines across the entire frame, "
+    "intense phosphor glow and bloom on bright areas especially energy and highlights, "
     "visible RGB color convergence fringing with red and blue shifts on high-contrast edges, "
-    "soft analog video blur and slight ghosting on fast motion, warm nostalgic color grading with boosted reds and yellows, "
-    "subtle barrel distortion and screen curvature, analog video noise and faint tracking lines, "
-    "phosphor persistence trails on bright objects, slight moiré patterns from the camcorder recording the CRT, "
-    "authentic late-90s broadcast CRT look, the anime world feels like a real physical place being holographically broadcast through an old TV"
-)
-
-# === CORE: TRUMAN SHOW TWO-LAYER (triggered when any tweet has >100 likes) ===
-# Anime characters on a couch watching a CRT TV broadcasting the user's life as reality TV.
-TRUMAN_CRT_CORE = (
-    "the entire video is captured exactly as if a real 1990s consumer camcorder is filming a curved CRT television screen "
-    "in a 90s anime living room. The scene has two clear layers: "
-    "Anime Layer (slow, foreground): Classic 90s anime characters sitting on a couch watching the TV, reacting slowly with commentary, gasps, cheers, and emotional expressions. "
-    "Human Layer (on the CRT TV screen): Fast-paced dramatic reality TV broadcast titled 'The Truman Show of the Planet' showing real human events based on @{username}'s last 16 tweets. "
-    "Strong visible horizontal scanlines across the entire frame, intense phosphor glow and bloom on bright areas, "
-    "visible RGB color convergence fringing with red and blue shifts on high-contrast edges, "
-    "soft analog video blur and slight ghosting on fast motion, warm nostalgic color grading with boosted reds and yellows, "
-    "subtle barrel distortion and screen curvature, analog video noise and faint tracking lines, "
-    "phosphor persistence trails on bright objects, slight moiré patterns from the camcorder recording the CRT, "
+    "soft analog video blur and slight ghosting on fast motion, "
+    "warm nostalgic color grading with boosted reds and yellows, "
+    "subtle barrel distortion and screen curvature, "
+    "analog video noise and faint tracking lines, "
+    "phosphor persistence trails on bright objects, "
+    "slight moiré patterns from the camcorder recording the CRT, "
     "authentic late-90s broadcast CRT look with holographic transmission feel"
 )
 
@@ -116,6 +104,13 @@ LANGUAGE_OPTIONS = {
     "mythx russian": "russian",
 }
 
+# ── Premium creative direction (triggered when mention tweet has >= 100 likes)
+PREMIUM_CREATIVE_DIRECTION = (
+    "ultra-cinematic masterpiece, maximum emotional impact, "
+    "highly detailed keyframe animation, award-winning direction, "
+    "epic scale, breathtaking visuals, perfect composition"
+)
+
 # ── Sentiment-biased theme pools ────────────────────────────────────
 _POSITIVE_THEMES = [t for t in EPIC_THEMES if any(w in t for w in ("heroic", "redemption", "awakening", "destiny", "fable", "ascension"))]
 _NEGATIVE_THEMES = [t for t in EPIC_THEMES if any(w in t for w in ("revenge", "empire fall", "war", "rebellion", "shadow", "odyssey"))]
@@ -177,18 +172,21 @@ class MythXEngine:
 
     def generate_3_slice_prompts(
         self, tweets_text: str, username: str, language: str = "english",
-        has_viral: bool = False,
+        has_viral: bool = False, is_premium: bool = False,
     ) -> Tuple[str, str, str, Dict]:
         """
         Returns (prompt1, prompt2, prompt3, combo_dict).
         Each prompt is for a 10s 1:1 480p clip.
-        If has_viral is True (any tweet >100 likes), uses Truman Show two-layer style.
+
+        Args:
+            has_viral: True if any of the user's tweets has >100 likes
+                       → triggers Truman Show Two-Layer style.
+            is_premium: True if the mythx mention tweet itself has >=100 likes
+                       → appends ultra-cinematic creative direction.
         """
         sentiment = self._advanced_sentiment(tweets_text)
         combo = self._sample_combo(sentiment)
 
-        # Pick CRT core based on viral status
-        crt_core = TRUMAN_CRT_CORE if has_viral else HOLOGRAPHIC_CRT_CORE
         combo["style"] = "truman_show" if has_viral else "holographic_crt"
 
         # Language instruction for dialogue/text in generated video
@@ -200,76 +198,133 @@ class MythXEngine:
         elif language == "russian":
             lang_instruction = " All spoken dialogue and on-screen text must be in natural Russian."
 
-        if has_viral:
-            # Truman Show two-layer prompts
-            base = (
-                f"10 second 1:1 square 480p video. "
-                f"The scene is captured as if a 1990s camcorder is filming a CRT TV in a 90s anime living room. "
-                f"Anime Layer (slow, foreground): Classic 90s anime characters sitting on a couch watching the TV and reacting with commentary, gasps, and emotions. "
-                f"Human Layer (on the CRT TV screen): Fast-paced dramatic reality TV broadcast titled 'The Truman Show of the Planet' showing real human events based on @{username}'s last 16 tweets. "
-                f"Style: {crt_core} with {combo['sub_style']} visual influences. "
-                f"Camera and motion: {combo['tech']}. "
-                f"24fps smooth motion, natural physics, ultra detailed, glorious battles, emotional depth."
-                f"{lang_instruction}"
+        # ── Quality boosters base (shared across all clips)
+        quality_base = (
+            "Ultra detailed, 24fps smooth natural motion, accurate physics simulation, "
+            "cinematic masterpiece, maximum emotional impact, highly detailed keyframe animation"
+        )
+
+        # ── Premium creative direction (100+ likes on mention tweet)
+        premium_creative = ""
+        if is_premium:
+            combo["premium"] = True
+            premium_creative = (
+                ", award-winning direction, epic scale, breathtaking visuals, perfect composition"
             )
 
-            p1 = base + (
-                " Start strong. Show the anime characters settling on the couch and beginning "
-                "to watch the Truman Show broadcast of @{username}'s life."
+        # ── Build base openings for both tiers ─────────────────────────
+        base_opening_truman = (
+            f"10 second 1:1 square 480p video captured exactly as if a real 1990s consumer "
+            f"camcorder is filming a curved CRT television screen in a 90s anime living room. "
+            f"Anime Layer (slow, emotional, foreground): Classic 90s anime characters sitting on "
+            f"a couch watching the TV, reacting with commentary, gasps, cheers, and genuine emotion. "
+            f"Human Layer (on the CRT TV screen): Dramatic reality TV broadcast titled "
+            f"'The Truman Show of the Planet' showing real human events from @{username}'s last 16 tweets."
+        )
+
+        base_opening_holo = (
+            f"10 second 1:1 square 480p video captured exactly as if a real 1990s consumer "
+            f"camcorder is filming a CRT television screen that is displaying a real physical "
+            f"world event in 90s anime style. "
+            f"Central subject is @{username}."
+        )
+
+        # ── Narrative context (shared across all clips)
+        narrative = (
+            f"@{username} is the powerful hero in a {combo['theme']} "
+            f"set in the {combo['arena']}. "
+            f"Style: {combo['sub_style']} visual influences."
+        )
+
+        if has_viral:
+            # ── TRUMAN SHOW TWO-LAYER TIER — 3-Act Structure ──
+
+            p1 = (
+                f"{base_opening_truman} "
+                f"This is Act 1 — The Setup. "
+                f"Introduce @{username}'s personality and world through their recent tweets. "
+                f"Show the beginning of their story with curiosity and emotional foundation. "
+                f"Show the anime characters settling on the couch and beginning to watch "
+                f"the Truman Show broadcast of @{username}'s life. "
+                f"{narrative} "
+                f"Camera and motion: {combo['tech']}. "
+                f"{CRT_PHYSICS_BLOCK}. "
+                f"{quality_base}.{lang_instruction}"
             )
+
             p2 = (
-                base
-                + " Seamlessly continue directly from the exact last frame of the "
-                "previous clip. Maintain identical character appearance, lighting, "
-                "color grading, CRT scanlines, phosphor glow, RGB fringing, curvature, "
-                "and analog effects. "
-                "Show key moments from @{username}'s recent tweets as dramatic real human events "
-                "on the TV while the anime characters react and comment."
+                f"{base_opening_truman} "
+                f"This is Act 2 — The Rising Action. "
+                f"Seamlessly continue directly from the exact last frame of the previous clip. "
+                f"Maintain identical character appearance, lighting, color grading, scanlines, "
+                f"phosphor glow, RGB fringing, curvature, and all analog CRT effects. "
+                f"Build tension and emotional depth. "
+                f"Show conflict, struggle, key moments, and rising intensity from "
+                f"@{username}'s tweets as the human story unfolds on the TV while the anime "
+                f"characters react more strongly. "
+                f"{narrative} "
+                f"Camera and motion: {combo['tech']}. "
+                f"{CRT_PHYSICS_BLOCK}. "
+                f"{quality_base}.{lang_instruction}"
             )
+
             p3 = (
-                base
-                + " Seamlessly continue directly from the exact last frame of the "
-                "previous clip. Maintain identical character appearance, lighting, "
-                "color grading, CRT scanlines, phosphor glow, RGB fringing, curvature, "
-                "and analog effects. "
-                "Build to an epic memorable ending with the anime characters cheering or "
-                "reacting strongly to the powerful finale of @{username}'s story."
+                f"{base_opening_truman} "
+                f"This is Act 3 — The Climax and Resolution. "
+                f"Seamlessly continue directly from the exact last frame of the previous clip. "
+                f"Maintain identical character appearance, lighting, color grading, scanlines, "
+                f"phosphor glow, RGB fringing, curvature, and all analog CRT effects. "
+                f"Deliver a powerful, memorable ending. "
+                f"Show the payoff, reflection, victory, or emotional close from "
+                f"@{username}'s tweets. Let the anime characters react with strong emotion or catharsis. "
+                f"{narrative} "
+                f"Camera and motion: {combo['tech']}. "
+                f"{CRT_PHYSICS_BLOCK}. "
+                f"{quality_base}{premium_creative}.{lang_instruction}"
             )
         else:
-            # Holographic CRT prompts
-            base = (
-                f"10 second 1:1 square 480p video. "
-                f"Central subject is @{username}. "
-                f"@{username} is the powerful hero in a {combo['theme']} "
-                f"set in the {combo['arena']}. "
-                f"Style: {crt_core} with {combo['sub_style']} visual influences. "
+            # ── HOLOGRAPHIC CRT TIER — 3-Act Structure ──
+
+            p1 = (
+                f"{base_opening_holo} "
+                f"This is Act 1 — The Setup. "
+                f"Introduce @{username}'s personality and the arena environment. "
+                f"Show the beginning of their heroic journey with curiosity and emotional foundation. "
+                f"First powerful interaction with arena forces begins. "
+                f"{narrative} "
                 f"Camera and motion: {combo['tech']}. "
-                f"24fps smooth motion, natural physics, ultra detailed, "
-                f"glorious battles, emotional depth, high energy shonen vibes."
-                f"{lang_instruction}"
+                f"{CRT_PHYSICS_BLOCK}. "
+                f"{quality_base}.{lang_instruction}"
             )
 
-            p1 = base + (
-                " Start strong. Introduce personality and first powerful "
-                "interaction with the arena."
-            )
             p2 = (
-                base
-                + " Seamlessly continue directly from the exact last frame of the "
-                "previous clip. Maintain identical character appearance, lighting, "
-                "color grading, CRT scanlines, phosphor glow, RGB fringing, curvature, "
-                "and analog effects. "
-                "Show key moments from recent tweets as the subject battles and "
-                "interacts with arena forces."
+                f"{base_opening_holo} "
+                f"This is Act 2 — The Rising Action. "
+                f"Seamlessly continue directly from the exact last frame of the previous clip. "
+                f"Maintain identical character appearance, lighting, color grading, scanlines, "
+                f"phosphor glow, RGB fringing, curvature, and all analog CRT effects. "
+                f"Build tension and emotional depth. "
+                f"Show key moments from recent tweets as @{username} battles and interacts "
+                f"with arena forces. Escalation of conflict and emotional depth. "
+                f"{narrative} "
+                f"Camera and motion: {combo['tech']}. "
+                f"{CRT_PHYSICS_BLOCK}. "
+                f"{quality_base}.{lang_instruction}"
             )
+
             p3 = (
-                base
-                + " Seamlessly continue directly from the exact last frame of the "
-                "previous clip. Maintain identical character appearance, lighting, "
-                "color grading, CRT scanlines, phosphor glow, RGB fringing, curvature, "
-                "and analog effects. "
-                "Build to an epic memorable ending with powerful final arena "
-                "interaction and victory."
+                f"{base_opening_holo} "
+                f"This is Act 3 — The Climax and Resolution. "
+                f"Seamlessly continue directly from the exact last frame of the previous clip. "
+                f"Maintain identical character appearance, lighting, color grading, scanlines, "
+                f"phosphor glow, RGB fringing, curvature, and all analog CRT effects. "
+                f"Deliver a powerful, memorable ending. "
+                f"@{username} claims victory or achieves their destiny. "
+                f"Epic memorable ending with powerful emotional resonance. "
+                f"{narrative} "
+                f"Camera and motion: {combo['tech']}. "
+                f"{CRT_PHYSICS_BLOCK}. "
+                f"{quality_base}{premium_creative}.{lang_instruction}"
             )
 
         return p1, p2, p3, combo

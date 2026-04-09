@@ -1,4 +1,4 @@
-// HyperCinema — AI chat homepage.
+// HyperM — AI chat agent.
 // Streams responses from xAI Grok. Detects @handles + wallet addresses and
 // offers one-click video generation inline.
 "use client";
@@ -32,10 +32,6 @@ const VIDEO_HINT: Record<string, string> = {
   hashmyth: "→ GENERATE HASHMYTH VIDEO",
 };
 
-// ─── System prompt ────────────────────────────────────────────────────────────
-
-const SYSTEM_PROMPT = `You are HyperCinema AI — sharp, concise, crypto-native. You know DeFi, memecoins, Solana, Ethereum, X (Twitter) culture deeply. You help users understand wallets, tokens, and on-chain activity. Keep answers brief and direct. No filler. If asked about generating videos, tell the user to type a wallet address or @handle and hit the yellow button.`;
-
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function uid() {
@@ -55,7 +51,12 @@ function Bubble({ msg }: { msg: Message }) {
             : "bg-[#111] text-[#e0e0e0] border border-[#222]"
         }`}
       >
-        {msg.content || (msg.streaming ? <span className="animate-pulse text-[#555]">▌</span> : "")}
+        {msg.content ||
+          (msg.streaming ? (
+            <span className="animate-pulse text-[#555]">▌</span>
+          ) : (
+            ""
+          ))}
       </div>
     </div>
   );
@@ -64,10 +65,19 @@ function Bubble({ msg }: { msg: Message }) {
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export default function ChatPage() {
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      id: "greeting",
+      role: "assistant",
+      content:
+        "What do you want to know or see? I only exist as X API wanted a terms of service and privacy policy which nobody cares about. So\n\nI ask again — what do you wana know or see?",
+    },
+  ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [messageCount, setMessageCount] = useState(0);
+  const [videoChosen, setVideoChosen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -84,20 +94,48 @@ export default function ChatPage() {
     const text = input.trim();
     if (!text || loading) return;
 
+    // After 5 messages without video creation → ooga booga
+    if (messageCount >= 5 && !videoChosen) {
+      const ooga: Message = {
+        id: uid(),
+        role: "assistant",
+        content: "ooga booga",
+      };
+      setMessages((prev) => [
+        ...prev,
+        { id: uid(), role: "user", content: text },
+        ooga,
+      ]);
+      setMessageCount((c) => c + 1);
+      return;
+    }
+
     setInput("");
     setError(null);
 
     const userMsg: Message = { id: uid(), role: "user", content: text };
     const assistantId = uid();
-    const assistantMsg: Message = { id: assistantId, role: "assistant", content: "", streaming: true };
+    const assistantMsg: Message = {
+      id: assistantId,
+      role: "assistant",
+      content: "",
+      streaming: true,
+    };
 
     setMessages((prev) => [...prev, userMsg, assistantMsg]);
     setLoading(true);
+    setMessageCount((c) => c + 1);
+
+    // Caveman persona after first message
+    const isCaveman = messageCount >= 1 && !videoChosen;
+    const systemPrompt = isCaveman
+      ? `You are a caveman. Answer every question like a caveman. Short. Simple words. UGH. Grunt. FIRE. CAVE. Always talk like a caveman. Do NOT use modern language. Always be funny caveman talk.`
+      : `You are HyperM — sharp, concise, crypto-native. You know DeFi, memecoins, Solana, Ethereum, X (Twitter) culture deeply. You help users understand wallets, tokens, and on-chain activity. Keep answers brief and direct. No filler. If asked about generating videos, tell the user to type a wallet address or @handle and hit the yellow button.`;
 
     try {
       const history = [...messages, userMsg];
       const apiMessages = [
-        { role: "system", content: SYSTEM_PROMPT },
+        { role: "system", content: systemPrompt },
         ...history.map((m) => ({ role: m.role, content: m.content })),
       ];
 
@@ -148,7 +186,9 @@ export default function ChatPage() {
 
       setMessages((prev) =>
         prev.map((m) =>
-          m.id === assistantId ? { ...m, content: fullText || "...", streaming: false } : m,
+          m.id === assistantId
+            ? { ...m, content: fullText || "...", streaming: false }
+            : m,
         ),
       );
     } catch (err) {
@@ -157,12 +197,13 @@ export default function ChatPage() {
     } finally {
       setLoading(false);
     }
-  }, [input, loading, messages]);
+  }, [input, loading, messages, messageCount, videoChosen]);
 
   // Generate video (delegate to /api/generate/auto)
   const generateVideo = useCallback(async () => {
     const text = input.trim();
     if (!text || loading) return;
+    setVideoChosen(true);
     setLoading(true);
     setError(null);
     try {
@@ -173,7 +214,11 @@ export default function ChatPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(res.status === 429 ? "Rate limit hit. Try again in a minute." : (data.error ?? "Generation failed"));
+        setError(
+          res.status === 429
+            ? "Rate limit hit. Try again in a minute."
+            : (data.error ?? "Generation failed"),
+        );
         setLoading(false);
         return;
       }
@@ -194,32 +239,59 @@ export default function ChatPage() {
     [sendChat],
   );
 
-  return (
-    <div className="min-h-dvh bg-black text-white flex flex-col">
+  // ─── Landing screen (no messages yet) ─────────────────────────────────
+  if (messageCount === 0) {
+    return (
+      <div className="min-h-dvh bg-black text-white flex flex-col">
+        {/* Nav */}
+        <nav className="border-b border-[#1a1a1a] px-6 py-3 flex items-center justify-between font-mono text-[0.65rem] tracking-widest uppercase shrink-0">
+          <span className="text-[#FFE500] font-bold">HYPERM</span>
+          <div className="flex gap-6 text-[#555]">
+            <Link
+              href="/creator"
+              className="hover:text-[#FFE500] transition-colors"
+            >
+              MYTHOS
+            </Link>
+            <Link
+              href="/autonomous"
+              className="hover:text-[#FFE500] transition-colors"
+            >
+              FEED
+            </Link>
+            <Link
+              href="/admin/inference"
+              className="hover:text-[#FFE500] transition-colors"
+            >
+              ADMIN
+            </Link>
+          </div>
+        </nav>
 
-      {/* Nav */}
-      <nav className="border-b border-[#1a1a1a] px-6 py-3 flex items-center justify-between font-mono text-[0.65rem] tracking-widest uppercase shrink-0">
-        <span className="text-[#FFE500] font-bold">HYPERCINEMA</span>
-        <div className="flex gap-6 text-[#555]">
-          <Link href="/creator" className="hover:text-[#FFE500] transition-colors">MEDIA</Link>
-          <Link href="/autonomous" className="hover:text-[#FFE500] transition-colors">FEED</Link>
-          <Link href="/admin/inference" className="hover:text-[#FFE500] transition-colors">ADMIN</Link>
-        </div>
-      </nav>
-
-      {/* Chat area */}
-      <div
-        ref={scrollRef}
-        className="flex-1 overflow-y-auto px-4 py-6 max-w-2xl w-full mx-auto"
-      >
-        {messages.length === 0 && (
+        {/* Chat area — big gap between nav and content */}
+        <div
+          ref={scrollRef}
+          className="flex-1 overflow-y-auto px-4 pt-32 pb-6 max-w-2xl w-full mx-auto"
+        >
           <div className="flex flex-col items-center justify-center h-full min-h-[40vh] text-center space-y-6">
+            {/* Greeting bubble */}
+            <div className="max-w-lg w-full bg-[#111] border border-[#222] px-5 py-4 rounded-lg text-left">
+              <p className="font-mono text-[0.85rem] leading-relaxed text-[#e0e0e0]">
+                What do you want to know or see? I only exist as X API wanted a
+                terms of service and privacy policy which nobody cares about. So
+              </p>
+              <p className="font-mono text-[0.85rem] leading-relaxed text-[#FFE500] mt-2">
+                I ask again — what do you wana know or see?
+              </p>
+            </div>
+
             <div>
               <p className="font-mono text-[0.6rem] tracking-[0.25em] uppercase text-[#FFE500] mb-3">
                 AI · Crypto · Cinema
               </p>
-              <h1 className="font-display text-[clamp(2.5rem,8vw,4rem)] font-black leading-[0.88] tracking-tighter">
-                ASK ANYTHING.<br />
+              <h1 className="font-display text-[clamp(2rem,7vw,3.5rem)] font-black leading-[0.88] tracking-tighter">
+                ASK ANYTHING.
+                <br />
                 <span className="text-[#FFE500]">OR GENERATE.</span>
               </h1>
             </div>
@@ -227,14 +299,26 @@ export default function ChatPage() {
             {/* Quick starters */}
             <div className="w-full max-w-sm space-y-2">
               {[
-                { label: "What is this?", text: "What is HyperCinema and what can I do here?" },
-                { label: "Explain a memecoin", text: "How do I check if a Solana memecoin is safe to buy?" },
-                { label: "MythX demo", text: "Generate a MythX video for @elonmusk" },
+                {
+                  label: "What is this?",
+                  text: "What is HyperM and what can I do here?",
+                },
+                {
+                  label: "Explain a memecoin",
+                  text: "How do I check if a Solana memecoin is safe to buy?",
+                },
+                {
+                  label: "MythX demo",
+                  text: "Generate a MythX video for @elonmusk",
+                },
               ].map((s) => (
                 <button
                   key={s.label}
                   type="button"
-                  onClick={() => { setInput(s.text); inputRef.current?.focus(); }}
+                  onClick={() => {
+                    setInput(s.text);
+                    inputRef.current?.focus();
+                  }}
                   className="w-full text-left border border-[#222] text-[#555] px-3 py-2 font-mono text-[0.62rem] tracking-wide hover:border-[#FFE500] hover:text-[#FFE500] transition-colors bg-transparent cursor-pointer"
                 >
                   {s.label} →
@@ -247,7 +331,7 @@ export default function ChatPage() {
               {[
                 { icon: "🎬", title: "MythX", desc: "@handle → video" },
                 { icon: "📊", title: "HashMyth", desc: "wallet → cinema" },
-                { icon: "💬", title: "Chat", desc: "ask anything" },
+                { icon: "💬", title: "HyperM", desc: "ask anything" },
               ].map((item) => (
                 <div key={item.title}>
                   <div className="text-xl mb-1">{item.icon}</div>
@@ -259,8 +343,125 @@ export default function ChatPage() {
               ))}
             </div>
           </div>
-        )}
+        </div>
 
+        {/* Input dock */}
+        <div className="shrink-0 border-t border-[#1a1a1a] bg-black px-4 py-4">
+          <div className="max-w-2xl mx-auto space-y-2">
+            {/* Video generation hint */}
+            {detectedType && (
+              <div className="flex items-center gap-3">
+                <span className="font-mono text-[0.58rem] tracking-[0.15em] text-[#FFE500]">
+                  {VIDEO_HINT[detectedType]}
+                </span>
+                <button
+                  type="button"
+                  onClick={generateVideo}
+                  disabled={loading}
+                  className="px-3 py-1 bg-[#FFE500] text-black font-mono text-[0.6rem] font-black tracking-widest uppercase disabled:opacity-40 hover:bg-white transition-colors cursor-pointer"
+                >
+                  {loading ? "..." : "GENERATE →"}
+                </button>
+              </div>
+            )}
+
+            {/* Error */}
+            {error && (
+              <div className="border border-[#FF3333] bg-[rgba(255,51,51,0.05)] px-3 py-2 font-mono text-[0.65rem] text-[#FF6666]">
+                {error}
+              </div>
+            )}
+
+            {/* Input row */}
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                sendChat();
+              }}
+              className="flex gap-2"
+            >
+              <div className="flex-1 border border-[#333] focus-within:border-[#FFE500] transition-colors">
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={input}
+                  onChange={(e) => {
+                    setInput(e.target.value);
+                    setError(null);
+                  }}
+                  onKeyDown={handleKey}
+                  placeholder="Ask anything · @handle · wallet address"
+                  disabled={loading}
+                  autoFocus
+                  className="w-full bg-black text-white px-4 py-3 outline-none placeholder-[#333] font-mono text-sm"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={loading || !input.trim()}
+                className="px-5 py-3 bg-[#FFE500] text-black font-mono font-black text-sm tracking-widest uppercase disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white transition-colors"
+              >
+                {loading ? "..." : "→"}
+              </button>
+            </form>
+
+            <p className="font-mono text-[0.55rem] tracking-wide text-[#333]">
+              ENTER to send · wallet/handle auto-detected for video ·{" "}
+              <Link
+                href="/creator"
+                className="text-[#444] hover:text-[#FFE500]"
+              >
+                mythos studio
+              </Link>{" "}
+              ·{" "}
+              <a
+                href="https://x.com/HyperMythX"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[#444] hover:text-[#FFE500]"
+              >
+                @HyperMythsX
+              </a>
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ─── Active chat ──────────────────────────────────────────────────────
+  return (
+    <div className="min-h-dvh bg-black text-white flex flex-col">
+      {/* Nav */}
+      <nav className="border-b border-[#1a1a1a] px-6 py-3 flex items-center justify-between font-mono text-[0.65rem] tracking-widest uppercase shrink-0">
+        <span className="text-[#FFE500] font-bold">HYPERM</span>
+        <div className="flex gap-6 text-[#555]">
+          <Link
+            href="/creator"
+            className="hover:text-[#FFE500] transition-colors"
+          >
+            MYTHOS
+          </Link>
+          <Link
+            href="/autonomous"
+            className="hover:text-[#FFE500] transition-colors"
+          >
+            FEED
+          </Link>
+          <Link
+            href="/admin/inference"
+            className="hover:text-[#FFE500] transition-colors"
+          >
+            ADMIN
+          </Link>
+        </div>
+      </nav>
+
+      {/* Chat area — big gap */}
+      <div
+        ref={scrollRef}
+        className="flex-1 overflow-y-auto px-4 pt-24 pb-6 max-w-2xl w-full mx-auto"
+      >
         {messages.map((msg) => (
           <Bubble key={msg.id} msg={msg} />
         ))}
@@ -269,7 +470,6 @@ export default function ChatPage() {
       {/* Input dock */}
       <div className="shrink-0 border-t border-[#1a1a1a] bg-black px-4 py-4">
         <div className="max-w-2xl mx-auto space-y-2">
-
           {/* Video generation hint */}
           {detectedType && (
             <div className="flex items-center gap-3">
@@ -287,6 +487,15 @@ export default function ChatPage() {
             </div>
           )}
 
+          {/* Ooga booga warning */}
+          {messageCount >= 4 && !videoChosen && (
+            <div className="border border-[#FFE500]/20 bg-[rgba(255,229,0,0.05)] px-3 py-2 font-mono text-[0.65rem] text-[#FFE500]/60">
+              {5 - messageCount === 1
+                ? "Last chance. Next message = ooga booga. Type @handle or wallet for video."
+                : `${5 - messageCount} messages left before ooga booga. Type @handle or wallet for video.`}
+            </div>
+          )}
+
           {/* Error */}
           {error && (
             <div className="border border-[#FF3333] bg-[rgba(255,51,51,0.05)] px-3 py-2 font-mono text-[0.65rem] text-[#FF6666]">
@@ -296,7 +505,10 @@ export default function ChatPage() {
 
           {/* Input row */}
           <form
-            onSubmit={(e) => { e.preventDefault(); sendChat(); }}
+            onSubmit={(e) => {
+              e.preventDefault();
+              sendChat();
+            }}
             className="flex gap-2"
           >
             <div className="flex-1 border border-[#333] focus-within:border-[#FFE500] transition-colors">
@@ -304,7 +516,10 @@ export default function ChatPage() {
                 ref={inputRef}
                 type="text"
                 value={input}
-                onChange={(e) => { setInput(e.target.value); setError(null); }}
+                onChange={(e) => {
+                  setInput(e.target.value);
+                  setError(null);
+                }}
                 onKeyDown={handleKey}
                 placeholder="Ask anything · @handle · wallet address"
                 disabled={loading}
@@ -322,7 +537,19 @@ export default function ChatPage() {
           </form>
 
           <p className="font-mono text-[0.55rem] tracking-wide text-[#333]">
-            ENTER to send · wallet/handle auto-detected for video · <Link href="/creator" className="text-[#444] hover:text-[#FFE500]">media studio</Link> · <a href="https://x.com/HyperMythX" target="_blank" rel="noopener noreferrer" className="text-[#444] hover:text-[#FFE500]">@HyperMythsX</a>
+            ENTER to send · wallet/handle auto-detected for video ·{" "}
+            <Link href="/creator" className="text-[#444] hover:text-[#FFE500]">
+              mythos studio
+            </Link>{" "}
+            ·{" "}
+            <a
+              href="https://x.com/HyperMythX"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[#444] hover:text-[#FFE500]"
+            >
+              @HyperMythsX
+            </a>
           </p>
         </div>
       </div>

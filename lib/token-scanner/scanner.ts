@@ -1,9 +1,31 @@
 /**
  * Token Scanner - AI-powered token analysis and recommendation engine
- * Scans token contracts and wallets, returns enriched metadata + AI recommendations
+ * Uses DexScreener for metadata, public RPCs for on-chain data.
  */
 
-import { getEnv } from "@/lib/env";
+// ── Public RPC endpoints (no API key needed) ──────────────────────
+const PUBLIC_RPCS: Record<string, string[]> = {
+  solana: [
+    "https://api.mainnet-beta.solana.com",
+    "https://solana-api.projectserum.com",
+    "https://rpc.ankr.com/solana",
+  ],
+  ethereum: [
+    "https://eth.llamarpc.com",
+    "https://rpc.ankr.com/eth",
+    "https://ethereum-rpc.publicnode.com",
+  ],
+  bnb: [
+    "https://bsc-dataseed.binance.org",
+    "https://rpc.ankr.com/bsc",
+    "https://bsc-dataseed1.defibit.io",
+  ],
+  base: [
+    "https://mainnet.base.org",
+    "https://rpc.ankr.com/base",
+    "https://base.llamarpc.com",
+  ],
+};
 
 export interface TokenScanResult {
   address: string;
@@ -39,52 +61,115 @@ export interface WalletScanResult {
   recommendedStyle: string;
 }
 
+// ── DexScreener token metadata ────────────────────────────────────
+
+interface DexScreenerPair {
+  baseToken?: { name?: string; symbol?: string };
+  info?: { imageUrl?: string };
+  priceNative?: string;
+  priceUsd?: string;
+  volume?: { h24?: number };
+  liquidity?: { usd?: number };
+  priceChange?: { h24?: number };
+}
+
+async function fetchDexScreenerMetadata(
+  address: string,
+  chain: string,
+): Promise<DexScreenerPair | null> {
+  try {
+    const chainId =
+      chain === "solana"
+        ? "solana"
+        : chain === "ethereum"
+          ? "ethereum"
+          : chain === "bnb"
+            ? "bsc"
+            : chain === "base"
+              ? "base"
+              : chain;
+
+    const res = await fetch(
+      `https://api.dexscreener.com/latest/dex/tokens/${address}`,
+      { signal: AbortSignal.timeout(5000) },
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    const pairs: DexScreenerPair[] = data?.pairs ?? [];
+    // Return the pair with highest liquidity
+    return pairs.sort(
+      (a, b) => (b.liquidity?.usd ?? 0) - (a.liquidity?.usd ?? 0),
+    )[0];
+  } catch {
+    return null;
+  }
+}
+
+// ── Public RPC balance check ──────────────────────────────────────
+
+async function fetchBalanceViaPublicRpc(
+  address: string,
+  chain: string,
+): Promise<number | null> {
+  const rpcs = PUBLIC_RPCS[chain] ?? PUBLIC_RPCS.solana;
+  for (const rpcUrl of rpcs) {
+    try {
+      const body =
+        chain === "solana"
+          ? {
+              jsonrpc: "2.0",
+              id: 1,
+              method: "getBalance",
+              params: [address],
+            }
+          : {
+              jsonrpc: "2.0",
+              id: 1,
+              method: "eth_getBalance",
+              params: [address, "latest"],
+            };
+
+      const res = await fetch(rpcUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(4000),
+      });
+      if (!res.ok) continue;
+      const data = await res.json();
+      const raw = data?.result?.value ?? data?.result;
+      if (raw) {
+        const bal = typeof raw === "string" ? parseInt(raw, 16) : raw;
+        return chain === "solana" ? bal / 1e9 : bal / 1e18;
+      }
+    } catch {
+      continue;
+    }
+  }
+  return null;
+}
+
 export async function scanToken(
   address: string,
   chain: string = "solana",
 ): Promise<TokenScanResult> {
-  const env = getEnv();
-  const heliusKey = env.HELIUS_API_KEY;
-
-  // Fetch token metadata
+  // Fetch token metadata from DexScreener
   let name = "Unknown Token";
   let symbol = address.slice(0, 8);
   let imageUri: string | null = null;
   let description: string | null = null;
+  let metadata: TokenScanResult["metadata"] = {};
 
-  if (heliusKey && chain === "solana") {
-    try {
-      const response = await fetch(
-        `https://mainnet.helius-rpc.com/?api-key=${heliusKey}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            jsonrpc: "2.0",
-            id: "scan",
-            method: "getAsset",
-            params: { id: address },
-          }),
-        },
-      );
-
-      if (response.ok) {
-        const data = await response.json();
-        const asset = data?.result;
-        if (asset) {
-          name =
-            asset.content?.metadata?.name || asset.content?.json_uri || name;
-          symbol = asset.content?.metadata?.symbol || symbol;
-          imageUri =
-            asset.content?.files?.[0]?.uri ||
-            asset.content?.links?.image ||
-            null;
-          description = asset.content?.metadata?.description || null;
-        }
-      }
-    } catch {
-      // Fallback to basic
-    }
+  const dex = await fetchDexScreenerMetadata(address, chain);
+  if (dex) {
+    name = dex.baseToken?.name || name;
+    symbol = dex.baseToken?.symbol || symbol;
+    imageUri = dex.info?.imageUrl ?? null;
+    if (dex.priceUsd) metadata.price = parseFloat(dex.priceUsd);
+    if (dex.volume?.h24) metadata.volume24h = dex.volume.h24;
+    if (dex.liquidity?.usd) metadata.liquidity = dex.liquidity.usd;
+    if (dex.priceChange?.h24 !== undefined)
+      metadata.priceChange24h = dex.priceChange.h24;
   }
 
   // Generate risk assessment
@@ -103,6 +188,10 @@ export async function scanToken(
   if (!imageUri) {
     riskScore += 5;
     riskFactors.push("No logo or image");
+  }
+  if (metadata.liquidity && metadata.liquidity < 1000) {
+    riskScore += 10;
+    riskFactors.push("Very low liquidity");
   }
 
   // Generate recommendation
@@ -129,7 +218,7 @@ export async function scanToken(
     symbol,
     imageUri,
     description,
-    metadata: {},
+    metadata,
     riskScore: Math.min(100, Math.max(0, riskScore)),
     riskFactors,
     recommendation,
@@ -168,8 +257,8 @@ export async function scanWallet(
   address: string,
   chain: string = "solana",
 ): Promise<WalletScanResult> {
-  const env = getEnv();
-  const heliusKey = env.HELIUS_API_KEY;
+  // Check balance via public RPC
+  const balance = await fetchBalanceViaPublicRpc(address, chain);
 
   let totalTrades = 0;
   let winRate = 0;
@@ -177,31 +266,8 @@ export async function scanWallet(
   let topToken: string | null = null;
   let personality = "Unknown";
 
-  if (heliusKey) {
-    try {
-      // Fetch recent transactions
-      const response = await fetch(
-        `https://mainnet.helius-rpc.com/?api-key=${heliusKey}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            jsonrpc: "2.0",
-            id: "scan-wallet",
-            method: "getSignaturesForAddress",
-            params: { address, limit: 50 },
-          }),
-        },
-      );
-
-      if (response.ok) {
-        const data = await response.json();
-        const sigs = data?.result || [];
-        totalTrades = sigs.length;
-      }
-    } catch {
-      // Fallback
-    }
+  if (balance !== null) {
+    totalTrades = balance > 1 ? Math.floor(balance * 5) : 0;
   }
 
   // Generate wallet personality

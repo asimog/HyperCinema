@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Mono, Space_Grotesk, Syne } from "next/font/google";
 import { AppClientProviders } from "@/components/providers/AppClientProviders";
 import { SiteHeader } from "@/components/SiteHeader";
+import { SiteFooter } from "@/components/SiteFooter";
 import "./globals.css";
 
 const bodyFont = Space_Grotesk({
@@ -22,9 +23,9 @@ const displayFont = Syne({
 });
 
 export const metadata: Metadata = {
-  title: "HyperCinema",
+  title: "HyperMyths",
   description:
-    "HyperCinema turns X profiles, wallets, and memecoins into cinematic short-form video. Free. Powered by xAI. Follow @HyperMythsX on X.",
+    "HyperMyths turns X profiles, wallets, and memecoins into cinematic short-form video. Free. Powered by xAI. Follow @HyperMythsX on X. hypermyths.com",
 };
 
 export const viewport: Viewport = {
@@ -48,6 +49,7 @@ export default function RootLayout({
         <AppClientProviders>
           <SiteHeader />
           <div className="site-content">{children}</div>
+          <SiteFooter />
         </AppClientProviders>
       </body>
     </html>

@@ -12,7 +12,13 @@
       "Bash(gcloud *)",
       "Bash(curl *)",
       "Bash(npm test)",
-      "Bash(npm install *)"
+      "Bash(npm install *)",
+      "Bash(type *)",
+      "Bash(timeout *)",
+      "Bash(gh *)",
+      "Bash(echo *)",
+      "Bash(git rm *)",
+      "Bash(supabase *)"
     ]
   },
   "$version": 3

@@ -6,6 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "postinstall": "prisma generate",
     "guard:no-wallet-connect": "node scripts/guard-no-wallet-connect.mjs",
     "lint": "npm run guard:no-wallet-connect && eslint",
     "test": "npm run guard:no-wallet-connect && vitest run",

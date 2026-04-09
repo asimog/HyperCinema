@@ -10,6 +10,8 @@ export interface GenerateMythXClipInput {
   aspectRatio?: string;
   style?: string;
   imageUrl?: string | null;
+  apiKey?: string | null;
+  baseUrl?: string | null;
   onProgress?: () => Promise<void> | void;
 }
 
@@ -37,6 +39,12 @@ function normalizeImageUrl(value?: string | null): string | undefined {
   return trimmed.length ? trimmed : undefined;
 }
 
+function normalizeValue(value?: string | null): string | undefined {
+  if (!value) return undefined;
+  const trimmed = value.trim();
+  return trimmed.length ? trimmed : undefined;
+}
+
 function extractVideoUrl(payload: MythXVideoStatusResponse): string | null {
   return payload.videoUrl?.trim() || null;
 }
@@ -58,14 +66,15 @@ export class MythXVideoClient {
     videoBytesBase64: string[];
   }> {
     const env = getVideoServiceEnv();
-    if (!env.MYTHX_API_KEY) {
+    const apiKey = normalizeValue(input.apiKey) ?? env.MYTHX_API_KEY ?? null;
+    if (!apiKey) {
       throw new Error("MYTHX_API_KEY is required for MythX video generation.");
     }
 
-    const baseUrl = normalizeMythXBaseUrl(env.MYTHX_BASE_URL);
+    const baseUrl = normalizeMythXBaseUrl(input.baseUrl ?? env.MYTHX_BASE_URL);
     const headers = {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${env.MYTHX_API_KEY}`,
+      Authorization: `Bearer ${apiKey}`,
     };
 
     const startResponse = await fetch(`${baseUrl}/api/videos/generations`, {

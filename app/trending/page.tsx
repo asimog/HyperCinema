@@ -1,11 +1,11 @@
 // Trending page - custom creators + latest videos
 import Link from "next/link";
-import { getDb } from "@/lib/firebase/admin";
+import { db } from "@/lib/db";
 
 // Disable caching for fresh content
 export const dynamic = "force-dynamic";
 
-// Job card data from Firestore
+// Job card data from Prisma
 interface JobCard {
   jobId: string;
   subjectName: string | null;
@@ -14,24 +14,29 @@ interface JobCard {
   requestKind: string | null;
   videoStyle: string | null;
   wallet: string | null;
-  completedAt: any;
+  createdAt: Date | null;
   status: string;
 }
 
 // Fetch latest 8 completed jobs
 async function getLast8Jobs(): Promise<JobCard[]> {
   try {
-    const db = getDb();
-    const snapshot = await db
-      .collection("jobs")
-      .where("status", "==", "complete")
-      .orderBy("completedAt", "desc")
-      .limit(8)
-      .get();
+    const jobs = await db.job.findMany({
+      where: { status: "complete" },
+      orderBy: { createdAt: "desc" },
+      take: 8,
+    });
 
-    return snapshot.docs.map(doc => ({
-      jobId: doc.id,
-      ...doc.data(),
+    return jobs.map((job) => ({
+      jobId: job.jobId,
+      subjectName: job.subjectName,
+      sourceMediaUrl: job.sourceMediaUrl,
+      videoSeconds: job.videoSeconds,
+      requestKind: job.requestKind,
+      videoStyle: job.stylePreset,
+      wallet: job.wallet,
+      createdAt: job.createdAt,
+      status: job.status,
     })) as JobCard[];
   } catch {
     return [];
@@ -43,7 +48,8 @@ const CUSTOM_CREATORS = [
   {
     id: "mythx",
     title: "MythX MythX",
-    description: "Turn any X profile into an autobiographical video. AI scrapes 42 tweets and generates cinema.",
+    description:
+      "Turn any X profile into an autobiographical video. AI scrapes 42 tweets and generates cinema.",
     href: "/MythX",
     icon: "🎬",
     gradient: "from-purple-600 to-pink-600",
@@ -52,7 +58,8 @@ const CUSTOM_CREATORS = [
   {
     id: "hyperm",
     title: "HyperM Premium",
-    description: "Premium creator cuts with 42 cinematic styles. Brand stories, trailers, and high-end productions.",
+    description:
+      "Premium creator cuts with 42 cinematic styles. Brand stories, trailers, and high-end productions.",
     href: "/HyperM",
     icon: "🎥",
     gradient: "from-cyan-600 to-blue-600",
@@ -61,7 +68,8 @@ const CUSTOM_CREATORS = [
   {
     id: "hashmyth-scanner",
     title: "HashMyth Scanner",
-    description: "Scan any token or wallet address. AI analyzes risk and generates a cinematic trading story.",
+    description:
+      "Scan any token or wallet address. AI analyzes risk and generates a cinematic trading story.",
     href: "/HashMyth",
     icon: "🔍",
     gradient: "from-green-600 to-cyan-600",
@@ -70,7 +78,8 @@ const CUSTOM_CREATORS = [
   {
     id: "lovex",
     title: "LoveX Moments",
-    description: "Family milestones, anniversaries, and keepsakes. Turn memories into cinematic videos.",
+    description:
+      "Family milestones, anniversaries, and keepsakes. Turn memories into cinematic videos.",
     href: "/LoveX",
     icon: "❤️",
     gradient: "from-red-600 to-pink-600",
@@ -79,7 +88,8 @@ const CUSTOM_CREATORS = [
   {
     id: "bedtime-stories",
     title: "Bedtime Stories",
-    description: "AI-generated children's stories with audio. Perfect for family movie nights.",
+    description:
+      "AI-generated children's stories with audio. Perfect for family movie nights.",
     href: "/FamilyCinema",
     icon: "🌙",
     gradient: "from-indigo-600 to-purple-600",
@@ -88,7 +98,8 @@ const CUSTOM_CREATORS = [
   {
     id: "music-video",
     title: "Music Videos",
-    description: "Rhythm-led music visuals. Upload beats and let AI generate the video.",
+    description:
+      "Rhythm-led music visuals. Upload beats and let AI generate the video.",
     href: "/MusicVideo",
     icon: "🎵",
     gradient: "from-orange-600 to-red-600",
@@ -126,7 +137,8 @@ export default async function TrendingPage() {
             <p className="eyebrow">Trending</p>
             <h1 className="font-display">Custom Video Creators.</h1>
             <p className="route-summary">
-              Choose from AI agents, premium creators, and specialized tools. Each generates unique cinematic videos.
+              Choose from AI agents, premium creators, and specialized tools.
+              Each generates unique cinematic videos.
             </p>
           </section>
 
@@ -140,7 +152,9 @@ export default async function TrendingPage() {
                   <h3 className="font-semibold">Are you an AI Agent?</h3>
                   <p className="text-sm text-gray-400 mt-1">
                     Use x402 USDC to generate videos programmatically.{" "}
-                    <Link href="/MythX" className="text-purple-400 underline">Start here →</Link>
+                    <Link href="/MythX" className="text-purple-400 underline">
+                      Start here →
+                    </Link>
                   </p>
                 </div>
               </div>
@@ -148,13 +162,15 @@ export default async function TrendingPage() {
 
             <h2 className="text-2xl font-bold mb-6">🎨 Video Creators</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {CUSTOM_CREATORS.map(creator => (
+              {CUSTOM_CREATORS.map((creator) => (
                 <Link
                   key={creator.id}
                   href={creator.href}
                   className="group surface-card panel p-6 hover:border-purple-500/50 transition-all"
                 >
-                  <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${creator.gradient} flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition-transform`}>
+                  <div
+                    className={`w-14 h-14 rounded-xl bg-gradient-to-br ${creator.gradient} flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition-transform`}
+                  >
                     {creator.icon}
                   </div>
                   <div className="flex items-center gap-2 mb-2">
@@ -175,7 +191,10 @@ export default async function TrendingPage() {
           <section>
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold">🎬 Latest 8 Videos</h2>
-              <Link href="/gallery" className="text-purple-400 hover:text-purple-300 text-sm">
+              <Link
+                href="/gallery"
+                className="text-purple-400 hover:text-purple-300 text-sm"
+              >
                 View all →
               </Link>
             </div>
@@ -192,7 +211,7 @@ export default async function TrendingPage() {
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {jobs.map(job => (
+                {jobs.map((job) => (
                   <Link
                     key={job.jobId}
                     href={`/job/${job.jobId}`}
@@ -200,10 +219,15 @@ export default async function TrendingPage() {
                   >
                     <div className="aspect-video bg-gray-800 rounded mb-3 flex items-center justify-center relative">
                       <span className="text-3xl">
-                        {job.requestKind === "mythx" ? "🎬" :
-                         job.requestKind === "token_video" ? "📊" :
-                         job.requestKind === "bedtime_story" ? "🌙" :
-                         job.requestKind === "music_video" ? "🎵" : "🎥"}
+                        {job.requestKind === "mythx"
+                          ? "🎬"
+                          : job.requestKind === "token_video"
+                            ? "📊"
+                            : job.requestKind === "bedtime_story"
+                              ? "🌙"
+                              : job.requestKind === "music_video"
+                                ? "🎵"
+                                : "🎥"}
                       </span>
                       {job.videoSeconds && (
                         <div className="absolute bottom-2 right-2 px-2 py-1 bg-black/80 rounded text-xs font-mono">

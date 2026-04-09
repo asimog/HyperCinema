@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { getInferenceRuntimeConfig } from "@/lib/inference/config";
-import type { VideoInferenceProviderId } from "@/lib/inference/providers";
+import {
+  getInferenceRuntimeConfig,
+  resolveVideoProviderSelection,
+} from "@/lib/inference/config";
+import {
+  isVideoInferenceProvider,
+  type VideoInferenceProviderId,
+} from "@/lib/inference/providers";
 import { fetchWithTimeout } from "@/lib/network/http";
-import { getEnv } from "@/lib/env";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { getRequestIp } from "@/lib/security/request-ip";
 
@@ -21,6 +26,13 @@ export async function POST(request: NextRequest) {
       model?: string | null;
       payload?: Record<string, unknown>;
     };
+
+    if (body.provider && !isVideoInferenceProvider(body.provider)) {
+      return NextResponse.json(
+        { error: `Unsupported video provider: ${body.provider}` },
+        { status: 400 },
+      );
+    }
 
     const ip = getRequestIp(request);
     const rateLimit = await enforceRateLimit({
@@ -45,34 +57,34 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const env = getEnv();
     const config = await getInferenceRuntimeConfig();
-    const provider = body.provider ?? (config.video.provider as VideoInferenceProviderId);
-    const model = body.model ?? config.video.model;
-    const baseUrl = config.video.baseUrl ?? env.VIDEO_API_BASE_URL;
+    const { provider, selection } = resolveVideoProviderSelection(config, body.provider);
+    const model = body.model ?? selection.model;
+    const baseUrl = selection.baseUrl;
+    const apiKey = selection.apiKey;
     const payload = {
       ...(body.payload ?? {}),
       provider,
       model,
     };
 
-    if (!baseUrl || !env.VIDEO_API_KEY) {
+    if (!baseUrl || !apiKey) {
       return NextResponse.json(
-        { error: "VIDEO_API_BASE_URL and VIDEO_API_KEY must be configured." },
+        { error: `Video provider ${provider} is missing apiKey or baseUrl.` },
         { status: 503 },
       );
     }
 
     const response = await fetchWithTimeout(
       `${baseUrl.replace(/\/+$/, "")}/render`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${env.VIDEO_API_KEY}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify(payload),
         },
-        body: JSON.stringify(payload),
-      },
       20_000,
     );
 

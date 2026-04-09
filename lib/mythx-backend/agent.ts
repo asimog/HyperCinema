@@ -6,7 +6,6 @@ import { MYTHX_CHARACTER, MYTHX_AGENT_ID } from "./character";
 import { getEnv } from "@/lib/env";
 import { logger } from "@/lib/logging/logger";
 import { getXClient, XClient, XCommandParseResult } from "@/lib/x/client";
-import { validatePromoCode, usePromoCode as consumePromoCode } from "@/lib/promocodes/manager";
 import { scrapeTweetsViaDexter } from "@/lib/dexter-mcp/tweet-scraper";
 import {
   agentResolveToken,
@@ -66,7 +65,6 @@ export interface MythXRequest {
   profileInput: string;
   style?: string;
   maxTweets?: number;
-  promoCode?: string | null;
   jobId?: string;
   wallet?: string;
   triggerFromTwitter?: boolean;
@@ -85,7 +83,6 @@ export interface MythXResponse {
   galleryUrl: string;
   postedToTwitter: boolean;
   twitterPostUrl: string | null;
-  promoCodeUsed: string | null;
   metadata: {
     style: string;
     totalScenes: number;
@@ -103,7 +100,10 @@ export interface MythXScene {
 }
 
 // Status update callback type
-export type StatusCallback = (status: string, progress?: number) => Promise<void>;
+export type StatusCallback = (
+  status: string,
+  progress?: number,
+) => Promise<void>;
 
 /**
  * STEP 1: Scrape 42 tweets from X profile
@@ -111,7 +111,7 @@ export type StatusCallback = (status: string, progress?: number) => Promise<void
 async function scrapeTweets(
   profileInput: string,
   maxTweets: number,
-  onStatus?: StatusCallback
+  onStatus?: StatusCallback,
 ): Promise<{
   profile: MythXProfile;
   tweets: MythXTweet[];
@@ -157,10 +157,13 @@ async function scrapeTweets(
     logger.warn("dexter_tweet_scrape_failed", {
       component: "mythx",
       errorCode: "dexter_tweet_scrape_failed",
-      errorMessage: dexterError instanceof Error ? dexterError.message : "Unknown error",
+      errorMessage:
+        dexterError instanceof Error ? dexterError.message : "Unknown error",
     });
 
-    throw new Error(`Failed to scrape tweets. Configure X_API credentials for reliable scraping.`);
+    throw new Error(
+      `Failed to scrape tweets. Configure X_API credentials for reliable scraping.`,
+    );
   }
 }
 
@@ -172,7 +175,7 @@ async function synthesizeNarrative(
   tweets: MythXTweet[],
   transcript: string,
   style: string,
-  onStatus?: StatusCallback
+  onStatus?: StatusCallback,
 ): Promise<{
   narrative: string;
   scenes: MythXScene[];
@@ -182,7 +185,8 @@ async function synthesizeNarrative(
   const client = getMythXClient();
 
   const styleHints: Record<string, string> = {
-    hyperflow_assembly: "Fluid, interconnected visual flow with seamless transitions",
+    hyperflow_assembly:
+      "Fluid, interconnected visual flow with seamless transitions",
     vhs_cinema: "VHS aesthetic, analog warmth, retro video feel",
     black_and_white_noir: "Black and white, high contrast, film noir lighting",
     double_exposure: "Layered imagery, multiple exposures, dreamlike overlays",
@@ -247,20 +251,25 @@ ${transcript}`,
   const parsed = JSON.parse(jsonMatch[0]);
 
   const parsedScenes = Array.isArray(parsed.scenes) ? parsed.scenes : [];
-  const scenes: MythXScene[] = parsedScenes.map((scene: {
-    sceneNumber?: number;
-    visualPrompt?: string;
-    narration?: string;
-    durationSeconds?: number;
-  }) => ({
-    sceneNumber: scene.sceneNumber || 1,
-    visualPrompt: scene.visualPrompt || "",
-    narration: scene.narration || undefined,
-    style,
-    durationSeconds: Math.max(5, Math.min(10, scene.durationSeconds || 8)),
-  }));
+  const scenes: MythXScene[] = parsedScenes.map(
+    (scene: {
+      sceneNumber?: number;
+      visualPrompt?: string;
+      narration?: string;
+      durationSeconds?: number;
+    }) => ({
+      sceneNumber: scene.sceneNumber || 1,
+      visualPrompt: scene.visualPrompt || "",
+      narration: scene.narration || undefined,
+      style,
+      durationSeconds: Math.max(5, Math.min(10, scene.durationSeconds || 8)),
+    }),
+  );
 
-  await onStatus?.(`🎬 Narrative complete: ${scenes.length} scenes planned`, 40);
+  await onStatus?.(
+    `🎬 Narrative complete: ${scenes.length} scenes planned`,
+    40,
+  );
 
   return {
     narrative: parsed.narrative || "",
@@ -274,7 +283,7 @@ ${transcript}`,
 async function generateVideoViaMythX(
   scenes: MythXScene[],
   agentId: string,
-  onStatus?: StatusCallback
+  onStatus?: StatusCallback,
 ): Promise<string[]> {
   await onStatus?.("🎥 Generating video clips via MythX...", 50);
 
@@ -284,7 +293,10 @@ async function generateVideoViaMythX(
   for (let i = 0; i < scenes.length; i++) {
     const scene = scenes[i];
     const progress = 50 + (i / scenes.length) * 40;
-    await onStatus?.(`🎬 Generating scene ${scene.sceneNumber}/${scenes.length}...`, Math.round(progress));
+    await onStatus?.(
+      `🎬 Generating scene ${scene.sceneNumber}/${scenes.length}...`,
+      Math.round(progress),
+    );
 
     try {
       const videoResponse = await client.generateVideo({
@@ -319,7 +331,10 @@ async function generateVideoViaMythX(
         }
       }
     } catch (error) {
-      console.error(`[MythX] Error generating scene ${scene.sceneNumber}:`, error);
+      console.error(
+        `[MythX] Error generating scene ${scene.sceneNumber}:`,
+        error,
+      );
     }
   }
 
@@ -329,99 +344,49 @@ async function generateVideoViaMythX(
 }
 
 /**
- * STEP 4: Upload to Firebase & save for Gallery
+ * STEP 4: Save video metadata to database (Firebase Storage removed - use Railway Persistent Volume)
  */
-async function uploadVideoToFirebaseStorage(
-  jobId: string,
-  videoUrl: string
-): Promise<string | null> {
-  try {
-    const { getBucket } = await import("@/lib/firebase/admin");
-    const bucket = getBucket();
-    const storagePath = `videos/${jobId}/mythx.mp4`;
-
-    // Download the video as a buffer
-    const response = await fetch(videoUrl);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch video: ${response.status}`);
-    }
-    const buffer = Buffer.from(await response.arrayBuffer());
-
-    // Upload to Firebase Storage
-    const file = bucket.file(storagePath);
-    await file.save(buffer, {
-      metadata: { contentType: "video/mp4" },
-      resumable: false,
-    });
-
-    // Make publicly readable and return public URL
-    await file.makePublic();
-    return `https://storage.googleapis.com/${bucket.name}/${storagePath}`;
-  } catch (error) {
-    console.warn("[MythX] Firebase Storage upload failed, using source URL:", error);
-    return null;
-  }
-}
-
 async function uploadToFirebaseAndSave(
   jobId: string,
   videoUrls: string[],
   scenes: MythXScene[],
   profile: MythXProfile,
-  style: string
+  style: string,
 ): Promise<{
   firebaseStorageUrl: string | null;
   galleryUrl: string;
 }> {
   const primaryVideoUrl = videoUrls[0] || null;
   if (!primaryVideoUrl) {
-    throw new Error("MythX generation finished without any completed video clips.");
+    throw new Error(
+      "MythX generation finished without any completed video clips.",
+    );
   }
   const galleryUrl = `${getEnv().APP_BASE_URL}/job/${jobId}`;
 
-  // Upload video to Firebase Storage (re-host from MythX URL)
-  const firebaseStorageUrl = primaryVideoUrl
-    ? await uploadVideoToFirebaseStorage(jobId, primaryVideoUrl)
-    : null;
-
-  // Save video metadata to Firestore
+  // Save video metadata via repository (Firebase Storage removed - video stays at source URL)
   try {
-    const { getDb } = await import("@/lib/firebase/admin");
-    const db = getDb();
-    const { Timestamp } = await import("firebase-admin/firestore");
+    const { upsertVideo, updateJob } = await import("@/lib/jobs/repository");
 
-    // Save video document
-    await db.collection("videos").doc(jobId).set({
+    await upsertVideo({
       jobId,
       videoUrl: primaryVideoUrl,
       thumbnailUrl: profile.profileImageUrl,
       duration: scenes.reduce((sum, s) => sum + s.durationSeconds, 0),
       renderStatus: "ready",
-      profile: {
-        username: profile.username,
-        displayName: profile.displayName,
-        profileUrl: profile.profileUrl,
-      },
-      style,
-      scenes: scenes.length,
-      createdAt: Timestamp.now(),
-      source: "mythx",
     });
 
-    // Update job document
-    await db.collection("jobs").doc(jobId).update({
+    await updateJob(jobId, {
       status: "complete",
       sourceMediaUrl: profile.profileUrl,
       subjectName: profile.displayName,
-      videoStyle: style,
-      completedAt: Timestamp.now(),
     });
   } catch (error) {
-    console.warn("[MythX] Failed to save to Firebase:", error);
+    console.warn("[MythX] Failed to save metadata:", error);
   }
 
   return {
-    firebaseStorageUrl: firebaseStorageUrl ?? primaryVideoUrl,
+    firebaseStorageUrl: primaryVideoUrl,
     galleryUrl,
   };
 }
@@ -433,7 +398,7 @@ async function postToTwitter(
   profile: MythXProfile,
   style: string,
   galleryUrl: string,
-  replyToTweetId?: string
+  replyToTweetId?: string,
 ): Promise<{
   posted: boolean;
   postUrl: string | null;
@@ -496,24 +461,12 @@ async function postToTwitter(
  */
 export async function generateMythXVideo(
   request: MythXRequest,
-  onStatus?: StatusCallback
+  onStatus?: StatusCallback,
 ): Promise<MythXResponse> {
   const startTime = Date.now();
   const jobId = request.jobId || `mythx-${randomUUID()}`;
 
   await onStatus?.(`🎬 MythX starting: ${request.profileInput}`, 0);
-
-  // Validate promo code if provided
-  let promoCodeUsed: string | null = null;
-  if (request.promoCode) {
-    const validation = await validatePromoCode(request.promoCode);
-    if (validation.isValid) {
-      promoCodeUsed = validation.code;
-      await onStatus?.(`🎟️ Promo code ${validation.code} validated`, 5);
-    } else {
-      console.warn(`[MythX] Invalid promo code: ${request.promoCode}`);
-    }
-  }
 
   // Initialize MythX agent
   try {
@@ -531,7 +484,7 @@ export async function generateMythXVideo(
   const { profile, tweets, transcript } = await scrapeTweets(
     request.profileInput,
     request.maxTweets || 42,
-    onStatus
+    onStatus,
   );
 
   if (tweets.length === 0) {
@@ -545,13 +498,19 @@ export async function generateMythXVideo(
     tweets,
     transcript,
     style,
-    onStatus
+    onStatus,
   );
 
   // STEP 3: Generate video
-  const videoUrls = await generateVideoViaMythX(scenes, MYTHX_AGENT_ID, onStatus);
+  const videoUrls = await generateVideoViaMythX(
+    scenes,
+    MYTHX_AGENT_ID,
+    onStatus,
+  );
   if (videoUrls.length === 0) {
-    throw new Error("MythX could not produce a finished clip for any planned scene.");
+    throw new Error(
+      "MythX could not produce a finished clip for any planned scene.",
+    );
   }
 
   // STEP 4: Upload & save
@@ -560,7 +519,7 @@ export async function generateMythXVideo(
     videoUrls,
     scenes,
     profile,
-    style
+    style,
   );
 
   // STEP 5: Post to Twitter (if triggered from Twitter or explicitly requested)
@@ -572,21 +531,10 @@ export async function generateMythXVideo(
       profile,
       style,
       galleryUrl,
-      request.replyToTweetId
+      request.replyToTweetId,
     );
     postedToTwitter = postResult.posted;
     twitterPostUrl = postResult.postUrl;
-  }
-
-  // Use promo code if valid
-  if (promoCodeUsed && request.wallet) {
-    await consumePromoCode({
-      code: promoCodeUsed,
-      jobId,
-      wallet: request.wallet || "anonymous",
-      profileInput: request.profileInput,
-      style,
-    });
   }
 
   const processingTimeMs = Date.now() - startTime;
@@ -603,11 +551,13 @@ export async function generateMythXVideo(
     galleryUrl,
     postedToTwitter,
     twitterPostUrl,
-    promoCodeUsed,
     metadata: {
       style,
       totalScenes: scenes.length,
-      totalDurationSeconds: scenes.reduce((sum, s) => sum + s.durationSeconds, 0),
+      totalDurationSeconds: scenes.reduce(
+        (sum, s) => sum + s.durationSeconds,
+        0,
+      ),
       processingTimeMs,
     },
   };
@@ -619,14 +569,15 @@ export async function generateMythXVideo(
 export async function handleTwitterCommand(
   command: XCommandParseResult,
   mentionTweetId: string,
-  authorUsername: string
+  authorUsername: string,
 ): Promise<{
   replyText: string;
   videoResult?: MythXResponse;
 }> {
   if (!command.isCommand) {
     return {
-      replyText: "Hey! To generate a video, use: @MythX generate @username [style] [promoCode]",
+      replyText:
+        "Hey! To generate a video, use: @MythX generate @username [style]",
     };
   }
 
@@ -637,7 +588,6 @@ export async function handleTwitterCommand(
           {
             profileInput: command.profileInput!,
             style: command.style || undefined,
-            promoCode: command.promoCode,
             triggerFromTwitter: true,
             replyToTweetId: mentionTweetId,
             jobId: `mythx-x-${randomUUID()}`,
@@ -646,7 +596,7 @@ export async function handleTwitterCommand(
           async (status, progress) => {
             console.log(`[MythX][${progress}%] ${status}`);
             // Optionally tweet progress updates here
-          }
+          },
         );
 
         return {
@@ -662,7 +612,8 @@ export async function handleTwitterCommand(
           replyText: XClient.buildGenerationReply({
             profileUsername: command.profileInput || "unknown",
             status: "failed",
-            errorMessage: error instanceof Error ? error.message : "Unknown error",
+            errorMessage:
+              error instanceof Error ? error.message : "Unknown error",
           }),
         };
       }
@@ -672,23 +623,23 @@ export async function handleTwitterCommand(
       return {
         replyText: `🎬 MythX Help:
 
-Generate video: @MythX generate @username [style] [promoCode]
+Generate video: @MythX generate @username [style]
 
 Styles: vhs_cinema, black_and_white_noir, hyperflow_assembly, double_exposure, glitch_digital, found_footage_raw, split_screen_diptych, film_grain_70s
 
-Promo codes: MYTHX-FREE, MYTHX-VIP, CINEMA-TRIAL
-
-Example: @MythX generate @elonmusk vhs_cinema MYTHX-FREE`,
+Example: @MythX generate @elonmusk vhs_cinema`,
       };
 
     case "status":
       return {
-        replyText: "🤖 MythX is online and generating videos! Check the gallery: /gallery",
+        replyText:
+          "🤖 MythX is online and generating videos! Check the gallery: /gallery",
       };
 
     default:
       return {
-        replyText: "👋 Mention @MythX generate @username to create an autobiographical video!",
+        replyText:
+          "👋 Mention @MythX generate @username to create an autobiographical video!",
       };
   }
 }
@@ -697,12 +648,16 @@ Example: @MythX generate @elonmusk vhs_cinema MYTHX-FREE`,
  * Process all unhandled mentions on X
  */
 export async function processTwitterMentions(
-  processedTweetIds: Set<string>
+  processedTweetIds: Set<string>,
 ): Promise<Array<{ tweetId: string; replyText: string; success: boolean }>> {
   const xClient = getXClient();
   const mentions = await xClient.getMentions({ maxResults: 20 });
 
-  const results: Array<{ tweetId: string; replyText: string; success: boolean }> = [];
+  const results: Array<{
+    tweetId: string;
+    replyText: string;
+    success: boolean;
+  }> = [];
 
   for (const mention of mentions) {
     // Skip already processed
@@ -717,7 +672,11 @@ export async function processTwitterMentions(
     }
 
     try {
-      const response = await handleTwitterCommand(command, mention.id, mention.authorUsername);
+      const response = await handleTwitterCommand(
+        command,
+        mention.id,
+        mention.authorUsername,
+      );
 
       results.push({
         tweetId: mention.id,
@@ -732,7 +691,8 @@ export async function processTwitterMentions(
 
       results.push({
         tweetId: mention.id,
-        replyText: "❌ Sorry, there was an error processing your request. Please try again.",
+        replyText:
+          "❌ Sorry, there was an error processing your request. Please try again.",
         success: false,
       });
 

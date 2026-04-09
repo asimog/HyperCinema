@@ -2,6 +2,7 @@
 "use client";
 
 import React, { useState, useCallback } from "react";
+import Image from "next/image";
 
 // Scan result data shape
 interface ScanResult {
@@ -24,9 +25,17 @@ interface ScanResult {
 // Cinematic style options for token videos
 const STYLE_OPTIONS = [
   { id: "trench_neon", label: "Trench Neon", desc: "Nightlife district vibes" },
-  { id: "hyperflow_assembly", label: "Hyperflow", desc: "Fluid visual transitions" },
+  {
+    id: "hyperflow_assembly",
+    label: "Hyperflow",
+    desc: "Fluid visual transitions",
+  },
   { id: "glass_signal", label: "Glass Signal", desc: "Transparent & volatile" },
-  { id: "mythic_poster", label: "Mythic Poster", desc: "Collectible poster style" },
+  {
+    id: "mythic_poster",
+    label: "Mythic Poster",
+    desc: "Collectible poster style",
+  },
   { id: "trading_card", label: "Trading Card", desc: "Pokemon-style card" },
   { id: "crt_anime_90s", label: "CRT Anime", desc: "90s anime aesthetic" },
   { id: "cyberpunk_neon", label: "Cyberpunk", desc: "Neon-lit future" },
@@ -98,7 +107,9 @@ export function HashMythPage() {
             symbol = data.symbol || name.toUpperCase();
             imageUri = data.image || null;
             riskScore = data.riskScore || 50;
-            riskFactors = data.riskFactors || ["Metadata requires on-chain fetch"];
+            riskFactors = data.riskFactors || [
+              "Metadata requires on-chain fetch",
+            ];
           } else {
             // Fallback: use address as name
             name = address.slice(0, 8);
@@ -205,7 +216,8 @@ export function HashMythPage() {
             <p className="eyebrow">HashMyth Token Scanner</p>
             <h1 className="font-display">Scan any token or wallet.</h1>
             <p className="route-summary">
-              Paste a contract address or wallet. Our AI analyzes risk, metadata, and recommends the perfect cinematic style.
+              Paste a contract address or wallet. Our AI analyzes risk,
+              metadata, and recommends the perfect cinematic style.
             </p>
           </section>
 
@@ -214,21 +226,27 @@ export function HashMythPage() {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               {/* Chain selector */}
               <div>
-                <label className="block text-sm font-medium text-gray-400 mb-2">Chain</label>
+                <label className="block text-sm font-medium text-gray-400 mb-2">
+                  Chain
+                </label>
                 <select
                   value={selectedChain}
                   onChange={(e) => setSelectedChain(e.target.value)}
                   className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-purple-500"
                 >
-                  {CHAIN_OPTIONS.map(c => (
-                    <option key={c.id} value={c.id}>{c.icon} {c.label}</option>
+                  {CHAIN_OPTIONS.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.icon} {c.label}
+                    </option>
                   ))}
                 </select>
               </div>
 
               {/* Address input */}
               <div className="md:col-span-3">
-                <label className="block text-sm font-medium text-gray-400 mb-2">Token or Wallet Address</label>
+                <label className="block text-sm font-medium text-gray-400 mb-2">
+                  Token or Wallet Address
+                </label>
                 <input
                   type="text"
                   value={input}
@@ -253,49 +271,72 @@ export function HashMythPage() {
                 {/* Token info */}
                 <div className="flex items-center gap-4">
                   {scanResult.imageUri && (
-                    <img src={scanResult.imageUri} alt="" className="w-12 h-12 rounded-full" />
+                    <Image
+                      src={scanResult.imageUri}
+                      alt=""
+                      width={48}
+                      height={48}
+                      className="rounded-full"
+                    />
                   )}
                   <div>
                     <h3 className="text-xl font-bold">{scanResult.name}</h3>
-                    <p className="text-sm text-gray-400">{scanResult.symbol} • {scanResult.address.slice(0, 8)}...</p>
+                    <p className="text-sm text-gray-400">
+                      {scanResult.symbol} • {scanResult.address.slice(0, 8)}...
+                    </p>
                   </div>
                   <div className="ml-auto text-right">
-                    <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                      scanResult.score === "high" ? "bg-green-500/20 text-green-400" :
-                      scanResult.score === "medium" ? "bg-yellow-500/20 text-yellow-400" :
-                      "bg-red-500/20 text-red-400"
-                    }`}>
+                    <span
+                      className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                        scanResult.score === "high"
+                          ? "bg-green-500/20 text-green-400"
+                          : scanResult.score === "medium"
+                            ? "bg-yellow-500/20 text-yellow-400"
+                            : "bg-red-500/20 text-red-400"
+                      }`}
+                    >
                       {scanResult.score?.toUpperCase()} RISK
                     </span>
                   </div>
                 </div>
 
                 {/* Risk factors */}
-                {scanResult.riskFactors && scanResult.riskFactors.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {scanResult.riskFactors.map((f, i) => (
-                      <span key={i} className="px-2 py-1 bg-gray-700 rounded text-xs text-gray-300">{f}</span>
-                    ))}
-                  </div>
-                )}
+                {scanResult.riskFactors &&
+                  scanResult.riskFactors.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {scanResult.riskFactors.map((f, i) => (
+                        <span
+                          key={i}
+                          className="px-2 py-1 bg-gray-700 rounded text-xs text-gray-300"
+                        >
+                          {f}
+                        </span>
+                      ))}
+                    </div>
+                  )}
 
                 {/* Recommendation */}
                 <p className="text-gray-300">{scanResult.recommendation}</p>
 
                 {scanResult.personality && (
                   <p className="text-sm text-purple-400">
-                    👤 {scanResult.personality} • {scanResult.totalTrades} trades
+                    👤 {scanResult.personality} • {scanResult.totalTrades}{" "}
+                    trades
                   </p>
                 )}
 
                 {/* Style selector */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-2">Cinematic Style</label>
+                  <label className="block text-sm font-medium text-gray-400 mb-2">
+                    Cinematic Style
+                  </label>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                    {STYLE_OPTIONS.map(s => (
+                    {STYLE_OPTIONS.map((s) => (
                       <button
                         key={s.id}
-                        onClick={() => setScanResult({ ...scanResult, style: s.id })}
+                        onClick={() =>
+                          setScanResult({ ...scanResult, style: s.id })
+                        }
                         className={`p-2 rounded border text-sm transition-all ${
                           scanResult.style === s.id
                             ? "border-cyan-500 bg-cyan-500/20"
@@ -317,19 +358,25 @@ export function HashMythPage() {
                       type="button"
                       onClick={() => setDuration("30s")}
                       className={`px-3 py-1 rounded text-sm ${
-                        duration === "30s" ? "bg-purple-600 text-white" : "bg-gray-600"
+                        duration === "30s"
+                          ? "bg-purple-600 text-white"
+                          : "bg-gray-600"
                       }`}
                     >
-                      30s — {isAgent ? `$${PRICE_USDC_30S} USDC` : `${PRICE_30S} SOL`}
+                      30s —{" "}
+                      {isAgent ? `$${PRICE_USDC_30S} USDC` : `${PRICE_30S} SOL`}
                     </button>
                     <button
                       type="button"
                       onClick={() => setDuration("60s")}
                       className={`px-3 py-1 rounded text-sm ${
-                        duration === "60s" ? "bg-purple-600 text-white" : "bg-gray-600"
+                        duration === "60s"
+                          ? "bg-purple-600 text-white"
+                          : "bg-gray-600"
                       }`}
                     >
-                      60s — {isAgent ? `$${PRICE_USDC_60S} USDC` : `${PRICE_60S} SOL`}
+                      60s —{" "}
+                      {isAgent ? `$${PRICE_USDC_60S} USDC` : `${PRICE_60S} SOL`}
                     </button>
                   </div>
                 </div>
@@ -354,14 +401,19 @@ export function HashMythPage() {
                       });
                       if (!response.ok) {
                         const err = await response.json();
-                        throw new Error(err.error || err.message || "Job creation failed");
+                        throw new Error(
+                          err.error || err.message || "Job creation failed",
+                        );
                       }
                       const data = await response.json();
                       window.location.href = `/job/${data.jobId}`;
                     } catch (err) {
                       setScanResult({
                         ...scanResult,
-                        error: err instanceof Error ? err.message : "Generation failed",
+                        error:
+                          err instanceof Error
+                            ? err.message
+                            : "Generation failed",
                         loading: false,
                       });
                     } finally {
@@ -371,13 +423,22 @@ export function HashMythPage() {
                   disabled={isGenerating}
                   className="w-full py-4 px-6 bg-gradient-to-r from-green-600 to-cyan-600 hover:from-green-700 hover:to-cyan-700 disabled:opacity-50 rounded-lg font-semibold text-lg transition-all"
                 >
-                  {isGenerating ? "🎬 Creating Job..." : isAgent ? `Generate via x402 — $${duration === "30s" ? PRICE_USDC_30S : PRICE_USDC_60S} USDC` : `Generate Video — ${duration === "30s" ? PRICE_30S : PRICE_60S} SOL`}
+                  {isGenerating
+                    ? "🎬 Creating Job..."
+                    : isAgent
+                      ? `Generate via x402 — $${duration === "30s" ? PRICE_USDC_30S : PRICE_USDC_60S} USDC`
+                      : `Generate Video — ${duration === "30s" ? PRICE_30S : PRICE_60S} SOL`}
                 </button>
 
                 {jobId && (
                   <div className="p-3 bg-green-900/30 border border-green-700 rounded">
                     <p className="text-green-400">✅ Job created!</p>
-                    <a href={`/job/${jobId}`} className="text-cyan-400 underline">View status and pay →</a>
+                    <a
+                      href={`/job/${jobId}`}
+                      className="text-cyan-400 underline"
+                    >
+                      View status and pay →
+                    </a>
                   </div>
                 )}
               </div>

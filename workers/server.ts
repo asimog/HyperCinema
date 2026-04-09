@@ -1,4 +1,3 @@
-import { dispatchDueJobs } from "@/lib/jobs/dispatch";
 import { logger } from "@/lib/logging/logger";
 import { createServer } from "http";
 import {
@@ -7,6 +6,8 @@ import {
   executeSweepCommand,
 } from "./commands";
 import { processJob } from "./process-job";
+import { setupTelegramBot } from "./telegram-bot";
+import { startXBotPolling } from "./x-bot";
 
 class BodyTooLargeError extends Error {
   constructor() {
@@ -99,26 +100,23 @@ const activeJobs = new Set<string>();
 const server = createServer(async (request, response) => {
   const url = new URL(request.url ?? "/", "http://localhost");
   const pathname = url.pathname;
-  const isJobRoute = request.method === "POST" && pathname === "/";
+  const isJobRoute =
+    request.method === "POST" &&
+    (pathname === "/" || pathname === "/jobs/process");
   const isSweepRoute = request.method === "POST" && pathname === "/sweep";
   const isRetryRoute = request.method === "POST" && pathname === "/retry-job";
-  const isDispatchRoute = request.method === "POST" && pathname === "/dispatch";
   const isMoltBookSyncRoute =
     request.method === "POST" && pathname === "/moltbook-sync";
-  const isHealthRoute = request.method === "GET" && pathname === "/healthz";
+  const isHealthRoute =
+    request.method === "GET" &&
+    (pathname === "/healthz" || pathname === "/health");
 
   if (isHealthRoute) {
     sendJson(response, 200, { ok: true });
     return;
   }
 
-  if (
-    !isJobRoute &&
-    !isSweepRoute &&
-    !isRetryRoute &&
-    !isDispatchRoute &&
-    !isMoltBookSyncRoute
-  ) {
+  if (!isJobRoute && !isSweepRoute && !isRetryRoute && !isMoltBookSyncRoute) {
     sendJson(response, 404, { error: "Not found" });
     return;
   }
@@ -151,19 +149,6 @@ const server = createServer(async (request, response) => {
     } catch (error) {
       sendJson(response, 500, {
         error: error instanceof Error ? error.message : "Sweep failure",
-      });
-      return;
-    }
-  }
-
-  if (isDispatchRoute) {
-    try {
-      const summary = await dispatchDueJobs(payload.limit);
-      sendJson(response, 200, { ok: true, ...summary });
-      return;
-    } catch (error) {
-      sendJson(response, 500, {
-        error: error instanceof Error ? error.message : "Dispatch failure",
       });
       return;
     }
@@ -232,6 +217,47 @@ const server = createServer(async (request, response) => {
 
 server.requestTimeout = 30_000;
 server.headersTimeout = 35_000;
+
+// ── Start background bots ────────────────────────────────────────────
+
+const telegramBot = setupTelegramBot();
+const xBotInterval = startXBotPolling();
+
+// ── Graceful shutdown ────────────────────────────────────────────────
+
+function gracefulShutdown(signal: string) {
+  logger.info("worker_shutdown", {
+    component: "worker",
+    stage: "shutdown",
+    signal,
+  });
+
+  // Stop Telegram bot polling
+  if (telegramBot) {
+    telegramBot.stopPolling();
+    logger.info("tg_bot_stopped", {
+      component: "telegram-bot",
+      stage: "shutdown",
+    });
+  }
+
+  // Stop X bot polling interval
+  if (xBotInterval) {
+    clearInterval(xBotInterval);
+    logger.info("x_bot_stopped", { component: "x-bot", stage: "shutdown" });
+  }
+
+  // Close HTTP server
+  server.close(() => {
+    process.exit(0);
+  });
+
+  // Force exit after 10s
+  setTimeout(() => process.exit(1), 10_000);
+}
+
+process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
+process.on("SIGINT", () => gracefulShutdown("SIGINT"));
 
 server.listen(port, () => {
   console.log(`HYPERCINEMA worker listening on ${port}`);

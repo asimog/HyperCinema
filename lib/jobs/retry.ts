@@ -1,16 +1,14 @@
-import { dispatchSingleJob } from "@/lib/jobs/dispatch";
 import { prepareFailedJobForRetry } from "@/lib/jobs/repository";
 import { logger } from "@/lib/logging/logger";
 
 export type RetryFailedJobReason =
   | "already_processing"
   | "job_not_found"
-  | "job_not_failed"
-  | "payment_incomplete";
+  | "job_not_failed";
 
 export interface RetryFailedJobResult {
   jobId: string;
-  status: "dispatched" | "retry_scheduled" | "skipped";
+  status: "ready" | "skipped";
   reason?: RetryFailedJobReason;
   error?: string;
 }
@@ -27,20 +25,15 @@ export async function retryFailedJob(
     };
   }
 
-  const dispatch = await dispatchSingleJob(jobId);
-  if (dispatch.status === "retry_scheduled") {
-    logger.warn("failed_job_retry_dispatch_retry_scheduled", {
-      component: "jobs_retry",
-      stage: "dispatch",
-      jobId,
-      errorCode: "failed_job_retry_dispatch_retry_scheduled",
-      errorMessage: dispatch.error ?? "dispatch retry scheduled",
-    });
-  }
+  logger.info("failed_job_retry_prepared", {
+    component: "jobs_retry",
+    stage: "retry",
+    jobId,
+  });
 
   return {
     jobId,
-    status: dispatch.status,
-    error: dispatch.error,
+    status: "ready",
+    error: prepared.job?.errorMessage ?? undefined,
   };
 }

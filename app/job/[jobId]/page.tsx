@@ -1,24 +1,26 @@
-// Job detail page - status, payment, video player
+// Job detail page - status, video player
 "use client";
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 
-import { PaymentInstructionsCard } from "@/components/PaymentInstructionsCard";
 import { ReportCard } from "@/components/ReportCard";
 import { VideoPlayer } from "@/components/VideoPlayer";
 import { HyperflowAssemblyScaffold } from "@/components/shell/HyperflowAssemblyScaffold";
 import { FINAL_JOB_STATUSES } from "@/lib/constants";
-import type { PaymentInstructions } from "@/lib/payments/instructions";
-import { JobDocument, ReportDocument, VideoDocument } from "@/lib/types/domain";
+import {
+  JobDocument,
+  JobStatus,
+  ReportDocument,
+  VideoDocument,
+} from "@/lib/types/domain";
 
 // API response shape for job data
 interface JobApiPayload {
   job?: JobDocument;
   report?: ReportDocument | null;
   video?: VideoDocument | null;
-  payment?: PaymentInstructions | null;
   error?: string;
   message?: string;
   warning?: string;
@@ -26,35 +28,23 @@ interface JobApiPayload {
 
 // Visual stepper stages for job progress
 const JOB_STAGES = [
-  { key: "awaiting_payment", label: "Payment" },
+  { key: "pending", label: "Queued" },
   { key: "processing", label: "Processing" },
-  { key: "generating_script", label: "Script" },
-  { key: "generating_report", label: "Report" },
-  { key: "generating_video", label: "Rendering" },
-  { key: "uploading_assets", label: "Upload" },
   { key: "complete", label: "Complete" },
   { key: "failed", label: "Failed" },
 ];
 
-// Map job status/progress to stepper index
-function getStageIndex(status: string, progress?: string): number {
+// Map job status to stepper index
+function getStageIndex(status: string): number {
   if (status === "failed") return JOB_STAGES.length - 1;
   if (status === "complete") return JOB_STAGES.length - 2;
-
-  if (progress) {
-    const idx = JOB_STAGES.findIndex((s) => s.key === progress);
-    if (idx >= 0) return idx;
-  }
-
-  if (status === "awaiting_payment") return 0;
-  if (status === "payment_detected") return 1;
-  if (status === "payment_confirmed") return 1;
-  return 1;
+  if (status === "processing") return 1;
+  return 0;
 }
 
 // Visual progress stepper showing job stages
-function VisualStepper({ status, progress }: { status: string; progress?: string }) {
-  const currentIndex = getStageIndex(status, progress);
+function VisualStepper({ status }: { status: string }) {
+  const currentIndex = getStageIndex(status);
   const isFailed = status === "failed";
 
   return (
@@ -74,17 +64,21 @@ function VisualStepper({ status, progress }: { status: string; progress?: string
                   isFailedStage
                     ? "bg-red-500"
                     : isComplete
-                    ? "bg-green-500"
-                    : isActive
-                    ? "bg-purple-500 animate-pulse"
-                    : "bg-gray-700"
+                      ? "bg-green-500"
+                      : isActive
+                        ? "bg-purple-500 animate-pulse"
+                        : "bg-gray-700"
                 }`}
                 title={stage.label}
               />
               {/* Stage label */}
               <span
                 className={`text-xs ml-1 ${
-                  isFailedStage ? "text-red-400" : isActive ? "text-purple-400" : "text-gray-500"
+                  isFailedStage
+                    ? "text-red-400"
+                    : isActive
+                      ? "text-purple-400"
+                      : "text-gray-500"
                 }`}
               >
                 {isComplete ? "✓" : isFailedStage ? "✗" : stage.label}
@@ -97,57 +91,27 @@ function VisualStepper({ status, progress }: { status: string; progress?: string
   );
 }
 
-function statusLabel(status: JobDocument["status"], progress: JobDocument["progress"]) {
-  if (status === "awaiting_payment") return "Awaiting payment";
-  if (status === "payment_detected") return "Payment received";
-  if (status === "payment_confirmed") return "Payment confirmed";
-  if (progress === "generating_report") return "Preparing story pack";
-  if (progress === "generating_video") return "Rendering video";
+function statusLabel(status: JobDocument["status"]) {
   if (status === "processing") return "In production";
   if (status === "complete") return "Ready to watch";
-  return "Needs attention";
+  if (status === "failed") return "Needs attention";
+  return "Queued";
 }
 
-function nextPollDelay(job: JobDocument | null, elapsedMs: number): number {
+function nextPollDelay(status: JobStatus | null, elapsedMs: number): number {
   if (elapsedMs >= 2 * 60 * 1000) {
     return 15000;
   }
 
-  if (!job) {
+  if (!status) {
     return 8000;
   }
 
-  if (
-    job.status === "awaiting_payment" ||
-    job.status === "payment_detected" ||
-    job.status === "payment_confirmed"
-  ) {
-    return 10000;
-  }
-
-  if (
-    job.progress === "generating_script" ||
-    job.progress === "generating_video" ||
-    job.progress === "uploading_assets"
-  ) {
-    return 8000;
-  }
-
-  if (job.status === "processing") {
+  if (status === "processing") {
     return 5000;
   }
 
   return 10000;
-}
-
-function priceLabel(job: JobDocument): string {
-  if (job.paymentWaived || job.paymentMethod === "discount_code") {
-    return "Discount code";
-  }
-  if (job.paymentMethod === "x402_usdc") {
-    return `$${job.priceUsdc ?? 0} USDC`;
-  }
-  return `${job.priceSol} SOL`;
 }
 
 function chainLabel(chain: JobDocument["subjectChain"]): string {
@@ -172,7 +136,6 @@ export default function JobPage() {
   const [job, setJob] = useState<JobDocument | null>(null);
   const [report, setReport] = useState<ReportDocument | null>(null);
   const [video, setVideo] = useState<VideoDocument | null>(null);
-  const [payment, setPayment] = useState<PaymentInstructions | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isRetrying, setIsRetrying] = useState(false);
 
@@ -180,12 +143,13 @@ export default function JobPage() {
     const response = await fetch(`/api/jobs/${jobId}`, { cache: "no-store" });
     const payload = (await response.json()) as JobApiPayload;
     if (!response.ok) {
-      throw new Error(payload.message ?? payload.error ?? "Failed to fetch job.");
+      throw new Error(
+        payload.message ?? payload.error ?? "Failed to fetch job.",
+      );
     }
     setJob(payload.job ?? null);
     setReport(payload.report ?? null);
     setVideo(payload.video ?? null);
-    setPayment(payload.payment ?? null);
     return payload.job ?? null;
   }, [jobId]);
 
@@ -215,7 +179,7 @@ export default function JobPage() {
         }
 
         const elapsedMs = Date.now() - startedAt;
-        schedule(nextPollDelay(latest, elapsedMs));
+        schedule(nextPollDelay(latest?.status ?? null, elapsedMs));
       } catch (pollError) {
         consecutiveErrors += 1;
 
@@ -256,13 +220,17 @@ export default function JobPage() {
       };
 
       if (!response.ok || !payload.ok) {
-        throw new Error(payload.message ?? payload.error ?? "Failed to retry job.");
+        throw new Error(
+          payload.message ?? payload.error ?? "Failed to retry job.",
+        );
       }
 
       window.location.reload();
     } catch (retryError) {
       setError(
-        retryError instanceof Error ? retryError.message : "Failed to retry job.",
+        retryError instanceof Error
+          ? retryError.message
+          : "Failed to retry job.",
       );
     } finally {
       setIsRetrying(false);
@@ -272,13 +240,14 @@ export default function JobPage() {
   const shareUrl = useMemo(() => {
     if (typeof window === "undefined") return "";
     const publicUrl = `${window.location.origin}/job/${jobId}`;
-    const experienceLabel = job?.experience === "mythx"
-      ? `@${job?.subjectName}'s autobiography`
-      : job?.subjectSymbol
-      ? `${job.subjectSymbol} token`
-      : job?.subjectName
-      ? `${job.subjectName}'s story`
-      : "this memecoin";
+    const experienceLabel =
+      job?.experience === "mythx"
+        ? `@${job?.subjectName}'s autobiography`
+        : job?.subjectSymbol
+          ? `${job.subjectSymbol} token`
+          : job?.subjectName
+            ? `${job.subjectName}'s story`
+            : "this memecoin";
     const text = `HyperMyths just turned ${experienceLabel} into a cinematic video.`;
     return `https://x.com/intent/tweet?text=${encodeURIComponent(
       text,
@@ -291,7 +260,9 @@ export default function JobPage() {
         <div className="panel-header">
           <div>
             <p className="eyebrow">Job</p>
-            <h2>{job?.subjectName ?? job?.subjectSymbol ?? "Memecoin render"}</h2>
+            <h2>
+              {job?.subjectName ?? job?.subjectSymbol ?? "Memecoin render"}
+            </h2>
           </div>
         </div>
         <div className="mini-list">
@@ -300,14 +271,18 @@ export default function JobPage() {
               <span>Address</span>
               <strong>{job?.subjectAddress ?? job?.wallet ?? jobId}</strong>
             </div>
-            <p className="route-summary compact">{chainLabel(job?.subjectChain)}</p>
+            <p className="route-summary compact">
+              {chainLabel(job?.subjectChain)}
+            </p>
           </article>
           <article className="mini-item-card">
             <div>
               <span>Package</span>
               <strong>{job?.videoSeconds ?? 0}s runtime</strong>
             </div>
-            <p className="route-summary compact">{job ? priceLabel(job) : "Loading"}</p>
+            <p className="route-summary compact">
+              {job ? `${job.priceSol} SOL` : "Loading"}
+            </p>
           </article>
         </div>
       </section>
@@ -320,7 +295,7 @@ export default function JobPage() {
         <div className="panel-header">
           <div>
             <p className="eyebrow">Pipeline</p>
-            <h2>{job ? statusLabel(job.status, job.progress) : "Loading"}</h2>
+            <h2>{job ? statusLabel(job.status) : "Loading"}</h2>
           </div>
         </div>
         <div className="mini-list">
@@ -328,18 +303,6 @@ export default function JobPage() {
             <div>
               <span>Progress</span>
               <strong>{job?.progress ?? "pending"}</strong>
-            </div>
-          </article>
-          <article className="mini-item-card">
-            <div>
-              <span>Checkout</span>
-              <strong>
-                {job?.paymentMethod === "x402_usdc"
-                  ? "x402 / USDC"
-                  : job?.paymentWaived || job?.paymentMethod === "discount_code"
-                    ? "Discount code"
-                    : "Direct SOL"}
-              </strong>
             </div>
           </article>
         </div>
@@ -384,7 +347,7 @@ export default function JobPage() {
     <div className="cinema-shell cinema-noise min-h-[100dvh] overflow-hidden px-4 py-6 text-[#fff1dc] md:px-8 md:py-8">
       <HyperflowAssemblyScaffold leftRail={leftRail} rightRail={rightRail}>
         {/* Visual Stepper */}
-        {job && <VisualStepper status={job.status} progress={job.progress} />}
+        {job && <VisualStepper status={job.status} />}
 
         <section className="panel">
           <div className="panel-header">
@@ -393,27 +356,9 @@ export default function JobPage() {
               <h1>{job?.subjectSymbol ?? "Token"} video status</h1>
             </div>
           </div>
-          <p className="route-summary">
-            {job?.subjectAddress ?? jobId}
-          </p>
+          <p className="route-summary">{job?.subjectAddress ?? jobId}</p>
           {error ? <p className="inline-error">{error}</p> : null}
         </section>
-
-        {job &&
-        payment &&
-        !job.paymentWaived &&
-        (job.status === "awaiting_payment" ||
-          job.status === "payment_detected" ||
-          job.status === "payment_confirmed") ? (
-          <PaymentInstructionsCard
-            jobId={job.jobId}
-            amountSol={payment.amountSol}
-            paymentAddress={payment.paymentAddress}
-            receivedSol={payment.receivedSol}
-            remainingSol={payment.remainingSol}
-            statusText={statusLabel(job.status, job.progress)}
-          />
-        ) : null}
 
         {video?.videoUrl ? (
           <section className="panel">
@@ -448,7 +393,9 @@ export default function JobPage() {
           </section>
         ) : null}
 
-        {report ? <ReportCard report={report} reportUrl={`/api/report/${jobId}`} /> : null}
+        {report ? (
+          <ReportCard report={report} reportUrl={`/api/report/${jobId}`} />
+        ) : null}
       </HyperflowAssemblyScaffold>
     </div>
   );

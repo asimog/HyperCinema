@@ -1,4 +1,3 @@
-import { getHeliusClient } from "@/lib/helius/client";
 import { getPumpMetadata, upsertPumpMetadata } from "@/lib/jobs/repository";
 import { logger } from "@/lib/logging/logger";
 import { fetchWithTimeout } from "@/lib/network/http";
@@ -141,7 +140,9 @@ async function withPromiseTimeout<T>(input: {
   }
 }
 
-async function fetchPumpFunMetadata(mint: string): Promise<PumpFunCoinResponse | null> {
+async function fetchPumpFunMetadata(
+  mint: string,
+): Promise<PumpFunCoinResponse | null> {
   const url = `${PUMP_FUN_API_BASE_URL}/coins/${encodeURIComponent(mint)}`;
 
   return withRetry(
@@ -285,36 +286,12 @@ async function fetchDexScreenerMetadata(
   );
 }
 
+// Helius client removed - returning null as fallback
 async function fetchHeliusAssetMetadata(
   mint: string,
 ): Promise<HeliusAssetMetadata | null> {
-  const helius = getHeliusClient();
-
-  return withRetry(
-    async () => {
-      const asset = await withPromiseTimeout({
-        operation: () => helius.getAsset({ id: mint }),
-        timeoutMs: HELIUS_ASSET_TIMEOUT_MS,
-        timeoutMessage: `Helius asset metadata timeout after ${HELIUS_ASSET_TIMEOUT_MS}ms for mint ${mint}`,
-      });
-
-      return {
-        name: sanitizeString(asset.content?.metadata?.name),
-        symbol: sanitizeString(asset.content?.metadata?.symbol),
-        image: normalizeMaybeUrl(asset.content?.links?.image),
-        description: sanitizeString(asset.content?.metadata?.description),
-        jsonUri: normalizeMaybeUrl(asset.content?.json_uri),
-      };
-    },
-    {
-      attempts: HELIUS_ASSET_RETRY_ATTEMPTS,
-      baseDelayMs: 400,
-      maxDelayMs: 2_500,
-      shouldRetry: (error) =>
-        error instanceof RetryableError ||
-        (error instanceof TypeError && error.message.length > 0),
-    },
-  );
+  // Helius integration removed; metadata comes from Pump.fun and DexScreener only
+  return null;
 }
 
 export async function getOrFetchPumpMetadata(
@@ -406,8 +383,10 @@ export async function getOrFetchPumpMetadata(
     }
   }
 
-  const name = pumpfunName ?? dexscreener?.name ?? helius?.name ?? mint.slice(0, 6);
-  const symbol = pumpfunSymbol ?? dexscreener?.symbol ?? helius?.symbol ?? "UNKNOWN";
+  const name =
+    pumpfunName ?? dexscreener?.name ?? helius?.name ?? mint.slice(0, 6);
+  const symbol =
+    pumpfunSymbol ?? dexscreener?.symbol ?? helius?.symbol ?? "UNKNOWN";
   const image = pumpfunImage ?? helius?.image ?? null;
   const description = pumpfunDescription ?? helius?.description ?? null;
   const jsonUri = pumpfunJsonUri ?? helius?.jsonUri ?? undefined;

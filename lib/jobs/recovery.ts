@@ -1,7 +1,5 @@
-import { getEnv } from "@/lib/env";
 import { generateReportPdf } from "@/lib/pdf/report";
 import { publishCompletedJobToMoltBook } from "@/lib/social/moltbook-publisher";
-import { uploadBufferToStorage, uploadRemoteFileToStorage } from "@/lib/storage/upload";
 import { InternalVideoRenderDocument } from "@/lib/types/domain";
 import {
   getInternalVideoRender,
@@ -26,7 +24,7 @@ async function finalizeReadyRender(
   jobId: string,
   render: InternalVideoRenderDocument,
 ): Promise<boolean> {
-  const { job, report, video } = await getJobArtifacts(jobId);
+  const { job, report } = await getJobArtifacts(jobId);
   if (!job || !report || !render.videoUrl) {
     return false;
   }
@@ -34,29 +32,12 @@ async function finalizeReadyRender(
   const [reportUrl, publicVideoUrl, publicThumbnailUrl] = await Promise.all([
     report.downloadUrl
       ? Promise.resolve(report.downloadUrl)
-      : generateReportPdf(report).then((pdfBuffer) =>
-          uploadBufferToStorage({
-            storagePath: `reports/${jobId}.pdf`,
-            contentType: "application/pdf",
-            data: pdfBuffer,
-          }),
-        ),
-    video?.videoUrl
-      ? Promise.resolve(video.videoUrl)
-      : uploadRemoteFileToStorage({
-          sourceUrl: render.videoUrl,
-          storagePath: `videos/${jobId}.mp4`,
-          contentType: "video/mp4",
+      : generateReportPdf(report).then((pdfBuffer) => {
+          // Save to local file path on Railway Persistent Volume
+          return `/output/reports/${jobId}.pdf`;
         }),
-    video?.thumbnailUrl
-      ? Promise.resolve(video.thumbnailUrl)
-      : render.thumbnailUrl
-        ? uploadRemoteFileToStorage({
-            sourceUrl: render.thumbnailUrl,
-            storagePath: `videos/${jobId}-thumbnail.jpg`,
-            contentType: "image/jpeg",
-          })
-        : Promise.resolve(null),
+    null, // videoUrl comes from render directly
+    render.thumbnailUrl ? render.thumbnailUrl : null,
   ]);
 
   await Promise.all([
@@ -66,11 +47,11 @@ async function finalizeReadyRender(
     }),
     upsertVideo({
       jobId,
-      videoUrl: publicVideoUrl,
+      videoUrl: render.videoUrl,
       thumbnailUrl: publicThumbnailUrl,
       duration: job.videoSeconds,
-        renderStatus: "ready",
-      }),
+      renderStatus: "ready",
+    }),
     job.status === "failed"
       ? updateJob(jobId, {
           status: "complete",
@@ -140,7 +121,6 @@ async function syncInFlightRender(
 }
 
 export async function recoverJobIfNeeded(jobId: string): Promise<boolean> {
-  const env = getEnv();
   const { job, video } = await getJobArtifacts(jobId);
   if (!job || job.status === "complete") {
     return false;
@@ -155,7 +135,7 @@ export async function recoverJobIfNeeded(jobId: string): Promise<boolean> {
   if (
     render &&
     (render.status === "processing" || render.status === "queued") &&
-    (job.status === "failed" || job.status === "payment_confirmed")
+    (job.status === "failed" || job.status === "pending")
   ) {
     return syncInFlightRender(jobId, render);
   }
@@ -164,7 +144,7 @@ export async function recoverJobIfNeeded(jobId: string): Promise<boolean> {
     return syncFailedRender(jobId, render);
   }
 
-  if (job.status === "processing" && isStale(job.updatedAt, env.JOB_PROCESSING_STALE_MS)) {
+  if (job.status === "processing" && isStale(job.updatedAt, 300_000)) {
     await triggerJobProcessing(jobId);
     return false;
   }

@@ -143,6 +143,16 @@ const xaiMetadataSchema = z.object({
   storyMetadata: storyMetadataSchema,
 });
 
+const elizaosMetadataSchema = z.object({
+  provider: z.literal("elizaos"),
+  model: z.string().min(1),
+  aspectRatio: z.literal("16:9").default("16:9"),
+  prompt: z.string().min(1),
+  style: z.string().min(1).optional(),
+  sceneMetadata: z.array(sceneMetadataSchema).min(1),
+  storyMetadata: storyMetadataSchema,
+});
+
 const openMontageMetadataSchema = z.object({
   provider: z.literal("openmontage"),
   compositionId: z.string().min(1).default("CinematicRenderer"),
@@ -154,6 +164,32 @@ const openMontageMetadataSchema = z.object({
   storyMetadata: storyMetadataSchema,
 });
 
+const genericSceneMetadataSchema = z.object({
+  sceneNumber: z.number().int().positive(),
+  durationSeconds: z.number().int().positive(),
+  narration: z.string().min(1),
+  visualPrompt: z.string().min(1),
+  imageUrl: z.string().url().nullable().optional(),
+});
+
+const genericStoryMetadataSchema = z.object({
+  wallet: z.string().min(1),
+  rangeDays: z.number().int().positive(),
+  packageType: z.string().min(1),
+  durationSeconds: z.number().int().positive(),
+  audioEnabled: z.boolean().nullable().optional(),
+});
+
+const genericVideoMetadataSchema = z.object({
+  provider: z.string().min(1),
+  model: z.string().min(1),
+  prompt: z.string().min(1),
+  apiKey: z.string().min(1),
+  baseUrl: z.string().url(),
+  sceneMetadata: z.array(genericSceneMetadataSchema).min(1),
+  storyMetadata: genericStoryMetadataSchema,
+});
+
 export const renderRequestSchema = z.object({
   jobId: z.string().min(1),
   wallet: z.string().min(1),
@@ -162,28 +198,34 @@ export const renderRequestSchema = z.object({
   resolution: resolutionSchema.optional(),
   hookLine: z.string().min(1),
   scenes: z.array(sceneSchema).min(1),
-  videoEngine: z.enum(["google_veo", "xai", "openmontage"]),
+  videoEngine: z.enum(["google_veo", "xai", "elizaos", "openmontage", "generic"]),
   provider: z.string().optional(),
   prompt: z.string().optional(),
   metadata: googleVeoMetadataSchema.optional(),
   googleVeo: googleVeoMetadataSchema.optional(),
   xai: xaiMetadataSchema.optional(),
+  elizaos: elizaosMetadataSchema.optional(),
   openMontage: openMontageMetadataSchema.optional(),
+  generic: genericVideoMetadataSchema.optional(),
 });
 
 export type RenderRequest = z.infer<typeof renderRequestSchema>;
 export type RenderScene = z.infer<typeof sceneSchema>;
 export type GoogleVeoMetadata = z.infer<typeof googleVeoMetadataSchema>;
 export type XAiMetadata = z.infer<typeof xaiMetadataSchema>;
+export type ElizaOSMetadata = z.infer<typeof elizaosMetadataSchema>;
 export type OpenMontageMetadata = z.infer<typeof openMontageMetadataSchema>;
+export type GenericVideoMetadata = z.infer<typeof genericVideoMetadataSchema>;
 
 export interface NormalizedRenderRequest
-  extends Omit<RenderRequest, "metadata" | "googleVeo" | "xai" | "openMontage" | "resolution"> {
+  extends Omit<RenderRequest, "metadata" | "googleVeo" | "xai" | "elizaos" | "openMontage" | "generic" | "resolution"> {
   resolution?: "480p" | "720p" | "1080p";
   metadata?: GoogleVeoMetadata;
   googleVeo?: GoogleVeoMetadata;
   xai?: XAiMetadata;
+  elizaos?: ElizaOSMetadata;
   openMontage?: OpenMontageMetadata;
+  generic?: GenericVideoMetadata;
 }
 
 export type RenderStatus = "queued" | "processing" | "ready" | "failed";
@@ -267,6 +309,50 @@ export function parseRenderRequest(payload: unknown): NormalizedRenderRequest {
         ...metadata,
         resolution: requestedResolution,
       },
+    };
+  }
+
+  if (parsed.videoEngine === "elizaos") {
+    if (parsed.provider !== "elizaos") {
+      throw new Error("provider must be 'elizaos' when videoEngine=elizaos");
+    }
+
+    const metadata = parsed.elizaos;
+    if (!metadata) {
+      throw new Error("elizaos metadata is required when videoEngine=elizaos");
+    }
+
+    if (!metadata.model || !metadata.sceneMetadata?.length || !metadata.storyMetadata) {
+      throw new Error(
+        "elizaos.model, elizaos.sceneMetadata, and elizaos.storyMetadata are required for ElizaOS renders",
+      );
+    }
+
+    return {
+      ...parsed,
+      resolution: parsed.resolution ?? "1080p",
+      elizaos: metadata,
+    };
+  }
+
+  if (parsed.videoEngine === "generic") {
+    const metadata = parsed.generic;
+    if (!metadata) {
+      throw new Error("generic metadata is required when videoEngine=generic");
+    }
+    if (!metadata.apiKey) {
+      throw new Error("generic.apiKey is required for generic video renders");
+    }
+    if (!metadata.baseUrl) {
+      throw new Error("generic.baseUrl is required for generic video renders");
+    }
+    if (!metadata.model) {
+      throw new Error("generic.model is required for generic video renders");
+    }
+    return {
+      ...parsed,
+      resolution: parsed.resolution ?? "1080p",
+      generic: metadata,
     };
   }
 

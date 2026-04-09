@@ -1,4 +1,3 @@
-import { dispatchSingleJob } from "@/lib/jobs/dispatch";
 import {
   createPromptVideoJob,
   createTokenVideoJob,
@@ -26,7 +25,9 @@ const freeGenerateSchema = z.discriminatedUnion("requestKind", [
   z.object({
     requestKind: z.literal("token_video"),
     tokenAddress: z.string().min(32).max(64),
-    chain: z.enum(["auto", "solana", "ethereum", "bsc", "base"]).default("auto"),
+    chain: z
+      .enum(["auto", "solana", "ethereum", "bsc", "base"])
+      .default("auto"),
     packageType: z.enum(["30s", "60s"]),
     stylePreset: videoStyleSchema.optional(),
     subjectDescription: z.string().max(1_200).optional(),
@@ -49,7 +50,13 @@ const freeGenerateSchema = z.discriminatedUnion("requestKind", [
       .optional(),
   }),
   z.object({
-    requestKind: z.enum(["generic_cinema", "mythx", "bedtime_story", "music_video", "scene_recreation"]),
+    requestKind: z.enum([
+      "generic_cinema",
+      "mythx",
+      "bedtime_story",
+      "music_video",
+      "scene_recreation",
+    ]),
     subjectName: z.string().min(2).max(120),
     subjectDescription: z.string().max(4_000).optional(),
     sourceMediaUrl: z.string().url().max(1_500).optional(),
@@ -79,8 +86,14 @@ const freeGenerateSchema = z.discriminatedUnion("requestKind", [
 
 export async function POST(request: NextRequest) {
   try {
-    if (request.cookies.get(cockpitSessionCookie.name)?.value !== cockpitSessionCookie.value) {
-      return NextResponse.json({ error: "Admin access required." }, { status: 403 });
+    if (
+      request.cookies.get(cockpitSessionCookie.name)?.value !==
+      cockpitSessionCookie.value
+    ) {
+      return NextResponse.json(
+        { error: "Admin access required." },
+        { status: 403 },
+      );
     }
 
     const body = await request.json();
@@ -97,7 +110,9 @@ export async function POST(request: NextRequest) {
       packageType: payload.packageType as PackageType,
       pricingMode: "private",
     });
-    const defaultStylePreset = getDefaultStylePresetForExperience(payload.experience);
+    const defaultStylePreset = getDefaultStylePresetForExperience(
+      payload.experience,
+    );
     const stylePreset: VideoStyleId =
       payload.stylePreset ?? defaultStylePreset ?? "hyperflow_assembly";
 
@@ -116,7 +131,8 @@ export async function POST(request: NextRequest) {
         subjectName: resolved.name,
         subjectSymbol: resolved.symbol,
         subjectImage: resolved.image,
-        subjectDescription: payload.subjectDescription?.trim() || resolved.description,
+        subjectDescription:
+          payload.subjectDescription?.trim() || resolved.description,
         stylePreset: stylePreset as VideoStyleId,
         requestedPrompt: payload.requestedPrompt?.trim() || null,
         audioEnabled: payload.audioEnabled,
@@ -128,6 +144,7 @@ export async function POST(request: NextRequest) {
         priceUsdc: 0,
         videoSeconds: pkg.videoSeconds,
         rangeDays: pkg.rangeDays,
+        paymentWaived: true,
       });
       jobId = job.jobId;
     } else {
@@ -151,30 +168,29 @@ export async function POST(request: NextRequest) {
         priceUsdc: 0,
         videoSeconds: pkg.videoSeconds,
         rangeDays: pkg.rangeDays,
+        paymentWaived: true,
       });
       jobId = job.jobId;
     }
 
-    // Skip payment — go straight to payment_confirmed and dispatch
-    await updateJobStatus(jobId, "payment_confirmed", {
-      progress: "payment_confirmed",
-      requiredLamports: 0,
-      receivedLamports: 0,
+    // Mark as pending (no payment needed) and the dispatch will pick it up
+    await updateJobStatus(jobId, "pending", {
+      progress: "pending",
     });
 
-    const dispatch = await dispatchSingleJob(jobId);
-    const dispatched = dispatch.status === "dispatched";
     logger.info("amber_vaults_free_generate", {
       component: "admin_free_generate",
-      stage: "dispatch",
+      stage: "create",
       jobId,
       adminUserId: "cockpit-admin",
-      dispatchStatus: dispatch.status,
     });
 
-    return NextResponse.json({ jobId, dispatched });
+    return NextResponse.json({ jobId, queued: true });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
-    return NextResponse.json({ error: "Free generate failed", message }, { status: 500 });
+    return NextResponse.json(
+      { error: "Free generate failed", message },
+      { status: 500 },
+    );
   }
 }

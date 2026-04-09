@@ -1,121 +1,291 @@
-// Homepage - 4 main products + how it works
+// Chat homepage — conversational AI with video generation
+"use client";
+
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import {
+  SendIcon,
+  SparkIcon,
+  FilmIcon,
+  HashIcon,
+  TrendingIcon,
+} from "@/components/ui/AppIcons";
 
-import { CinemaConciergeChat } from "@/components/chat/CinemaConciergeChat";
-import { GetPageIcon } from "@/components/ui/AppIcons";
+type Message = {
+  id: string;
+  role: "user" | "assistant";
+  text: string;
+  streaming?: boolean;
+};
 
-// Main product cards shown on homepage
-const MAIN_PAGES = [
+type QuickAction = {
+  id: string;
+  label: string;
+  icon: React.FC<React.SVGProps<SVGSVGElement>>;
+  prompt?: string;
+  href?: string;
+};
+
+const QUICK_ACTIONS: QuickAction[] = [
   {
-    id: "mythx" as const,
-    href: "/MythX",
-    title: "MythX",
-    summary: "Autobiographical cinema from 42 tweets. Powered by MythX AI.",
+    id: "mythx",
+    label: "MythX",
+    icon: FilmIcon,
+    prompt: "Create an autobiography video from an X profile",
+    href: "/creator/mythx",
   },
   {
-    id: "hyperm" as const,
-    href: "/HyperM",
-    title: "HyperM",
-    summary: "Premium creator cuts. Brand stories, cinematic trailers.",
+    id: "hashmyth",
+    label: "HashMyth",
+    icon: HashIcon,
+    prompt: "Scan a wallet or memecoin and generate a cinematic video",
+    href: "/creator/hashmyth",
   },
   {
-    id: "hashmyth" as const,
-    href: "/HashMyth",
-    title: "HashMyth",
-    summary: "Token & wallet scanner. Turn any contract into a trading story.",
+    id: "random",
+    label: "Random Video",
+    icon: SparkIcon,
+    prompt: "Generate a random TikTok-style video",
+    href: "/creator/random",
   },
   {
-    id: "trending" as const,
-    href: "/trending",
-    title: "Trending",
-    summary: "Discover custom video creators. Browse the latest 8 generations.",
+    id: "gallery",
+    label: "Browse Gallery",
+    icon: TrendingIcon,
+    href: "/gallery",
   },
-] as const;
-
-// Color tone classes for hero cards
-const TONE_CLASSES = ["tone-0", "tone-1", "tone-5", "tone-gallery"] as const;
-
-// How it works steps shown below hero
-const HOW_IT_WORKS = [
-  { step: "1", title: "Choose Your Story", desc: "Pick MythX for tweets, HashMyth for tokens, or HyperM for premium cinema." },
-  { step: "2", title: "Describe or Scan", desc: "Enter an X handle, paste a token address, or write your creative brief." },
-  { step: "3", title: "Pick a Style", desc: "From VHS Cinema to Cyberpunk — choose the cinematic look that fits." },
-  { step: "4", title: "Pay & Generate", desc: "Pay with SOL or USDC via x402. AI generates your video in minutes." },
 ];
 
-// Render hero icon for each product card
-function HeroIcon({ id }: { id: string }) {
-  const Icon = GetPageIcon(id as any);
-  return <Icon className="hero-quad-icon" aria-hidden="true" />;
+const INITIAL_MESSAGE: Message = {
+  id: "intro",
+  role: "assistant",
+  text: "Hey, I'm your HyperCinema assistant. Tell me what you'd like to create — a video from an X profile, a token story, or just something random. I can also point you to the right creator tool.",
+};
+
+function uid() {
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-// Homepage component with hero cards and onboarding
-export default function HomePage() {
+export default function ChatHomePage() {
+  const [messages, setMessages] = useState<Message[]>([INITIAL_MESSAGE]);
+  const [input, setInput] = useState("");
+  const [isStreaming, setIsStreaming] = useState(false);
+  const threadRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    threadRef.current?.scrollTo({
+      top: threadRef.current.scrollHeight,
+      behavior: "smooth",
+    });
+  }, [messages]);
+
+  const sendMessage = useCallback(
+    (text: string) => {
+      if (!text.trim() || isStreaming) return;
+
+      const userMsg: Message = { id: uid(), role: "user", text: text.trim() };
+      setMessages((prev) => [...prev, userMsg]);
+      setInput("");
+      setIsStreaming(true);
+
+      // Placeholder assistant message for streaming
+      const assistantId = uid();
+      setMessages((prev) => [
+        ...prev,
+        { id: assistantId, role: "assistant", text: "", streaming: true },
+      ]);
+
+      // Call the AI chat API via fetch
+      fetch("/api/inference/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: text.trim() }),
+      })
+        .then(async (res) => {
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.error || "Something went wrong. Try again.");
+          }
+
+          // Handle SSE streaming
+          const reader = res.body?.getReader();
+          if (!reader) throw new Error("Streaming not available");
+
+          const decoder = new TextDecoder();
+          let fullText = "";
+
+          const read = (): Promise<void> =>
+            reader.read().then(({ done, value }) => {
+              if (done) return;
+              const chunk = decoder.decode(value, { stream: true });
+              // Parse SSE lines
+              const lines = chunk.split("\n");
+              for (const line of lines) {
+                if (line.startsWith("data:")) {
+                  const data = line.slice(5).trim();
+                  if (data) fullText += data;
+                }
+              }
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === assistantId ? { ...m, text: fullText } : m,
+                ),
+              );
+              return read();
+            });
+
+          return read().then(() => {
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === assistantId
+                  ? { ...m, text: fullText, streaming: false }
+                  : m,
+              ),
+            );
+            setIsStreaming(false);
+          });
+        })
+        .catch((err) => {
+          const errorMsg =
+            err instanceof Error ? err.message : "Failed to get a response.";
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantId
+                ? { ...m, text: errorMsg, streaming: false }
+                : m,
+            ),
+          );
+          setIsStreaming(false);
+        });
+    },
+    [isStreaming],
+  );
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    sendMessage(input);
+  };
+
+  const handleQuickAction = (action: QuickAction) => {
+    if (action.href) {
+      window.location.href = action.href;
+    } else if (action.prompt) {
+      sendMessage(action.prompt);
+    }
+  };
+
   return (
-    <div className="cinema-shell cinema-noise home-landing-shell min-h-[100dvh] overflow-hidden px-4 py-4 text-[#f4efe8] md:px-6 md:py-6">
-      <main className="home-home-rail">
-        <section className="home-stage home-stage--landing" aria-labelledby="hero-grid">
-          <div className="home-stage-backdrop" aria-hidden="true" />
+    <div className="cinema-shell cinema-noise min-h-[100dvh] text-[#f4efe8] flex flex-col">
+      <div className="flex-1 flex flex-col max-w-3xl mx-auto w-full px-4 py-4 md:px-6 md:py-6">
+        {/* Header */}
+        <div className="panel mb-4">
+          <p className="eyebrow">HyperCinema Chat</p>
+          <h1 className="font-display text-3xl md:text-4xl">
+            What do you want to create?
+          </h1>
+          <p className="route-summary mt-2">
+            Describe your idea and I'll help you generate it. Free to use.
+          </p>
+        </div>
 
-          <div className="home-stage-content">
-            {/* 4 hero product cards */}
-            <section className="hero-quad-grid" id="hero-grid">
-              {MAIN_PAGES.map((page, index) => (
-                <Link
-                  key={page.id}
-                  href={page.href}
-                  className={`surface-card hero-quad-card ${TONE_CLASSES[index]}`}
-                >
-                  <div className="hero-quad-card-inner">
-                    <div className="hero-quad-title-row">
-                      <HeroIcon id={page.id} />
-                      <h2 className="font-display">{page.title}</h2>
-                    </div>
-                    <p className="route-summary compact">{page.summary}</p>
-                  </div>
-                </Link>
-              ))}
-            </section>
+        {/* Quick Actions */}
+        <div className="flex flex-wrap gap-2 mb-4">
+          {QUICK_ACTIONS.map((action) => {
+            const Icon = action.icon;
+            return (
+              <button
+                key={action.id}
+                onClick={() => handleQuickAction(action)}
+                className="surface-card inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm text-gray-300 hover:text-white hover:border-purple-500/40 transition-all"
+              >
+                <Icon className="w-4 h-4 text-purple-400" />
+                {action.label}
+              </button>
+            );
+          })}
+        </div>
 
-            {/* How It Works */}
-            <section className="panel mt-8" aria-labelledby="how-it-works">
-              <div className="panel-header">
-                <p className="eyebrow">How It Works</p>
-                <h2 id="how-it-works" className="font-display">Four steps to your video.</h2>
+        {/* Chat Thread */}
+        <div
+          ref={threadRef}
+          className="flex-1 overflow-y-auto space-y-4 pb-4 min-h-0"
+        >
+          {messages.map((msg) => (
+            <div
+              key={msg.id}
+              className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+            >
+              <div
+                className={`max-w-[85%] rounded-2xl px-4 py-3 ${
+                  msg.role === "user"
+                    ? "bg-purple-600/30 border border-purple-500/30 text-white"
+                    : "surface-card text-gray-200"
+                }`}
+              >
+                <p className="whitespace-pre-wrap text-sm leading-relaxed">
+                  {msg.text}
+                  {msg.streaming && (
+                    <span className="inline-block w-1.5 h-4 bg-purple-400 ml-1 animate-pulse" />
+                  )}
+                </p>
+                {/* Video generation button if message suggests it */}
+                {msg.role === "assistant" &&
+                  !msg.streaming &&
+                  msg.text.length > 0 && (
+                    <GenerateVideoButton text={msg.text} />
+                  )}
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
-                {HOW_IT_WORKS.map((item) => (
-                  <div key={item.step} className="surface-card panel p-4">
-                    <div className="text-3xl font-bold text-purple-400 mb-2">{item.step}</div>
-                    <h3 className="font-semibold mb-1">{item.title}</h3>
-                    <p className="text-sm text-gray-400">{item.desc}</p>
-                  </div>
-                ))}
-              </div>
-            </section>
+            </div>
+          ))}
+        </div>
 
-            {/* Agent Callout */}
-            <section className="surface-card panel p-6 mt-4 border border-purple-500/30">
-              <div className="flex items-center gap-4">
-                <div className="text-4xl">🤖</div>
-                <div>
-                  <h3 className="font-semibold text-lg">Are you an AI Agent?</h3>
-                  <p className="text-sm text-gray-400 mt-1">
-                    Use x402 USDC payments to generate videos programmatically.{" "}
-                    <Link href="/MythX" className="text-purple-400 underline">
-                      Start here →
-                    </Link>
-                  </p>
-                </div>
-              </div>
-            </section>
+        {/* Chat Input */}
+        <form onSubmit={handleSubmit} className="mt-2">
+          <div className="surface-card flex items-center gap-2 px-4 py-2 rounded-2xl border border-purple-500/20">
+            <input
+              ref={inputRef}
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Describe the video you want to create..."
+              className="flex-1 bg-transparent text-sm text-white placeholder-gray-500 focus:outline-none py-2"
+              disabled={isStreaming}
+            />
+            <button
+              type="submit"
+              disabled={isStreaming || !input.trim()}
+              className="p-2 rounded-xl bg-purple-600 text-white disabled:opacity-40 hover:bg-purple-500 transition-colors"
+            >
+              <SendIcon className="w-4 h-4" />
+            </button>
           </div>
-        </section>
-
-        <section className="home-concierge-home">
-          <CinemaConciergeChat />
-        </section>
-      </main>
+        </form>
+      </div>
     </div>
+  );
+}
+
+// Show a "Generate Video" button if the assistant response mentions video
+function GenerateVideoButton({ text }: { text: string }) {
+  const lower = text.toLowerCase();
+  const mentionsVideo =
+    lower.includes("video") ||
+    lower.includes("generate") ||
+    lower.includes("create") ||
+    lower.includes("mythx") ||
+    lower.includes("hashmyth") ||
+    lower.includes("cinema");
+
+  if (!mentionsVideo) return null;
+
+  return (
+    <Link
+      href="/creator"
+      className="inline-flex items-center gap-2 mt-3 px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-xs font-semibold text-white hover:from-purple-500 hover:to-pink-500 transition-all"
+    >
+      <FilmIcon className="w-3.5 h-3.5" />
+      Go to Creator
+    </Link>
   );
 }

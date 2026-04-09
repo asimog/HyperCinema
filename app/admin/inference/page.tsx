@@ -37,6 +37,18 @@ export default async function InferencePage() {
           Switch the active text and video providers without editing deployment code. Keep API
           keys in env vars and use this cockpit to move between models.
         </p>
+        <div className="grid gap-3 md:grid-cols-2">
+          <div className="surface-card grid gap-1">
+            <strong>Active text</strong>
+            <div>{config.text.provider}</div>
+            <div className="route-summary compact">{config.text.model ?? "No model set"}</div>
+          </div>
+          <div className="surface-card grid gap-1">
+            <strong>Active video</strong>
+            <div>{config.video.provider}</div>
+            <div className="route-summary compact">{config.video.model ?? "No model set"}</div>
+          </div>
+        </div>
       </section>
     </div>
   );

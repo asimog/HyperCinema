@@ -1,14 +1,22 @@
 // MoltBook publisher - posts to AI social network
-import { getDb } from "@/lib/firebase/admin";
+import { db, Prisma } from "@/lib/db";
 import { getEnv } from "@/lib/env";
-import { getJobArtifacts, listCompletedJobArtifacts } from "@/lib/jobs/repository";
+import {
+  getJobArtifacts,
+  listCompletedJobArtifacts,
+} from "@/lib/jobs/repository";
 import { logger } from "@/lib/logging/logger";
 import { JobDocument, ReportDocument, VideoDocument } from "@/lib/types/domain";
 
 // Agent claim status on MoltBook
 type MoltBookAgentStatus = "pending_claim" | "claimed" | "suspended";
 // Publication tracking states
-type MoltBookPublicationStatus = "pending" | "posting" | "posted" | "pending_verification" | "failed";
+type MoltBookPublicationStatus =
+  | "pending"
+  | "posting"
+  | "posted"
+  | "pending_verification"
+  | "failed";
 
 // Stale posting timeout - 5 minutes
 const POSTING_STALE_MS = 5 * 60_000;
@@ -16,22 +24,14 @@ const POSTING_STALE_MS = 5 * 60_000;
 // Get MoltBook API base URL from env
 function getMoltBookBaseUrl(): string {
   const env = getEnv();
-  return (env.MOLTBOOK_API_BASE_URL || "https://www.moltbook.com/api/v1").replace(/\/+$/, "");
+  return (
+    env.MOLTBOOK_API_BASE_URL || "https://www.moltbook.com/api/v1"
+  ).replace(/\/+$/, "");
 }
 
 // ISO timestamp helper
 function nowIso(): string {
   return new Date().toISOString();
-}
-
-// Firestore collection for publication tracking
-function moltBookPublicationCollection() {
-  return getDb().collection("moltbook_publications");
-}
-
-// Firestore collection for agent credentials
-function moltBookAgentStateCollection() {
-  return getDb().collection("moltbook_agent_state");
 }
 
 // Normalize raw publication doc data
@@ -42,7 +42,10 @@ function normalizePublication(
   return {
     jobId,
     status:
-      raw?.status === "posting" || raw?.status === "posted" || raw?.status === "failed" || raw?.status === "pending_verification"
+      raw?.status === "posting" ||
+      raw?.status === "posted" ||
+      raw?.status === "failed" ||
+      raw?.status === "pending_verification"
         ? raw.status
         : "pending",
     attempts: Math.max(0, Math.floor(raw?.attempts ?? 0)),
@@ -56,7 +59,7 @@ function normalizePublication(
   };
 }
 
-// Publication tracking document schema
+// Publication tracking document schema (in-memory only; Prisma model is simplified)
 interface MoltBookPublicationDocument {
   jobId: string;
   status: MoltBookPublicationStatus;
@@ -133,12 +136,20 @@ function buildPostContent(input: {
 }): { title: string; content: string; submolt: string } {
   const env = getEnv();
   const walletLabel = shortWallet(input.job.wallet);
-  const personality = input.report?.walletPersonality || input.report?.styleClassification || "AI Cinema";
+  const personality =
+    input.report?.walletPersonality ||
+    input.report?.styleClassification ||
+    "AI Cinema";
   const summary = clamp(
-    input.report?.summary || input.report?.narrativeSummary || "Fresh AI-generated autobiographical video.",
+    input.report?.summary ||
+      input.report?.narrativeSummary ||
+      "Fresh AI-generated autobiographical video.",
     2000,
   );
-  const jobUrl = new URL(`/job/${input.job.jobId}`, env.APP_BASE_URL).toString();
+  const jobUrl = new URL(
+    `/job/${input.job.jobId}`,
+    env.APP_BASE_URL,
+  ).toString();
 
   return {
     title: `New MythX Drop: ${walletLabel}`,
@@ -161,20 +172,27 @@ function buildPostContent(input: {
 /**
  * Claim publication for atomic posting (prevents duplicates)
  */
-async function claimPublication(jobId: string): Promise<MoltBookPublicationDocument | null> {
-  return getDb().runTransaction(async (tx) => {
-    const ref = moltBookPublicationCollection().doc(jobId);
-    const snap = await tx.get(ref);
+async function claimPublication(
+  jobId: string,
+): Promise<MoltBookPublicationDocument | null> {
+  return db.$transaction(async (tx: Prisma.TransactionClient) => {
+    const existing = await tx.moltbookPublication.findUnique({
+      where: { jobId },
+    });
     const current = normalizePublication(
       jobId,
-      snap.exists ? ((snap.data() as Partial<MoltBookPublicationDocument>) ?? null) : null,
+      existing
+        ? (existing as unknown as Partial<MoltBookPublicationDocument>)
+        : null,
     );
 
     if (current.status === "posted") {
       return null;
     }
 
-    const lastAttemptAtMs = current.lastAttemptAt ? Date.parse(current.lastAttemptAt) : 0;
+    const lastAttemptAtMs = current.lastAttemptAt
+      ? Date.parse(current.lastAttemptAt)
+      : 0;
     const isFreshPosting =
       current.status === "posting" &&
       Number.isFinite(lastAttemptAtMs) &&
@@ -193,63 +211,101 @@ async function claimPublication(jobId: string): Promise<MoltBookPublicationDocum
       errorMessage: null,
     };
 
-    tx.set(ref, updated, { merge: true });
+    await tx.moltbookPublication.upsert({
+      where: { jobId },
+      create: {
+        jobId,
+        status: "posting",
+        publishedAt: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      update: {
+        status: "posting",
+        updatedAt: new Date(),
+      },
+    });
     return updated;
   });
 }
 
-async function markPublicationPosted(input: { 
-  jobId: string; 
+async function markPublicationPosted(input: {
+  jobId: string;
   postId?: string | null;
   postUrl?: string | null;
 }) {
-  const timestamp = nowIso();
-  await moltBookPublicationCollection().doc(input.jobId).set(
-    {
+  await db.moltbookPublication.upsert({
+    where: { jobId: input.jobId },
+    create: {
       jobId: input.jobId,
-      status: "posted",
-      updatedAt: timestamp,
-      postedAt: timestamp,
-      moltBookPostId: input.postId ?? null,
-      moltBookPostUrl: input.postUrl ?? null,
-      errorMessage: null,
-    } satisfies Partial<MoltBookPublicationDocument>,
-    { merge: true },
-  );
+      status: "published",
+      moltbookUrl: input.postUrl ?? undefined,
+      moltbookId: input.postId ?? undefined,
+      publishedAt: new Date(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+    update: {
+      status: "published",
+      moltbookUrl: input.postUrl ?? undefined,
+      moltbookId: input.postId ?? undefined,
+      updatedAt: new Date(),
+    },
+  });
 }
 
-async function markPublicationPendingVerification(input: { 
-  jobId: string; 
+async function markPublicationPendingVerification(input: {
+  jobId: string;
   postId?: string | null;
   challenge: string | null;
   expiresAt: string | null;
 }) {
-  const timestamp = nowIso();
-  await moltBookPublicationCollection().doc(input.jobId).set(
-    {
+  await db.moltbookPublication.upsert({
+    where: { jobId: input.jobId },
+    create: {
       jobId: input.jobId,
-      status: "pending_verification",
-      updatedAt: timestamp,
-      moltBookPostId: input.postId ?? null,
-      moltBookPostUrl: null,
-      verificationChallenge: input.challenge,
-      verificationExpiresAt: input.expiresAt,
-      errorMessage: null,
-    } satisfies Partial<MoltBookPublicationDocument>,
-    { merge: true },
-  );
+      status: "published",
+      moltbookId: input.postId ?? undefined,
+      publishedAt: new Date(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+    update: {
+      status: "published",
+      moltbookId: input.postId ?? undefined,
+      updatedAt: new Date(),
+    },
+  });
+
+  logger.warn("moltbook_post_pending_verification", {
+    component: "moltbook_publisher",
+    jobId: input.jobId,
+    postId: input.postId,
+    challenge: input.challenge,
+    expiresAt: input.expiresAt,
+  });
 }
 
-async function markPublicationFailed(input: { jobId: string; errorMessage: string }) {
-  await moltBookPublicationCollection().doc(input.jobId).set(
-    {
+async function markPublicationFailed(input: {
+  jobId: string;
+  errorMessage: string;
+}) {
+  await db.moltbookPublication.upsert({
+    where: { jobId: input.jobId },
+    create: {
       jobId: input.jobId,
       status: "failed",
-      updatedAt: nowIso(),
-      errorMessage: input.errorMessage,
-    } satisfies Partial<MoltBookPublicationDocument>,
-    { merge: true },
-  );
+      error: input.errorMessage,
+      publishedAt: new Date(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+    update: {
+      status: "failed",
+      error: input.errorMessage,
+      updatedAt: new Date(),
+    },
+  });
 }
 
 /**
@@ -267,24 +323,25 @@ export async function registerMoltBookAgent(input: {
 
   const result = await response.json();
   if (!result.success) {
-    throw new Error(`MoltBook registration failed: ${result.error || response.status}`);
+    throw new Error(
+      `MoltBook registration failed: ${result.error || response.status}`,
+    );
   }
 
   const data = result.data as MoltBookAgentRegistration;
 
-  await moltBookAgentStateCollection().doc("mythxmythx").set(
-    {
-      agentId: data.agent_id,
-      name: data.name,
-      status: data.status,
-      apiKey: data.api_key,
-      claimUrl: data.claim_url,
-      verificationCode: data.verification_code,
-      registeredAt: data.registered_at,
-      updatedAt: nowIso(),
+  await db.moltbookAgentState.upsert({
+    where: { id: "mythxmythx" },
+    create: {
+      id: "mythxmythx",
+      accessToken: data.api_key,
+      updatedAt: new Date(),
     },
-    { merge: true },
-  );
+    update: {
+      accessToken: data.api_key,
+      updatedAt: new Date(),
+    },
+  });
 
   logger.info("moltbook_agent_registered", {
     component: "moltbook_publisher",
@@ -298,7 +355,7 @@ export async function registerMoltBookAgent(input: {
 }
 
 /**
- * Get stored agent credentials from Firestore
+ * Get stored agent credentials from database
  */
 async function getStoredAgentCredentials(): Promise<{
   apiKey: string;
@@ -306,22 +363,21 @@ async function getStoredAgentCredentials(): Promise<{
   status: MoltBookAgentStatus;
   claimUrl: string | null;
 } | null> {
-  const doc = await moltBookAgentStateCollection().doc("mythxmythx").get();
-  if (!doc.exists) return null;
-
-  const data = doc.data();
-  if (!data?.apiKey) return null;
+  const record = await db.moltbookAgentState.findUnique({
+    where: { id: "mythxmythx" },
+  });
+  if (!record?.accessToken) return null;
 
   return {
-    apiKey: data.apiKey,
-    agentId: data.agentId || "unknown",
-    status: data.status || "pending_claim",
-    claimUrl: data.claimUrl || null,
+    apiKey: record.accessToken,
+    agentId: "mythxmythx",
+    status: "claimed",
+    claimUrl: null,
   };
 }
 
 /**
- * Resolve API key (env var > Firestore > register new)
+ * Resolve API key (env var > database > register new)
  */
 async function resolveApiKey(): Promise<{
   apiKey: string;
@@ -332,7 +388,12 @@ async function resolveApiKey(): Promise<{
   const env = getEnv();
 
   if (env.MOLTBOOK_AGENT_API_KEY) {
-    return { apiKey: env.MOLTBOOK_AGENT_API_KEY, agentId: "mythxmythx", status: "claimed", claimUrl: null };
+    return {
+      apiKey: env.MOLTBOOK_AGENT_API_KEY,
+      agentId: "mythxmythx",
+      status: "claimed",
+      claimUrl: null,
+    };
   }
 
   const stored = await getStoredAgentCredentials();
@@ -340,7 +401,8 @@ async function resolveApiKey(): Promise<{
 
   const registration = await registerMoltBookAgent({
     name: "MythX",
-    description: "AI cinematic storyteller that transforms X profiles into autobiographical videos. Powered by MythX.",
+    description:
+      "AI cinematic storyteller that transforms X profiles into autobiographical videos. Powered by MythX.",
   });
 
   return {
@@ -359,9 +421,9 @@ async function postToMoltBook(input: {
   title: string;
   content: string;
   submolt: string;
-}): Promise<{ 
-  postId: string | null; 
-  postUrl: string | null; 
+}): Promise<{
+  postId: string | null;
+  postUrl: string | null;
   status: "posted" | "pending_verification";
   verificationChallenge: string | null;
   verificationExpiresAt: string | null;
@@ -382,7 +444,9 @@ async function postToMoltBook(input: {
 
   const postResult = await postResponse.json();
   if (!postResult.success) {
-    throw new Error(`MoltBook post creation failed: ${postResult.error || postResponse.status}`);
+    throw new Error(
+      `MoltBook post creation failed: ${postResult.error || postResponse.status}`,
+    );
   }
 
   const postData = postResult.data as MoltBookPostPayload;
@@ -426,7 +490,11 @@ export async function publishCompletedJobToMoltBook(jobId: string): Promise<{
 }> {
   const claim = await claimPublication(jobId);
   if (!claim) {
-    return { jobId, status: "skipped", reason: "already_posted_or_in_progress" };
+    return {
+      jobId,
+      status: "skipped",
+      reason: "already_posted_or_in_progress",
+    };
   }
 
   try {
@@ -438,7 +506,12 @@ export async function publishCompletedJobToMoltBook(jobId: string): Promise<{
         jobId,
         claimUrl: credential.claimUrl,
       });
-      return { jobId, status: "skipped", reason: "agent_pending_claim", claimUrl: credential.claimUrl };
+      return {
+        jobId,
+        status: "skipped",
+        reason: "agent_pending_claim",
+        claimUrl: credential.claimUrl,
+      };
     }
 
     const { job, report, video } = await getJobArtifacts(jobId);
@@ -446,8 +519,17 @@ export async function publishCompletedJobToMoltBook(jobId: string): Promise<{
       throw new Error("Job is not ready for MoltBook publication.");
     }
 
-    const { title, content, submolt } = buildPostContent({ job, report, video });
-    const result = await postToMoltBook({ apiKey: credential.apiKey, title, content, submolt });
+    const { title, content, submolt } = buildPostContent({
+      job,
+      report,
+      video,
+    });
+    const result = await postToMoltBook({
+      apiKey: credential.apiKey,
+      title,
+      content,
+      submolt,
+    });
 
     if (result.status === "pending_verification") {
       await markPublicationPendingVerification({
@@ -455,12 +537,6 @@ export async function publishCompletedJobToMoltBook(jobId: string): Promise<{
         postId: result.postId,
         challenge: result.verificationChallenge,
         expiresAt: result.verificationExpiresAt,
-      });
-
-      logger.warn("moltbook_post_pending_verification", {
-        component: "moltbook_publisher",
-        jobId,
-        postId: result.postId,
       });
 
       return {
@@ -472,11 +548,21 @@ export async function publishCompletedJobToMoltBook(jobId: string): Promise<{
       };
     }
 
-    await markPublicationPosted({ jobId, postId: result.postId, postUrl: result.postUrl });
+    await markPublicationPosted({
+      jobId,
+      postId: result.postId,
+      postUrl: result.postUrl,
+    });
 
-    return { jobId, status: "posted", postId: result.postId, postUrl: result.postUrl };
+    return {
+      jobId,
+      status: "posted",
+      postId: result.postId,
+      postUrl: result.postUrl,
+    };
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown MoltBook error";
+    const message =
+      error instanceof Error ? error.message : "Unknown MoltBook error";
     await markPublicationFailed({ jobId, errorMessage: message });
 
     logger.warn("moltbook_publication_failed", {
@@ -494,9 +580,18 @@ export async function publishCompletedJobToMoltBook(jobId: string): Promise<{
 /**
  * Sync entire gallery to MoltBook
  */
-export async function syncGalleryToMoltBook(requestedLimit?: number): Promise<MoltBookSyncSummary> {
-  const limit = Math.max(1, Math.min(50, requestedLimit && Number.isFinite(requestedLimit)
-    ? Math.floor(requestedLimit) : 12));
+export async function syncGalleryToMoltBook(
+  requestedLimit?: number,
+): Promise<MoltBookSyncSummary> {
+  const limit = Math.max(
+    1,
+    Math.min(
+      50,
+      requestedLimit && Number.isFinite(requestedLimit)
+        ? Math.floor(requestedLimit)
+        : 12,
+    ),
+  );
 
   const galleryItems = await listCompletedJobArtifacts(limit);
   const results: MoltBookSyncSummary["results"] = [];

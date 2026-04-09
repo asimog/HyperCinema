@@ -72,15 +72,22 @@ describe("vertex veo polling endpoint", () => {
       styleHints: [],
     });
 
-    expect(result.videoUris).toEqual(["gcs://video-renders/hashart-fun/op-123.mp4"]);
+    expect(result.videoUris).toEqual([
+      "gcs://video-renders/hashart-fun/op-123.mp4",
+    ]);
     expect(fetchMock).toHaveBeenCalledTimes(2);
 
-    const [pollUrl, pollInit] = fetchMock.mock.calls[1] as [string, RequestInit];
+    const [pollUrl, pollInit] = fetchMock.mock.calls[1] as [
+      string,
+      RequestInit,
+    ];
     expect(pollUrl).toContain(":fetchPredictOperation");
     expect(pollInit.method).toBe("POST");
-    expect(pollInit.body).toContain("\"operationName\"");
+    expect(pollInit.body).toContain('"operationName"');
     expect(pollInit.body).toContain("operations/op-123");
-    expect((fetchMock.mock.calls[0] as [string, RequestInit])[1].body).toContain("\"storageUri\"");
+    expect(
+      (fetchMock.mock.calls[0] as [string, RequestInit])[1].body,
+    ).toContain('"storageUri"');
   });
 
   it("falls back to the operation resource when fetchPredictOperation returns no video URI", async () => {
@@ -131,10 +138,15 @@ describe("vertex veo polling endpoint", () => {
       styleHints: [],
     });
 
-    expect(result.videoUris).toEqual(["gs://video-renders/hashart-fun/op-456.mp4"]);
+    expect(result.videoUris).toEqual([
+      "gs://video-renders/hashart-fun/op-456.mp4",
+    ]);
     expect(fetchMock).toHaveBeenCalledTimes(3);
 
-    const [fallbackUrl, fallbackInit] = fetchMock.mock.calls[2] as [string, RequestInit];
+    const [fallbackUrl, fallbackInit] = fetchMock.mock.calls[2] as [
+      string,
+      RequestInit,
+    ];
     expect(fallbackUrl).toContain("/operations/op-456");
     expect(fallbackInit.method).toBe("GET");
   });
@@ -156,7 +168,8 @@ describe("vertex veo polling endpoint", () => {
           response: {
             videos: [
               {
-                bytesBase64Encoded: "QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQQ==",
+                bytesBase64Encoded:
+                  "QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQQ==",
               },
             ],
           },
@@ -320,7 +333,7 @@ describe("vertex veo polling endpoint", () => {
 
     const originalPrompt =
       "Subject: Birthday short. Brief: a stocky but not fat square-built short man arrives in canada and is celebrating his birthday with friends. Music cue: happy birthday to you.";
-    const rewrittenPrompt = sanitizePromptForPolicyRetry(originalPrompt);
+    const _rewrittenPrompt = sanitizePromptForPolicyRetry(originalPrompt);
 
     const client = new VertexVeoClient();
     const result = await client.generateClip({
@@ -333,11 +346,17 @@ describe("vertex veo polling endpoint", () => {
       styleHints: [],
     });
 
-    expect(result.videoUris).toEqual(["gs://video-renders/hashart-fun/op-safe.mp4"]);
+    expect(result.videoUris).toEqual([
+      "gs://video-renders/hashart-fun/op-safe.mp4",
+    ]);
     expect(fetchMock).toHaveBeenCalledTimes(3);
 
-    const firstStartBody = String((fetchMock.mock.calls[0] as [string, RequestInit])[1].body);
-    const secondStartBody = String((fetchMock.mock.calls[1] as [string, RequestInit])[1].body);
+    const firstStartBody = String(
+      (fetchMock.mock.calls[0] as [string, RequestInit])[1].body,
+    );
+    const secondStartBody = String(
+      (fetchMock.mock.calls[1] as [string, RequestInit])[1].body,
+    );
 
     expect(firstStartBody).toContain("stocky but not fat");
     expect(secondStartBody).toContain("adult protagonist");

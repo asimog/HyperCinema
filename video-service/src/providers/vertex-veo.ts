@@ -17,6 +17,7 @@ interface VertexOperationResponse {
   response?: unknown;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const ALLOWED_VEO_MODEL = "veo-3.1-fast-generate-001" as const;
 
 export interface GenerateClipInput {
@@ -28,6 +29,7 @@ export interface GenerateClipInput {
   imageUrl?: string | null;
   styleHints?: string[];
   storageUri?: string;
+  apiKey?: string | null;
   onProgress?: () => Promise<void> | void;
 }
 
@@ -47,12 +49,15 @@ export function isVertexImageEmptyError(status: number, body: string): boolean {
   const normalized = body.toLowerCase();
   return (
     normalized.includes("image is empty") ||
-    (normalized.includes("\"status\": \"invalid_argument\"") &&
+    (normalized.includes('"status": "invalid_argument"') &&
       normalized.includes("image"))
   );
 }
 
-export function isVertexPromptPolicyError(status: number, body: string): boolean {
+export function isVertexPromptPolicyError(
+  status: number,
+  body: string,
+): boolean {
   if (status < 400 || status >= 500) {
     return false;
   }
@@ -73,18 +78,33 @@ export function sanitizePromptForPolicyRetry(prompt: string): string {
       "adult protagonist",
     ],
     [/\bnot\s+fat\b/gi, "warm and approachable"],
-    [/\b(?:stocky|heavyset|chubby|fat|skinny|obese|slim|short|tall|square[- ]built)\b/gi, ""],
+    [
+      /\b(?:stocky|heavyset|chubby|fat|skinny|obese|slim|short|tall|square[- ]built)\b/gi,
+      "",
+    ],
     [/\b(?:ugly|hideous|deformed|grotesque|monstrous)\b/gi, "distinctive"],
     // Violence-related terms
-    [/\b(?:kill|murder|shoot|stab|slash|cut|bleed|blood|wound|injure|attack|fight|violence|weapon|gun|knife|bomb|explode|die|death|dead|corpse|corpse|skeleton|skull|grave|tomb)\b/gi, "depart"],
+    [
+      /\b(?:kill|murder|shoot|stab|slash|cut|bleed|blood|wound|injure|attack|fight|violence|weapon|gun|knife|bomb|explode|die|death|dead|corpse|corpse|skeleton|skull|grave|tomb)\b/gi,
+      "depart",
+    ],
     // Explicit content terms
-    [/\b(?:naked|nude|naked|sexy|sexual|porn|explicit|adult|nsfw|bare|barely clothed|scantily clad)\b/gi, "elegant"],
+    [
+      /\b(?:naked|nude|naked|sexy|sexual|porn|explicit|adult|nsfw|bare|barely clothed|scantily clad)\b/gi,
+      "elegant",
+    ],
     // Substance-related
-    [/\b(?:drug|drugs|weed|marijuana|cocaine|heroin|alcohol|beer|wine|drunk|high|intoxicated|stoned)\b/gi, "herbal"],
+    [
+      /\b(?:drug|drugs|weed|marijuana|cocaine|heroin|alcohol|beer|wine|drunk|high|intoxicated|stoned)\b/gi,
+      "herbal",
+    ],
     // Self-harm terms
     [/\b(?:suicide|self-harm|self harm|cutting|hang|jump)\b/gi, "reflect"],
     // Hate speech indicators
-    [/\b(?:hate|hate speech|racist|bigot|slur|discriminate|genocide)\b/gi, "differ"],
+    [
+      /\b(?:hate|hate speech|racist|bigot|slur|discriminate|genocide)\b/gi,
+      "differ",
+    ],
     // Song lyrics protection
     [/\blyrics?\s+or\s+song\s+notes\s*:/gi, "Music cue:"],
     [/\bhappy birthday to you\b/gi, "a birthday singalong"],
@@ -92,7 +112,10 @@ export function sanitizePromptForPolicyRetry(prompt: string): string {
     [/\bbattle|war|combat|conflict|struggle\b/gi, "contest"],
     [/\bblood|bloody|gore|gory|gruesome|grisly\b/gi, "dramatic"],
     [/\bscream|shriek|yell|shout|cry|sob|weep|tears\b/gi, "express"],
-    [/\bfear|terrify|terrifying|horror|horrifying|scary|frighten|creepy\b/gi, "intense"],
+    [
+      /\bfear|terrify|terrifying|horror|horrifying|scary|frighten|creepy\b/gi,
+      "intense",
+    ],
   ];
 
   let rewritten = prompt;
@@ -152,7 +175,9 @@ function findVideoUris(value: unknown, collector: Set<string>): void {
   }
 }
 
-export function extractVideoUrisFromOperation(operation: VertexOperationResponse): string[] {
+export function extractVideoUrisFromOperation(
+  operation: VertexOperationResponse,
+): string[] {
   const uris = new Set<string>();
   findVideoUris(operation, uris);
   return [...uris];
@@ -195,7 +220,9 @@ function findInlineVideoBytes(value: unknown, collector: Set<string>): void {
   }
 }
 
-export function extractInlineVideoBytesFromOperation(operation: VertexOperationResponse): string[] {
+export function extractInlineVideoBytesFromOperation(
+  operation: VertexOperationResponse,
+): string[] {
   const bytes = new Set<string>();
   findInlineVideoBytes(operation, bytes);
   return [...bytes];
@@ -245,16 +272,30 @@ export class VertexVeoClient {
     return `Bearer ${token.token}`;
   }
 
-  private buildPredictEndpoint(input: { projectId: string; location: string; model: string }): string {
+  private buildPredictEndpoint(input: {
+    projectId: string;
+    location: string;
+    model: string;
+  }): string {
     return `https://${input.location}-aiplatform.googleapis.com/v1/projects/${input.projectId}/locations/${input.location}/publishers/google/models/${input.model}:predictLongRunning`;
   }
 
-  private buildFetchOperationEndpoint(input: { projectId: string; location: string; model: string }): string {
+  private buildFetchOperationEndpoint(input: {
+    projectId: string;
+    location: string;
+    model: string;
+  }): string {
     return `https://${input.location}-aiplatform.googleapis.com/v1/projects/${input.projectId}/locations/${input.location}/publishers/google/models/${input.model}:fetchPredictOperation`;
   }
 
-  private buildOperationEndpoint(input: { location: string; operationName: string }): string {
-    if (input.operationName.startsWith("https://") || input.operationName.startsWith("http://")) {
+  private buildOperationEndpoint(input: {
+    location: string;
+    operationName: string;
+  }): string {
+    if (
+      input.operationName.startsWith("https://") ||
+      input.operationName.startsWith("http://")
+    ) {
       return input.operationName;
     }
 
@@ -274,22 +315,26 @@ export class VertexVeoClient {
     videoBytesBase64: string[];
   }> {
     const env = getVideoServiceEnv();
-    const useApiKeyAuth = Boolean(env.VERTEX_API_KEY);
+    const apiKey = input.apiKey?.trim() || env.VERTEX_API_KEY || undefined;
+    const useApiKeyAuth = Boolean(apiKey);
     const authHeader = useApiKeyAuth ? undefined : await this.getAuthHeader();
 
     // Proactively sanitize prompt BEFORE first attempt to avoid policy violations
     const sanitizedPrompt = sanitizePromptForPolicyRetry(input.prompt);
 
     // Let API decide model if not specified
-    const modelParams: { projectId: string; location: string; model?: string } = {
-      projectId: env.VERTEX_PROJECT_ID,
-      location: env.VERTEX_LOCATION,
-      model: input.model || undefined,
-    };
+    const modelParams: { projectId: string; location: string; model?: string } =
+      {
+        projectId: env.VERTEX_PROJECT_ID,
+        location: env.VERTEX_LOCATION,
+        model: input.model || undefined,
+      };
 
     const endpoint = this.withApiKey(
-      this.buildPredictEndpoint(modelParams as { projectId: string; location: string; model: string }),
-      env.VERTEX_API_KEY,
+      this.buildPredictEndpoint(
+        modelParams as { projectId: string; location: string; model: string },
+      ),
+      apiKey,
     );
 
     const parameters: Record<string, unknown> = {
@@ -305,7 +350,10 @@ export class VertexVeoClient {
       ...(authHeader ? { Authorization: authHeader } : {}),
     };
 
-    const makeRequestBody = (prompt: string, imageUrl?: string): Record<string, unknown> => ({
+    const makeRequestBody = (
+      prompt: string,
+      imageUrl?: string,
+    ): Record<string, unknown> => ({
       instances: [
         {
           prompt,
@@ -315,7 +363,10 @@ export class VertexVeoClient {
       parameters,
     });
 
-    const startOperation = async (prompt: string, imageUrl?: string): Promise<Response> =>
+    const startOperation = async (
+      prompt: string,
+      imageUrl?: string,
+    ): Promise<Response> =>
       fetch(endpoint, {
         method: "POST",
         headers: requestHeaders,
@@ -360,7 +411,10 @@ export class VertexVeoClient {
           const retryKey = `retry-policy::${attempt.imageUrl ?? "no-image"}`;
           if (!seenStarts.has(retryKey)) {
             seenStarts.add(retryKey);
-            startQueue.push({ prompt: rewrittenPrompt, imageUrl: attempt.imageUrl });
+            startQueue.push({
+              prompt: rewrittenPrompt,
+              imageUrl: attempt.imageUrl,
+            });
           }
           // Also try without image since the image might trigger the policy filter
           if (attempt.imageUrl) {
@@ -372,7 +426,8 @@ export class VertexVeoClient {
           }
         } else {
           // Sanitization didn't help - generate a minimal safe fallback prompt
-          const safePrompt = "A peaceful scenic landscape with natural beauty, calm atmosphere, serene environment, gentle lighting, tranquil setting, harmonious composition";
+          const safePrompt =
+            "A peaceful scenic landscape with natural beauty, calm atmosphere, serene environment, gentle lighting, tranquil setting, harmonious composition";
           const retryKey = `retry-safe::${attempt.imageUrl ?? "no-image"}`;
           if (!seenStarts.has(retryKey)) {
             seenStarts.add(retryKey);
@@ -393,7 +448,9 @@ export class VertexVeoClient {
       if (!lastStartFailure) {
         throw new Error("Veo start failed before a response was captured.");
       }
-      throw new Error(`Veo start failed (${lastStartFailure.status}): ${lastStartFailure.body}`);
+      throw new Error(
+        `Veo start failed (${lastStartFailure.status}): ${lastStartFailure.body}`,
+      );
     }
 
     const started = (await startResponse.json()) as VertexStartResponse;
@@ -407,21 +464,25 @@ export class VertexVeoClient {
         location: env.VERTEX_LOCATION,
         model: input.model,
       }),
-      env.VERTEX_API_KEY,
+      apiKey,
     );
     const operationEndpoint = this.withApiKey(
       this.buildOperationEndpoint({
         location: env.VERTEX_LOCATION,
         operationName: started.name,
       }),
-      env.VERTEX_API_KEY,
+      apiKey,
     );
 
     const pollHeaders = {
       ...(authHeader ? { Authorization: authHeader } : {}),
     };
 
-    for (let attempt = 0; attempt < env.VERTEX_MAX_POLL_ATTEMPTS; attempt += 1) {
+    for (
+      let attempt = 0;
+      attempt < env.VERTEX_MAX_POLL_ATTEMPTS;
+      attempt += 1
+    ) {
       await sleep(env.VERTEX_POLL_INTERVAL_MS);
       await input.onProgress?.();
 
@@ -443,11 +504,14 @@ export class VertexVeoClient {
         });
         if (!operationResponse.ok) {
           const body = await operationResponse.text();
-          throw new Error(`Veo operation polling failed (${operationResponse.status}): ${body}`);
+          throw new Error(
+            `Veo operation polling failed (${operationResponse.status}): ${body}`,
+          );
         }
       }
 
-      let operation = (await operationResponse.json()) as VertexOperationResponse;
+      let operation =
+        (await operationResponse.json()) as VertexOperationResponse;
       if (!operation.done) {
         continue;
       }
@@ -464,7 +528,8 @@ export class VertexVeoClient {
           headers: pollHeaders,
         });
         if (fallbackResponse.ok) {
-          operation = (await fallbackResponse.json()) as VertexOperationResponse;
+          operation =
+            (await fallbackResponse.json()) as VertexOperationResponse;
           if (operation.error) {
             throw new Error(operation.error.message ?? "Veo operation failed.");
           }

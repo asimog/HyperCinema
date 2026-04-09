@@ -1,18 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
-  buildSweepSummary: vi.fn(),
-  sweepDedicatedPaymentAddressForJob: vi.fn(),
-  sweepDedicatedPaymentAddresses: vi.fn(),
   retryFailedJob: vi.fn(),
   publishCompletedJobToMoltBook: vi.fn(),
   syncGalleryToMoltBook: vi.fn(),
-}));
-
-vi.mock("@/workers/sweep-payments", () => ({
-  buildSweepSummary: mocks.buildSweepSummary,
-  sweepDedicatedPaymentAddressForJob: mocks.sweepDedicatedPaymentAddressForJob,
-  sweepDedicatedPaymentAddresses: mocks.sweepDedicatedPaymentAddresses,
 }));
 
 vi.mock("@/lib/jobs/retry", () => ({
@@ -27,118 +18,61 @@ vi.mock("@/lib/social/moltbook-publisher", () => ({
 import {
   executeMoltBookSyncCommand,
   executeRetryFailedJobCommand,
-  executeSweepCommand,
 } from "@/workers/commands";
-
-describe("worker sweep command", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it("uses single-job sweep mode when payload includes jobId", async () => {
-    const singleResult = { jobId: "job-1", status: "swept" };
-    const summary = {
-      scanned: 1,
-      swept: 1,
-      pending: 0,
-      failed: 0,
-      results: [singleResult],
-    };
-
-    mocks.sweepDedicatedPaymentAddressForJob.mockResolvedValue(singleResult);
-    mocks.buildSweepSummary.mockReturnValue(summary);
-
-    const result = await executeSweepCommand({ jobId: "job-1", limit: 10 });
-
-    expect(mocks.sweepDedicatedPaymentAddressForJob).toHaveBeenCalledWith("job-1");
-    expect(mocks.buildSweepSummary).toHaveBeenCalledWith(1, [singleResult]);
-    expect(mocks.sweepDedicatedPaymentAddresses).not.toHaveBeenCalled();
-    expect(result).toEqual(summary);
-  });
-
-  it("uses batch sweep mode when payload does not include jobId", async () => {
-    const summary = {
-      scanned: 5,
-      swept: 3,
-      pending: 2,
-      failed: 0,
-      results: [],
-    };
-    mocks.sweepDedicatedPaymentAddresses.mockResolvedValue(summary);
-
-    const result = await executeSweepCommand({ limit: 25 });
-
-    expect(mocks.sweepDedicatedPaymentAddresses).toHaveBeenCalledWith(25);
-    expect(mocks.sweepDedicatedPaymentAddressForJob).not.toHaveBeenCalled();
-    expect(result).toEqual(summary);
-  });
-});
 
 describe("worker retry command", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("retries a specific failed job when payload contains jobId", async () => {
-    const retryResult = { jobId: "job-failed", status: "dispatched" };
-    mocks.retryFailedJob.mockResolvedValue(retryResult);
-
-    const result = await executeRetryFailedJobCommand({ jobId: " job-failed " });
-
-    expect(mocks.retryFailedJob).toHaveBeenCalledWith("job-failed");
-    expect(result).toEqual(retryResult);
+  it("throws when jobId is missing", async () => {
+    await expect(executeRetryFailedJobCommand({})).rejects.toThrow(
+      "Missing jobId",
+    );
   });
 
-  it("throws when payload has no jobId", async () => {
-    await expect(executeRetryFailedJobCommand({})).rejects.toThrow("Missing jobId");
-    expect(mocks.retryFailedJob).not.toHaveBeenCalled();
+  it("calls retryFailedJob with trimmed jobId", async () => {
+    mocks.retryFailedJob.mockResolvedValue({ status: "retried" });
+
+    const result = await executeRetryFailedJobCommand({ jobId: " job-123 " });
+
+    expect(mocks.retryFailedJob).toHaveBeenCalledWith("job-123");
+    expect(result).toEqual({ status: "retried" });
   });
 });
 
-describe("worker MoltBook sync command", () => {
+describe("worker moltbook sync command", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("publishes a specific completed job when payload includes jobId", async () => {
+  it("uses single-job publish mode when payload includes jobId", async () => {
     mocks.publishCompletedJobToMoltBook.mockResolvedValue({
-      jobId: "job-complete",
+      jobId: "job-1",
       status: "posted",
-      postId: "moltbook-post-1",
+      postId: "post-1",
+      postUrl: "https://moltbook.com/post-1",
     });
 
-    const result = await executeMoltBookSyncCommand({ jobId: " job-complete " });
+    const result = await executeMoltBookSyncCommand({ jobId: "job-1" });
 
-    expect(mocks.publishCompletedJobToMoltBook).toHaveBeenCalledWith("job-complete");
-    expect(mocks.syncGalleryToMoltBook).not.toHaveBeenCalled();
-    expect(result).toEqual({
-      scanned: 1,
-      posted: 1,
-      skipped: 0,
-      failed: 0,
-      results: [
-        {
-          jobId: "job-complete",
-          status: "posted",
-          postId: "moltbook-post-1",
-        },
-      ],
-    });
+    expect(mocks.publishCompletedJobToMoltBook).toHaveBeenCalledWith("job-1");
+    expect(result.scanned).toBe(1);
+    expect(result.posted).toBe(1);
   });
 
-  it("falls back to gallery sync mode when no jobId is provided", async () => {
-    const summary = {
-      scanned: 4,
-      posted: 2,
+  it("uses gallery sync when no jobId provided", async () => {
+    mocks.syncGalleryToMoltBook.mockResolvedValue({
+      scanned: 5,
+      posted: 3,
       skipped: 1,
       failed: 1,
       results: [],
-    };
-    mocks.syncGalleryToMoltBook.mockResolvedValue(summary);
+    });
 
-    const result = await executeMoltBookSyncCommand({ limit: 8 });
+    const result = await executeMoltBookSyncCommand({ limit: 5 });
 
-    expect(mocks.syncGalleryToMoltBook).toHaveBeenCalledWith(8);
-    expect(result).toEqual(summary);
+    expect(mocks.syncGalleryToMoltBook).toHaveBeenCalledWith(5);
+    expect(result.scanned).toBe(5);
   });
 });

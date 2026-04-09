@@ -14,13 +14,21 @@ import {
 
 // Navigation items shown in header (desktop only)
 const NAV_ITEMS = [
-  { href: "/", label: "Home", iconId: "home" },
-  { href: "/MythX", label: "MythX", iconId: "mythx" },
-  { href: "/HyperM", label: "HyperM", iconId: "hyperm" },
-  { href: "/HashMyth", label: "HashMyth", iconId: "hashmyth" },
-  { href: "/trending", label: "Trending", iconId: "trending" },
-  { href: "/gallery", label: "Gallery", iconId: "gallery" },
+  { href: "/", label: "Chat", icon: "chat" as const },
+  { href: "/creator", label: "Creator", icon: "hyperm" as const },
+  { href: "/creator/mythx", label: "MythX", icon: "mythx" as const },
+  { href: "/creator/hashmyth", label: "HashMyth", icon: "hashmyth" as const },
+  { href: "/creator/random", label: "Random", icon: "trending" as const },
+  { href: "/gallery", label: "Gallery", icon: "gallery" as const },
 ];
+
+type NavIconId =
+  | "chat"
+  | "mythx"
+  | "hyperm"
+  | "hashmyth"
+  | "trending"
+  | "gallery";
 
 // Header component
 export function SiteHeader() {
@@ -41,7 +49,10 @@ export function SiteHeader() {
           {/* Desktop navigation links */}
           <nav className="nav-links">
             {NAV_ITEMS.map((item) => {
-              const Icon = item.iconId ? GetPageIcon(item.iconId as any) : TrendingIcon;
+              const Icon =
+                item.icon === "chat"
+                  ? HomeIcon
+                  : GetPageIcon(item.icon as Exclude<NavIconId, "chat">);
               const isActive = pathname === item.href;
               return (
                 <Link
@@ -74,9 +85,15 @@ export function SiteHeader() {
             aria-label="Toggle menu"
             aria-expanded={mobileMenuOpen}
           >
-            <span className={`mobile-menu-toggle-line ${mobileMenuOpen ? "open" : ""}`} />
-            <span className={`mobile-menu-toggle-line ${mobileMenuOpen ? "open" : ""}`} />
-            <span className={`mobile-menu-toggle-line ${mobileMenuOpen ? "open" : ""}`} />
+            <span
+              className={`mobile-menu-toggle-line ${mobileMenuOpen ? "open" : ""}`}
+            />
+            <span
+              className={`mobile-menu-toggle-line ${mobileMenuOpen ? "open" : ""}`}
+            />
+            <span
+              className={`mobile-menu-toggle-line ${mobileMenuOpen ? "open" : ""}`}
+            />
           </button>
         </div>
 
@@ -84,7 +101,10 @@ export function SiteHeader() {
         {mobileMenuOpen && (
           <nav className="mobile-menu">
             {NAV_ITEMS.map((item) => {
-              const Icon = item.iconId ? GetPageIcon(item.iconId as any) : TrendingIcon;
+              const Icon =
+                item.icon === "chat"
+                  ? HomeIcon
+                  : GetPageIcon(item.icon as Exclude<NavIconId, "chat">);
               const isActive = pathname === item.href;
               return (
                 <Link

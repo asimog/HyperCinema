@@ -10,6 +10,7 @@
     "incremental": false,
     "declaration": false,
     "sourceMap": true,
+    "skipLibCheck": true,
     "types": ["node"],
     "lib": ["es2022"]
   },

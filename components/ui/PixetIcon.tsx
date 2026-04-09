@@ -1,12 +1,6 @@
 import type { ComponentPropsWithoutRef } from "react";
 
-type IconId =
-  | "home"
-  | "mythx"
-  | "hyperm"
-  | "hashmyth"
-  | "trending"
-  | "gallery";
+type IconId = "home" | "mythx" | "hyperm" | "hashmyth" | "trending" | "gallery";
 
 const palettes = {
   sunset: ["#FF007A", "#FF6000", "#FFD600"],
@@ -18,10 +12,7 @@ const palettes = {
   gold: ["#FFD700", "#FFA500", "#FF8C00"],
 };
 
-const PIXEL_ICONS: Record<
-  IconId,
-  { colors: string[]; matrix: number[][] }
-> = {
+const PIXEL_ICONS: Record<IconId, { colors: string[]; matrix: number[][] }> = {
   home: {
     colors: palettes.sunset,
     matrix: [
@@ -105,7 +96,11 @@ const PIXEL_ICONS: Record<
 function hexToRgb(hex: string) {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
   return result
-    ? [parseInt(result[1]!, 16), parseInt(result[2]!, 16), parseInt(result[3]!, 16)]
+    ? [
+        parseInt(result[1]!, 16),
+        parseInt(result[2]!, 16),
+        parseInt(result[3]!, 16),
+      ]
     : [255, 255, 255];
 }
 
@@ -137,7 +132,7 @@ export function PixetIcon({
 
   const rows = icon.matrix.length;
   const cols = icon.matrix[0]?.length ?? 0;
-  const pixel = size / Math.max(rows, cols);
+  const _pixel = size / Math.max(rows, cols);
 
   return (
     <svg

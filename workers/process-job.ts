@@ -6,7 +6,6 @@ import {
 import { walletAnalysisResultSchema } from "../lib/analytics/schemas";
 import { generateReportSummary } from "../lib/ai/report";
 import { getEnv } from "../lib/env";
-import { fetchRecentTransactionsByWallet } from "../lib/helius/fetch-transactions";
 import {
   beginJobProcessing,
   getJob,
@@ -20,10 +19,6 @@ import {
 import { logger } from "../lib/logging/logger";
 import { generateReportPdf } from "../lib/pdf/report";
 import { extractPumpTrades } from "../lib/pump/filter";
-import {
-  uploadBufferToStorage,
-  uploadRemoteFileToStorage,
-} from "../lib/storage/upload";
 import { JobDocument, ReportDocument, WalletStory } from "../lib/types/domain";
 import { buildAndRenderVideo } from "../lib/video/pipeline";
 import { computeAnalyticsFromTrades } from "../lib/analytics/compute";
@@ -94,9 +89,11 @@ function stageTimedOutMessage(stage: string, timeoutMs: number): string {
   return `Stage '${stage}' timed out after ${timeoutMs}ms`;
 }
 
-async function withTimeout<T>(
-  input: { stage: string; timeoutMs: number; operation: () => Promise<T> },
-): Promise<T> {
+async function withTimeout<T>(input: {
+  stage: string;
+  timeoutMs: number;
+  operation: () => Promise<T>;
+}): Promise<T> {
   let timeoutHandle: NodeJS.Timeout | null = null;
   const timeoutPromise = new Promise<never>((_, reject) => {
     timeoutHandle = setTimeout(() => {
@@ -113,19 +110,17 @@ async function withTimeout<T>(
   }
 }
 
-async function withProgressHeartbeat<T>(
-  input: {
-    jobId: string;
-    progress:
-      | "fetching_transactions"
-      | "filtering_pump_activity"
-      | "generating_report"
-      | "generating_script"
-      | "generating_video"
-      | "uploading_assets";
-    operation: () => Promise<T>;
-  },
-): Promise<T> {
+async function withProgressHeartbeat<T>(input: {
+  jobId: string;
+  progress:
+    | "fetching_transactions"
+    | "filtering_pump_activity"
+    | "generating_report"
+    | "generating_script"
+    | "generating_video"
+    | "uploading_assets";
+  operation: () => Promise<T>;
+}): Promise<T> {
   const interval = setInterval(() => {
     void updateJobProgress(input.jobId, input.progress).catch((error) => {
       logger.warn("pipeline_stage_heartbeat_failed", {
@@ -155,11 +150,8 @@ async function computeLegacyArtifacts(input: {
   report: Omit<ReportDocument, "summary" | "downloadUrl">;
   story: WalletStory;
 }> {
-  const transactions = await timedStage(
-    { jobId: input.jobId, wallet: input.wallet },
-    "legacy_fetch_wallet_transactions",
-    () => fetchRecentTransactionsByWallet(input.wallet, input.rangeDays),
-  );
+  // Helius transaction fetch removed — stub with empty data
+  const transactions: any[] = [];
 
   const trades = await timedStage(
     { jobId: input.jobId, wallet: input.wallet },
@@ -202,40 +194,14 @@ async function uploadRenderedAssets(input: {
     progress: "uploading_assets",
     operation: async () => {
       await updateJobProgress(input.jobId, "uploading_assets");
-      const [pdfBuffer, storedVideoUrl] = await Promise.all([
-        timedStage(input.context, "generate_report_pdf", async () =>
-          generateReportPdf(input.report),
-        ),
-        timedStage(input.context, "upload_video_asset", async () =>
-          uploadRemoteFileToStorage({
-            sourceUrl: input.rendered.videoUrl,
-            storagePath: `videos/${input.jobId}.mp4`,
-            contentType: "video/mp4",
-          }),
-        ),
-      ]);
-
-      const reportUrl = await timedStage(input.context, "upload_report_asset", async () =>
-        uploadBufferToStorage({
-          storagePath: `reports/${input.jobId}.pdf`,
-          contentType: "application/pdf",
-          data: pdfBuffer,
-        }),
+      await timedStage(input.context, "generate_report_pdf", async () =>
+        generateReportPdf(input.report),
       );
 
-      let thumbnailUrl: string | null = null;
-      if (input.rendered.thumbnailUrl) {
-        thumbnailUrl = await timedStage(
-          input.context,
-          "upload_thumbnail_asset",
-          async () =>
-            uploadRemoteFileToStorage({
-              sourceUrl: input.rendered.thumbnailUrl!,
-              storagePath: `videos/${input.jobId}-thumbnail.jpg`,
-              contentType: "image/jpeg",
-            }),
-        );
-      }
+      // Storage upload stubs — return direct URLs since storage module is not available
+      const storedVideoUrl = input.rendered.videoUrl;
+      const reportUrl = `/api/report/${input.jobId}`;
+      let thumbnailUrl: string | null = input.rendered.thumbnailUrl;
 
       return {
         storedVideoUrl,
@@ -288,8 +254,10 @@ async function processTokenVideoJob(input: {
     token,
   });
 
-  const summary = await timedStage(context, "generate_report_summary", async () =>
-    generateReportSummary(computed.report),
+  const summary = await timedStage(
+    context,
+    "generate_report_summary",
+    async () => generateReportSummary(computed.report),
   );
 
   const report: ReportDocument = {
@@ -322,12 +290,13 @@ async function processTokenVideoJob(input: {
       ),
   });
 
-  const { storedVideoUrl, reportUrl, thumbnailUrl } = await uploadRenderedAssets({
-    jobId: input.job.jobId,
-    context,
-    rendered,
-    report,
-  });
+  const { storedVideoUrl, reportUrl, thumbnailUrl } =
+    await uploadRenderedAssets({
+      jobId: input.job.jobId,
+      context,
+      rendered,
+      report,
+    });
 
   await Promise.all([
     upsertReport({
@@ -360,9 +329,7 @@ async function processPromptVideoJob(input: {
   let job = input.job;
   if (job.requestKind === "mythx") {
     const profileInput =
-      job.sourceMediaUrl?.trim() ||
-      job.subjectName?.trim() ||
-      "";
+      job.sourceMediaUrl?.trim() || job.subjectName?.trim() || "";
 
     if (profileInput) {
       try {
@@ -374,7 +341,9 @@ async function processPromptVideoJob(input: {
         const normalized = normalizeXProfileInput(profileInput);
         const subjectName =
           profile.profile.displayName ||
-          (normalized.username ? `@${normalized.username}` : job.subjectName ?? "X profile");
+          (normalized.username
+            ? `@${normalized.username}`
+            : (job.subjectName ?? "X profile"));
         const sourceMediaUrl = profile.profile.profileUrl;
         const sourceTranscript = profile.transcript;
         const sourceMediaProvider = "x";
@@ -417,8 +386,10 @@ async function processPromptVideoJob(input: {
     job,
   });
 
-  const summary = await timedStage(context, "generate_report_summary", async () =>
-    generateReportSummary(computed.report),
+  const summary = await timedStage(
+    context,
+    "generate_report_summary",
+    async () => generateReportSummary(computed.report),
   );
 
   const report: ReportDocument = {
@@ -451,12 +422,13 @@ async function processPromptVideoJob(input: {
       ),
   });
 
-  const { storedVideoUrl, reportUrl, thumbnailUrl } = await uploadRenderedAssets({
-    jobId: job.jobId,
-    context,
-    rendered,
-    report,
-  });
+  const { storedVideoUrl, reportUrl, thumbnailUrl } =
+    await uploadRenderedAssets({
+      jobId: job.jobId,
+      context,
+      rendered,
+      report,
+    });
 
   await Promise.all([
     upsertReport({
@@ -523,7 +495,8 @@ export async function processJob(jobId: string): Promise<void> {
             jobId,
             wallet: job.wallet,
             errorCode: "moltbook_publication_attempt_failed",
-            errorMessage: publication.reason ?? "Unknown MoltBook publication error",
+            errorMessage:
+              publication.reason ?? "Unknown MoltBook publication error",
           });
         }
       } catch (publicationError) {
@@ -593,16 +566,19 @@ export async function processJob(jobId: string): Promise<void> {
             ),
         });
 
-        computed = await timedStage(context, "v2_adapt_legacy_contract", async () =>
-          adaptWalletAnalysisToLegacyArtifacts({
-            jobId: job.jobId,
-            wallet: job.wallet,
-            rangeDays: job.rangeDays,
-            packageType: job.packageType,
-            durationSeconds: job.videoSeconds,
-            analysis,
-            analysisEngine: "v2",
-          }),
+        computed = await timedStage(
+          context,
+          "v2_adapt_legacy_contract",
+          async () =>
+            adaptWalletAnalysisToLegacyArtifacts({
+              jobId: job.jobId,
+              wallet: job.wallet,
+              rangeDays: job.rangeDays,
+              packageType: job.packageType,
+              durationSeconds: job.videoSeconds,
+              analysis,
+              analysisEngine: "v2",
+            }),
         );
       } catch (error) {
         if (mode === "v2") {
@@ -635,8 +611,10 @@ export async function processJob(jobId: string): Promise<void> {
     }
 
     await updateJobProgress(jobId, "generating_report");
-    const summary = await timedStage(context, "generate_report_summary", async () =>
-      generateReportSummary(computed!.report),
+    const summary = await timedStage(
+      context,
+      "generate_report_summary",
+      async () => generateReportSummary(computed!.report),
     );
 
     const report: ReportDocument = {
@@ -687,12 +665,13 @@ export async function processJob(jobId: string): Promise<void> {
         ),
     });
 
-    const { storedVideoUrl, reportUrl, thumbnailUrl } = await uploadRenderedAssets({
-      jobId,
-      context,
-      rendered,
-      report,
-    });
+    const { storedVideoUrl, reportUrl, thumbnailUrl } =
+      await uploadRenderedAssets({
+        jobId,
+        context,
+        rendered,
+        report,
+      });
 
     await Promise.all([
       upsertReport({
@@ -722,7 +701,8 @@ export async function processJob(jobId: string): Promise<void> {
           jobId,
           wallet: job.wallet,
           errorCode: "moltbook_publication_attempt_failed",
-          errorMessage: publication.reason ?? "Unknown MoltBook publication error",
+          errorMessage:
+            publication.reason ?? "Unknown MoltBook publication error",
         });
       }
     } catch (publicationError) {

@@ -9,8 +9,13 @@ const serviceEnvSchema = z.object({
   VIDEO_API_KEY: z.string().min(1),
   VIDEO_SERVICE_BASE_URL: z.string().url().optional(),
   XAI_API_KEY: z.string().min(1).optional(),
+  XAI_VIDEO_API_KEY: z.string().min(1).optional(),
   XAI_BASE_URL: z.string().url().default("https://api.x.ai/v1"),
+  XAI_VIDEO_BASE_URL: z.string().url().optional(),
   XAI_VIDEO_MODEL: z.string().min(1).default("grok-imagine-video"),
+  ELIZAOS_API_KEY: z.string().min(1).optional(),
+  ELIZAOS_BASE_URL: z.string().url().default("https://api.elizacloud.ai"),
+  ELIZAOS_VIDEO_MODEL: z.string().min(1).default("default"),
   VERTEX_PROJECT_ID: z.string().min(1),
   VERTEX_API_KEY: z.string().min(1).optional(),
   VERTEX_LOCATION: z.string().min(1).default("us-central1"),
@@ -36,6 +41,13 @@ const serviceEnvSchema = z.object({
   MYTHX_API_KEY: z.string().min(1).optional(),
   MYTHX_BASE_URL: z.string().url().default("https://cloud.milady.ai"),
   MYTHX_VIDEO_MODEL: z.string().min(1).default("default"),
+  // Fal AI video provider
+  FAL_API_KEY: z.string().min(1).optional(),
+  FAL_VIDEO_API_KEY: z.string().min(1).optional(),
+  // Hugging Face video provider
+  HUGGINGFACE_API_TOKEN: z.string().min(1).optional(),
+  // Generic REST video provider (others)
+  VIDEO_INFERENCE_API_KEY: z.string().min(1).optional(),
   OPENMONTAGE_REPO_DIR: z.string().min(1).default("/tmp/openmontage"),
   OPENMONTAGE_GIT_URL: z
     .string()
@@ -47,7 +59,7 @@ const serviceEnvSchema = z.object({
   OPENMONTAGE_NODE_BIN: z.string().min(1).default("npx"),
   OPENMONTAGE_FFMPEG_PATH: z.string().min(1).default("ffmpeg"),
   OPENMONTAGE_VIDEO_WORKER_PROVIDER: z
-    .enum(["google_veo", "xai", "mythx"])
+    .enum(["google_veo", "xai", "elizaos", "mythx"])
     .default("google_veo"),
   OPENMONTAGE_VIDEO_WORKER_MODEL: z.string().optional(),
   OPENMONTAGE_RENDER_TIMEOUT_MS: z.coerce.number().int().min(30_000).default(900_000),
@@ -64,11 +76,20 @@ export function getVideoServiceEnv(): VideoServiceEnv {
 
   const parsed = serviceEnvSchema.safeParse({
     ...process.env,
+    XAI_VIDEO_API_KEY: trimEnvValue(process.env.XAI_VIDEO_API_KEY),
     VERTEX_VEO_MODEL: trimEnvValue(process.env.VERTEX_VEO_MODEL),
+    XAI_VIDEO_BASE_URL: trimEnvValue(process.env.XAI_VIDEO_BASE_URL),
     VEO_OUTPUT_RESOLUTION: trimEnvValue(process.env.VEO_OUTPUT_RESOLUTION),
+    ELIZAOS_API_KEY: trimEnvValue(process.env.ELIZAOS_API_KEY),
+    ELIZAOS_BASE_URL: trimEnvValue(process.env.ELIZAOS_BASE_URL),
+    ELIZAOS_VIDEO_MODEL: trimEnvValue(process.env.ELIZAOS_VIDEO_MODEL),
     FIREBASE_PRIVATE_KEY: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
     MYTHX_API_KEY: trimEnvValue(process.env.MYTHX_API_KEY),
     MYTHX_BASE_URL: trimEnvValue(process.env.MYTHX_BASE_URL),
+    FAL_API_KEY: trimEnvValue(process.env.FAL_API_KEY),
+    FAL_VIDEO_API_KEY: trimEnvValue(process.env.FAL_VIDEO_API_KEY),
+    HUGGINGFACE_API_TOKEN: trimEnvValue(process.env.HUGGINGFACE_API_TOKEN),
+    VIDEO_INFERENCE_API_KEY: trimEnvValue(process.env.VIDEO_INFERENCE_API_KEY),
     OPENMONTAGE_REPO_DIR: trimEnvValue(process.env.OPENMONTAGE_REPO_DIR),
     OPENMONTAGE_GIT_URL: trimEnvValue(process.env.OPENMONTAGE_GIT_URL),
     OPENMONTAGE_RUN_COMMAND: trimEnvValue(process.env.OPENMONTAGE_RUN_COMMAND),

@@ -1,0 +1,329 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================================
+// JOBS — Core job documents (replaces Firestore `jobs`)
+// ============================================================
+model Job {
+  jobId                String   @id
+  wallet               String
+  requestKind          String?  // "wallet_recap" | "token_video" | "generic_cinema" | "mythx" | "bedtime_story" | "music_video" | "scene_recreation"
+  pricingMode          String?  @default("legacy")  // "legacy" | "public" | "private"
+  visibility           String?  @default("public")  // "public" | "private"
+  experience           String?
+  moderationStatus     String?  @default("visible") // "visible" | "flagged" | "hidden"
+  creatorId            String?
+  creatorEmail         String?
+  subjectAddress       String?
+  subjectChain         String?  // "solana" | "ethereum" | "bsc" | "base"
+  subjectName          String?
+  subjectSymbol        String?
+  subjectImage         String?
+  subjectDescription   String?
+  sourceMediaUrl       String?
+  sourceEmbedUrl       String?
+  sourceMediaProvider  String?
+  sourceTranscript     String?
+  stylePreset          String?
+  requestedPrompt      String?
+  audioEnabled         Boolean?
+  packageType          String   // "30s" | "60s"
+  rangeDays            Int
+  priceSol             Float
+  priceUsdc            Float?
+  videoSeconds         Int
+  status               String   // "awaiting_payment" | "payment_detected" | "payment_confirmed" | "processing" | "complete" | "failed"
+  progress             String   // "awaiting_payment" | "payment_detected" | ... | "complete" | "failed"
+  txSignature          String?
+  errorCode            String?
+  errorMessage         String?
+  paymentMethod        String?  // "sol_dedicated_address" | "x402_usdc" | "discount_code"
+  paymentCurrency      String?  // "SOL" | "USDC"
+  paymentNetwork       String?  @default("solana")
+  x402Transaction      String?
+  discountCode         String?
+  paymentWaived        Boolean  @default(false)
+  paymentAddress       String
+  paymentIndex         Int?
+  paymentRouting       String   // "dedicated_address" | "legacy_memo" | "x402" | "discount_code"
+  requiredLamports     BigInt
+  receivedLamports     BigInt   @default(0)
+  paymentSignatures    Json?    // string[] stored as JSON
+  lastPaymentAt        DateTime?
+  sweepStatus          String   @default("pending") // "pending" | "swept" | "failed"
+  sweepSignature       String?
+  sweptLamports        BigInt   @default(0)
+  lastSweepAt          DateTime?
+  sweepError           String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  // Relations
+  report    Report?
+  video     Video?
+  render    VideoRender?
+
+  @@index([status])
+  @@index([wallet])
+  @@index([creatorId])
+  @@index([paymentAddress])
+  @@index([paymentRouting, sweepStatus])
+  @@index([status, createdAt(sort: Desc)])
+}
+
+// ============================================================
+// REPORTS — Analysis reports (1:1 with jobs)
+// ============================================================
+model Report {
+  jobId                     String   @id
+  wallet                    String
+  rangeDays                 Int
+  subjectKind               String?
+  pricingMode               String?
+  visibility                String?
+  experience                String?
+  moderationStatus          String?
+  creatorId                 String?
+  creatorEmail              String?
+  subjectAddress            String?
+  subjectChain              String?
+  subjectName               String?
+  subjectSymbol             String?
+  subjectImage              String?
+  subjectDescription        String?
+  sourceMediaUrl            String?
+  sourceEmbedUrl            String?
+  sourceMediaProvider       String?
+  sourceTranscript          String?
+  sourceReference           Json?
+  stylePreset               String?
+  styleLabel                String?
+  durationSeconds           Int?
+  audioEnabled              Boolean?
+  storyCards                Json?    // StoryCard[]
+  continuationPrompt        String?
+  tokenLinks                Json?    // TokenLink[]
+  marketSnapshot            Json?    // TokenMarketSnapshot
+  pumpTokensTraded          Int      @default(0)
+  buyCount                  Int      @default(0)
+  sellCount                 Int      @default(0)
+  solSpent                  Float    @default(0)
+  solReceived               Float    @default(0)
+  estimatedPnlSol           Float    @default(0)
+  bestTrade                 String   @default("")
+  worstTrade                String   @default("")
+  styleClassification       String   @default("")
+  summary                   String   @default("")
+  timeline                  Json?    // ReportTimelineItem[]
+  downloadUrl               String?
+  walletPersonality         String?
+  walletSecondaryPersonality String?
+  walletModifiers           Json?    // string[]
+  behaviorPatterns          Json?    // string[]
+  memorableMoments          Json?    // string[]
+  funObservations           Json?    // string[]
+  narrativeSummary          String?
+  storyBeats                Json?    // string[]
+  keyEvents                 Json?    // WalletKeyEvent[]
+  walletProfile             Json?
+  analysisV2                Json?
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+
+  job Job @relation(fields: [jobId], references: [jobId], onDelete: Cascade)
+}
+
+// ============================================================
+// VIDEOS — Video metadata (1:1 with jobs)
+// ============================================================
+model Video {
+  jobId        String   @id
+  videoUrl     String?
+  thumbnailUrl String?
+  duration     Float    @default(0)
+  renderStatus String   @default("queued") // "queued" | "processing" | "ready" | "failed"
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  job Job @relation(fields: [jobId], references: [jobId], onDelete: Cascade)
+}
+
+// ============================================================
+// DISCOUNT CODES — Issued codes with usage tracking
+// ============================================================
+model DiscountCode {
+  code          String    @id  // Normalized 6-24 alphanumeric
+  createdAt     DateTime  @default(now())
+  origin        String    @default("admin")
+  label         String?
+  issuedBy      String?
+  usedAt        DateTime?
+  usedByJobId   String?
+  usedByAction  String?   // "job_create" | "job_redeem"
+}
+
+// ============================================================
+// JOB DISPATCH OUTBOX — Worker dispatch queue
+// ============================================================
+model JobDispatchOutbox {
+  jobId         String    @id
+  status        String    @default("pending") // "pending" | "in_progress" | "dispatched"
+  attempts      Int       @default(0)
+  nextAttemptAt DateTime
+  lockUntil     DateTime?
+  lastError     String?
+  dispatchedAt  DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([status, nextAttemptAt])
+}
+
+// ============================================================
+// VIDEO RENDERS — Render job tracking
+// ============================================================
+model VideoRender {
+  id           String    @id
+  jobId        String    @unique
+  status       String    @default("queued") // "queued" | "processing" | "ready" | "failed"
+  renderStatus String    @default("queued")
+  videoUrl     String?
+  thumbnailUrl String?
+  error        String?
+  startedAt    DateTime?
+  completedAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  job Job @relation(fields: [jobId], references: [jobId])
+
+  @@index([status])
+}
+
+// ============================================================
+// PUMP METADATA CACHE — Token metadata cache
+// ============================================================
+model PumpMetadataCache {
+  mint        String    @id
+  name        String
+  symbol      String
+  image       String?
+  description String?
+  cachedAt    DateTime  @default(now())
+}
+
+// ============================================================
+// RATE LIMITS — Sliding window counters
+// ============================================================
+model RateLimit {
+  id         String   @id  // "{scope}:{ruleName}:{windowSec}:{bucketStart}:{encodedKey}"
+  count      Int      @default(0)
+  windowEnd  DateTime
+  updatedAt  DateTime @updatedAt
+
+  @@index([windowEnd])
+}
+
+// ============================================================
+// PROMO CODES — Promo code definitions
+// ============================================================
+model PromoCode {
+  code         String   @id  // Normalized code string
+  discountPct  Float    @default(0)
+  discountSol  Float?
+  discountUsdc Float?
+  maxUses      Int?
+  currentUses  Int      @default(0)
+  validFrom    DateTime?
+  validUntil   DateTime?
+  isActive     Boolean  @default(true)
+  label        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  uses PromoCodeUse[]
+
+  @@index([isActive])
+}
+
+// ============================================================
+// PROMO CODE USES — Promo code redemption log
+// ============================================================
+model PromoCodeUse {
+  id        String    @id @default(cuid())
+  code      String
+  jobId     String?
+  usedAt    DateTime  @default(now())
+  usedBy    String?
+
+  promoCode PromoCode @relation(fields: [code], references: [code], onDelete: Cascade)
+
+  @@index([code, usedAt(sort: Desc)])
+}
+
+// ============================================================
+// MOLTBOOK PUBLICATIONS — Social publication tracking
+// ============================================================
+model MoltbookPublication {
+  jobId         String    @id
+  publishedAt   DateTime  @default(now())
+  moltbookUrl   String?
+  moltbookId    String?
+  status        String    @default("published") // "published" | "failed"
+  error         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+// ============================================================
+// MOLTBOOK AGENT STATE — Single row agent credentials
+// ============================================================
+model MoltbookAgentState {
+  id            String    @id @default("mythxmythx")
+  accessToken   String?
+  refreshToken  String?
+  tokenExpiry   DateTime?
+  lastSyncAt    DateTime?
+  updatedAt     DateTime  @updatedAt
+}
+
+// ============================================================
+// INFERENCE CONFIG — Runtime inference settings (single row)
+// ============================================================
+model InferenceConfig {
+  id                  String   @id @default("inference_config")
+  textProvider        String?
+  textModel           String?
+  textApiKey          String?
+  textBaseUrl         String?
+  videoProvider       String?
+  videoModel          String?
+  videoApiKey       String?
+  videoBaseUrl      String?
+  openrouterApiKey    String?
+  openrouterModel     String?
+  openrouterBaseUrl   String?
+  xaiApiKey           String?
+  xaiModel            String?
+  xaiBaseUrl          String?
+  falApiKey           String?
+  falBaseUrl          String?
+  huggingfaceApiKey   String?
+  huggingfaceBaseUrl  String?
+  ollamaBaseUrl     String?
+  updatedAt           DateTime @updatedAt
+}
+
+// ============================================================
+// PAYMENT COUNTER — Single row for payment address derivation
+// ============================================================
+model PaymentCounter {
+  id          String   @id @default("payment_counter")
+  nextIndex   BigInt   @default(0)
+  updatedAt   DateTime @updatedAt
+}

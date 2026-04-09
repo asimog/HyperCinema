@@ -7,7 +7,11 @@ type IconProps = ComponentPropsWithoutRef<"svg"> & {
   title?: string;
 };
 
-function SvgIcon({ title, children, ...props }: IconProps & { children: ReactNode }) {
+function SvgIcon({
+  title,
+  children,
+  ...props
+}: IconProps & { children: ReactNode }) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -37,8 +41,20 @@ export function SparkIcon(props: IconProps) {
 export function FilmIcon(props: IconProps) {
   return (
     <SvgIcon {...props}>
-      <rect x="4" y="5" width="16" height="14" rx="3" stroke="currentColor" strokeWidth="1.8" />
-      <path d="M8 5v14M16 5v14M4 9h16M4 15h16" stroke="currentColor" strokeWidth="1.4" />
+      <rect
+        x="4"
+        y="5"
+        width="16"
+        height="14"
+        rx="3"
+        stroke="currentColor"
+        strokeWidth="1.8"
+      />
+      <path
+        d="M8 5v14M16 5v14M4 9h16M4 15h16"
+        stroke="currentColor"
+        strokeWidth="1.4"
+      />
     </SvgIcon>
   );
 }
@@ -77,8 +93,20 @@ export function WalletIcon(props: IconProps) {
 export function CopyIcon(props: IconProps) {
   return (
     <SvgIcon {...props}>
-      <rect x="8" y="8" width="11" height="11" rx="2" stroke="currentColor" strokeWidth="1.8" />
-      <path d="M6 16H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v1" stroke="currentColor" strokeWidth="1.8" />
+      <rect
+        x="8"
+        y="8"
+        width="11"
+        height="11"
+        rx="2"
+        stroke="currentColor"
+        strokeWidth="1.8"
+      />
+      <path
+        d="M6 16H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v1"
+        stroke="currentColor"
+        strokeWidth="1.8"
+      />
     </SvgIcon>
   );
 }
@@ -86,8 +114,19 @@ export function CopyIcon(props: IconProps) {
 export function ArrowRightIcon(props: IconProps) {
   return (
     <SvgIcon {...props}>
-      <path d="M5 12h12" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" />
-      <path d="M13 6l6 6-6 6" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
+      <path
+        d="M5 12h12"
+        stroke="currentColor"
+        strokeWidth="1.9"
+        strokeLinecap="round"
+      />
+      <path
+        d="M13 6l6 6-6 6"
+        stroke="currentColor"
+        strokeWidth="1.9"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </SvgIcon>
   );
 }
@@ -95,8 +134,18 @@ export function ArrowRightIcon(props: IconProps) {
 export function SendIcon(props: IconProps) {
   return (
     <SvgIcon {...props}>
-      <path d="M4 11.5l15-6.5-6.5 15-2.1-6.4L4 11.5z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
-      <path d="M10.4 14.1l3.6-3.6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <path
+        d="M4 11.5l15-6.5-6.5 15-2.1-6.4L4 11.5z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M10.4 14.1l3.6-3.6"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
     </SvgIcon>
   );
 }
@@ -104,7 +153,13 @@ export function SendIcon(props: IconProps) {
 export function CheckIcon(props: IconProps) {
   return (
     <SvgIcon {...props}>
-      <path d="M5.5 12.3l4.2 4.2L18.5 7.8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path
+        d="M5.5 12.3l4.2 4.2L18.5 7.8"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </SvgIcon>
   );
 }
@@ -112,7 +167,12 @@ export function CheckIcon(props: IconProps) {
 export function HomeIcon(props: IconProps) {
   return (
     <SvgIcon {...props}>
-      <path d="M4.5 11.5 12 5l7.5 6.5V19a1.5 1.5 0 0 1-1.5 1.5h-4.5v-5h-3v5H6a1.5 1.5 0 0 1-1.5-1.5v-7.5Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+      <path
+        d="M4.5 11.5 12 5l7.5 6.5V19a1.5 1.5 0 0 1-1.5 1.5h-4.5v-5h-3v5H6a1.5 1.5 0 0 1-1.5-1.5v-7.5Z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
     </SvgIcon>
   );
 }
@@ -120,8 +180,20 @@ export function HomeIcon(props: IconProps) {
 export function TrendingIcon(props: IconProps) {
   return (
     <SvgIcon {...props}>
-      <path d="M5 17l4.5-4.5 3 3L19 9" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M14.5 9H19v4.5" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
+      <path
+        d="M5 17l4.5-4.5 3 3L19 9"
+        stroke="currentColor"
+        strokeWidth="1.9"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M14.5 9H19v4.5"
+        stroke="currentColor"
+        strokeWidth="1.9"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </SvgIcon>
   );
 }
@@ -142,7 +214,12 @@ export function HeartIcon(props: IconProps) {
 export function HashIcon(props: IconProps) {
   return (
     <SvgIcon {...props}>
-      <path d="M9 4.5L7.5 19.5M16.5 4.5L15 19.5M4.5 9h15M3.5 15h15" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <path
+        d="M9 4.5L7.5 19.5M16.5 4.5L15 19.5M4.5 9h15M3.5 15h15"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
     </SvgIcon>
   );
 }
@@ -150,8 +227,20 @@ export function HashIcon(props: IconProps) {
 export function ChainIcon(props: IconProps) {
   return (
     <SvgIcon {...props}>
-      <path d="M8.3 12.7 6.8 14.2a3.5 3.5 0 1 0 5 5l1.5-1.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M15.7 11.3 17.2 9.8a3.5 3.5 0 1 0-5-5L10.7 6.3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      <path
+        d="M8.3 12.7 6.8 14.2a3.5 3.5 0 1 0 5 5l1.5-1.5"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M15.7 11.3 17.2 9.8a3.5 3.5 0 1 0-5-5L10.7 6.3"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </SvgIcon>
   );
 }
@@ -160,7 +249,13 @@ export function ClockIcon(props: IconProps) {
   return (
     <SvgIcon {...props}>
       <circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="1.8" />
-      <path d="M12 7.5v5l3 1.8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      <path
+        d="M12 7.5v5l3 1.8"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </SvgIcon>
   );
 }
@@ -182,25 +277,42 @@ export function PaletteIcon(props: IconProps) {
 }
 
 export function GetPageIcon(id: CinemaPageId) {
-  const PAGE_ICON_MAP: Partial<Record<CinemaPageId, PixetIconId>> = {
-    hashmyth: "hashmyth",
-    hypercinema: "gallery",
-    hyperm: "hyperm",
-    mythx: "mythx",
-    lovex: "home",
-    trenchcinema: "trending",
-    funcinema: "hyperm",
-    familycinema: "home",
-    musicvideo: "gallery",
-    gallery: "gallery",
-    trending: "trending",
-  };
-
-  const mapped = PAGE_ICON_MAP[id] ?? "trending";
-
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const resolvedId = resolvePageIcon(id) as any;
   return function WrappedPixetIcon(props: ComponentPropsWithoutRef<"svg">) {
-    return <PixetIcon id={mapped as any} {...props} />;
+    return <PixetIcon id={resolvedId} {...props} />;
   };
+}
+
+function resolvePageIcon(id: CinemaPageId): PixetIconId {
+  switch (id) {
+    case "hashmyth":
+      return "hashmyth";
+    case "mythx":
+      return "mythx";
+    case "hyperm":
+      return "hyperm";
+    case "trending":
+      return "trending";
+    case "gallery":
+      return "gallery";
+    case "lovex":
+      return "home";
+    case "hypercinema":
+      return "gallery";
+    case "trenchcinema":
+      return "trending";
+    case "funcinema":
+      return "hyperm";
+    case "familycinema":
+      return "home";
+    case "musicvideo":
+      return "gallery";
+    case "recreator":
+      return "gallery";
+    default:
+      return "trending";
+  }
 }
 
 export function ChainBadgeIcon(chain: RequestedTokenChain) {

@@ -1,18 +1,11 @@
 import {
-  createDiscountWaivedPromptVideoJob,
-  createDiscountWaivedTokenVideoJob,
   createPromptVideoJob,
   createTokenVideoJob,
   findRecentReusableTokenJob,
-  rollbackUnpaidJob,
 } from "@/lib/jobs/repository";
-import { dispatchSingleJob } from "@/lib/jobs/dispatch";
-import { ensurePaymentAddressSubscribedToHeliusWebhook } from "@/lib/helius/webhook-subscriptions";
 import { logger } from "@/lib/logging/logger";
 import { resolveMemecoinMetadata } from "@/lib/memecoins/metadata";
 import { getPackageConfig } from "@/lib/packages";
-import { normalizeDiscountCode } from "@/lib/payments/discount-codes";
-import { lamportsToSol } from "@/lib/payments/solana-pay";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { getRequestIp } from "@/lib/security/request-ip";
 import {
@@ -26,7 +19,6 @@ import {
 } from "@/lib/types/domain";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { assertFirestoreEmulatorAvailable } from "@/lib/firebase/emulator";
 import { getCinemaPackageConfig } from "@/lib/cinema/config";
 import {
   getDefaultStylePresetForExperience,
@@ -40,7 +32,6 @@ const sharedCinemaSchema = z.object({
   stylePreset: videoStyleSchema.optional(),
   requestedPrompt: z.string().max(4_000).optional(),
   audioEnabled: z.boolean().optional(),
-  discountCode: z.string().max(32).optional(),
   pricingMode: z.enum(["legacy", "public", "private"]).optional(),
   visibility: z.enum(["public", "private"]).optional(),
   experience: z
@@ -95,8 +86,6 @@ type CreateJobPayload = z.infer<typeof createJobSchema>;
 interface CreateJobResponse {
   jobId: string;
   priceSol: number;
-  paymentAddress: string;
-  amountSol: number;
   paymentRequired: boolean;
   tokenAddress?: string | null;
   chain?: RequestedTokenChain | null;
@@ -107,10 +96,11 @@ interface CreateJobResponse {
   pricingMode?: CinemaPricingMode;
   visibility?: CinemaVisibility;
   experience?: CinemaExperience;
-  discountCode?: string | null;
 }
 
-function isPromptPayload(payload: CreateJobPayload): payload is z.infer<typeof promptVideoSchema> {
+function isPromptPayload(
+  payload: CreateJobPayload,
+): payload is z.infer<typeof promptVideoSchema> {
   return (
     payload.requestKind === "generic_cinema" ||
     payload.requestKind === "mythx" ||
@@ -201,11 +191,9 @@ function createJobResponse(input: {
   return {
     jobId: input.job.jobId,
     priceSol: input.job.priceSol,
-    paymentAddress: input.job.paymentAddress,
-    amountSol: lamportsToSol(input.job.requiredLamports),
-    paymentRequired: !input.job.paymentWaived && input.job.requiredLamports > 0,
+    paymentRequired: !input.job.paymentWaived,
     tokenAddress: input.job.subjectAddress ?? null,
-    chain: input.chain ?? (input.job.subjectChain ?? null),
+    chain: input.chain ?? input.job.subjectChain ?? null,
     subjectName: input.job.subjectName ?? null,
     subjectSymbol: input.job.subjectSymbol ?? null,
     subjectImage: input.job.subjectImage ?? null,
@@ -213,25 +201,10 @@ function createJobResponse(input: {
     pricingMode: input.job.pricingMode ?? "legacy",
     visibility: input.job.visibility ?? "public",
     experience: input.job.experience ?? "legacy",
-    discountCode: input.job.discountCode ?? null,
   };
 }
 
 export async function POST(request: NextRequest) {
-  try {
-    await assertFirestoreEmulatorAvailable();
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Firestore emulator is unavailable.";
-    return NextResponse.json(
-      {
-        error: "Firestore emulator unavailable",
-        message,
-        details: "Start the local Firestore emulator before creating MythX jobs.",
-      },
-      { status: 503 },
-    );
-  }
-
   try {
     const body = await request.json();
     const parsed = createJobSchema.safeParse(body);
@@ -288,9 +261,6 @@ export async function POST(request: NextRequest) {
       packageType: payload.packageType as PackageType,
       pricingMode,
     });
-    const discountCode = payload.discountCode?.trim()
-      ? normalizeDiscountCode(payload.discountCode)
-      : null;
     const defaultStylePreset = getDefaultStylePresetForExperience(experience);
 
     if (!isPromptPayload(payload)) {
@@ -298,40 +268,6 @@ export async function POST(request: NextRequest) {
         address: payload.tokenAddress,
         chain: payload.chain,
       });
-
-      if (discountCode) {
-        const job = await createDiscountWaivedTokenVideoJob({
-          tokenAddress: payload.tokenAddress,
-          packageType: payload.packageType as PackageType,
-          subjectChain: resolved.chain,
-          subjectName: resolved.name,
-          subjectSymbol: resolved.symbol,
-          subjectImage: resolved.image,
-          subjectDescription:
-            payload.subjectDescription?.trim() ||
-            resolved.description,
-          stylePreset: (payload.stylePreset ?? defaultStylePreset) as VideoStyleId,
-          requestedPrompt: payload.requestedPrompt?.trim() || null,
-          audioEnabled: payload.audioEnabled,
-          pricingMode,
-          visibility,
-          experience,
-          creatorId,
-          priceSol: pkg.priceSol,
-          priceUsdc: pkg.priceUsdc,
-          videoSeconds: pkg.videoSeconds,
-          rangeDays: pkg.rangeDays,
-          discountCode,
-        });
-        await dispatchSingleJob(job.jobId);
-
-        return NextResponse.json(
-          createJobResponse({
-            job,
-            chain: job.subjectChain ?? resolved.chain,
-          }),
-        );
-      }
 
       const canReuseLegacy =
         pricingMode === "legacy" &&
@@ -343,13 +279,13 @@ export async function POST(request: NextRequest) {
           tokenAddress: payload.tokenAddress,
           packageType: payload.packageType as PackageType,
           subjectChain: resolved.chain,
-          stylePreset: (payload.stylePreset ?? defaultStylePreset) as VideoStyleId,
+          stylePreset: (payload.stylePreset ??
+            defaultStylePreset) as VideoStyleId,
           requestedPrompt: payload.requestedPrompt?.trim() || null,
           maxAgeMinutes: 20,
         });
 
         if (reusableJob) {
-          await ensurePaymentAddressSubscribedToHeliusWebhook(reusableJob.paymentAddress);
           return NextResponse.json(
             createJobResponse({
               job: reusableJob,
@@ -367,9 +303,9 @@ export async function POST(request: NextRequest) {
         subjectSymbol: resolved.symbol,
         subjectImage: resolved.image,
         subjectDescription:
-          payload.subjectDescription?.trim() ||
-          resolved.description,
-        stylePreset: (payload.stylePreset ?? defaultStylePreset) as VideoStyleId,
+          payload.subjectDescription?.trim() || resolved.description,
+        stylePreset: (payload.stylePreset ??
+          defaultStylePreset) as VideoStyleId,
         requestedPrompt: payload.requestedPrompt?.trim() || null,
         audioEnabled: payload.audioEnabled,
         pricingMode,
@@ -381,71 +317,11 @@ export async function POST(request: NextRequest) {
         videoSeconds: pkg.videoSeconds,
         rangeDays: pkg.rangeDays,
       });
-
-      try {
-        await ensurePaymentAddressSubscribedToHeliusWebhook(job.paymentAddress);
-      } catch (error) {
-        const rollback = await rollbackUnpaidJob(job.jobId);
-        const message = error instanceof Error ? error.message : "Unknown error";
-
-        logger.error("job_create_webhook_subscription_failed", {
-          component: "api_jobs",
-          stage: "create_job",
-          jobId: job.jobId,
-          paymentAddress: job.paymentAddress,
-          errorCode: "webhook_subscription_failed",
-          errorMessage: message,
-          rolledBack: rollback.rolledBack,
-        });
-
-        return NextResponse.json(
-          {
-            error:
-              "Failed to subscribe payment address to webhook. Please retry job creation.",
-            message,
-            rolledBack: rollback.rolledBack,
-          },
-          { status: rollback.rolledBack ? 503 : 500 },
-        );
-      }
 
       return NextResponse.json(
         createJobResponse({
           job,
           chain: job.subjectChain ?? resolved.chain,
-        }),
-      );
-    }
-
-    if (discountCode) {
-      const job = await createDiscountWaivedPromptVideoJob({
-        requestKind: payload.requestKind,
-        packageType: payload.packageType as PackageType,
-        subjectName: payload.subjectName,
-        subjectDescription: payload.subjectDescription?.trim() || null,
-        sourceMediaUrl: payload.sourceMediaUrl?.trim() || null,
-        sourceEmbedUrl: payload.sourceEmbedUrl?.trim() || null,
-        sourceMediaProvider: payload.sourceMediaProvider?.trim() || null,
-        sourceTranscript: payload.sourceTranscript?.trim() || null,
-        stylePreset: (payload.stylePreset ?? defaultStylePreset) as VideoStyleId,
-        requestedPrompt: payload.requestedPrompt?.trim() || null,
-        audioEnabled: payload.audioEnabled,
-        pricingMode,
-        visibility,
-        experience,
-        creatorId,
-        priceSol: pkg.priceSol,
-        priceUsdc: pkg.priceUsdc,
-        videoSeconds: pkg.videoSeconds,
-        rangeDays: pkg.rangeDays,
-        discountCode,
-      });
-      await dispatchSingleJob(job.jobId);
-
-      return NextResponse.json(
-        createJobResponse({
-          job,
-          chain: null,
         }),
       );
     }
@@ -471,33 +347,6 @@ export async function POST(request: NextRequest) {
       videoSeconds: pkg.videoSeconds,
       rangeDays: pkg.rangeDays,
     });
-
-    try {
-      await ensurePaymentAddressSubscribedToHeliusWebhook(job.paymentAddress);
-    } catch (error) {
-      const rollback = await rollbackUnpaidJob(job.jobId);
-      const message = error instanceof Error ? error.message : "Unknown error";
-
-      logger.error("job_create_webhook_subscription_failed", {
-        component: "api_jobs",
-        stage: "create_job",
-        jobId: job.jobId,
-        paymentAddress: job.paymentAddress,
-        errorCode: "webhook_subscription_failed",
-        errorMessage: message,
-        rolledBack: rollback.rolledBack,
-      });
-
-      return NextResponse.json(
-        {
-          error:
-            "Failed to subscribe payment address to webhook. Please retry job creation.",
-          message,
-          rolledBack: rollback.rolledBack,
-        },
-        { status: rollback.rolledBack ? 503 : 500 },
-      );
-    }
 
     return NextResponse.json(
       createJobResponse({

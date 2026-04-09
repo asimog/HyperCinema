@@ -46,7 +46,6 @@ export type VideoStyleId =
   | "mythic_poster"
   | "glass_signal"
   | "crt_anime_90s"
-  // HyperMythX cinematic styles (42)
   | "vhs_cinema"
   | "music_video_80s"
   | "60s_nouvelle_vague"
@@ -94,28 +93,15 @@ export type VideoStyleId =
   | "technicolor_musical"
   | "scandinavian_minimal"
   | "latin_telenovela"
-  // LoveX styles (4)
   | "love_slow_waltz"
   | "love_golden_cinema"
   | "love_moonlit_garden"
   | "love_timeless_portrait";
 
-export type PaymentMethod = "sol_dedicated_address" | "x402_usdc" | "discount_code";
-
-export type PaymentCurrency = "SOL" | "USDC";
-
-export type JobStatus =
-  | "awaiting_payment"
-  | "payment_detected"
-  | "payment_confirmed"
-  | "processing"
-  | "complete"
-  | "failed";
+export type JobStatus = "pending" | "processing" | "complete" | "failed";
 
 export type JobProgress =
-  | "awaiting_payment"
-  | "payment_detected"
-  | "payment_confirmed"
+  | "pending"
   | "fetching_transactions"
   | "filtering_pump_activity"
   | "generating_report"
@@ -205,24 +191,9 @@ export interface JobDocument {
   updatedAt: string;
   errorCode: string | null;
   errorMessage: string | null;
-  paymentMethod?: PaymentMethod;
-  paymentCurrency?: PaymentCurrency;
-  paymentNetwork?: "solana";
-  x402Transaction?: string | null;
-  discountCode?: string | null;
+  // Simplified: payment fields removed, kept minimal for backward compat
   paymentWaived?: boolean;
-  paymentAddress: string;
-  paymentIndex: number | null;
-  paymentRouting: "dedicated_address" | "legacy_memo" | "x402" | "discount_code";
-  requiredLamports: number;
-  receivedLamports: number;
-  paymentSignatures: string[];
-  lastPaymentAt: string | null;
-  sweepStatus: "pending" | "swept" | "failed";
-  sweepSignature: string | null;
-  sweptLamports: number;
-  lastSweepAt: string | null;
-  sweepError: string | null;
+  discountCode?: string | null;
 }
 
 export interface ReportTimelineItem {

@@ -8,6 +8,8 @@ export interface GenerateXAiClipInput {
   prompt: string;
   durationSeconds: number;
   imageUrl?: string | null;
+  apiKey?: string | null;
+  baseUrl?: string | null;
   onProgress?: () => Promise<void> | void;
 }
 
@@ -27,6 +29,12 @@ interface XAiVideoStatusResponse {
 }
 
 function normalizeImageUrl(value?: string | null): string | undefined {
+  if (!value) return undefined;
+  const trimmed = value.trim();
+  return trimmed.length ? trimmed : undefined;
+}
+
+function normalizeValue(value?: string | null): string | undefined {
   if (!value) return undefined;
   const trimmed = value.trim();
   return trimmed.length ? trimmed : undefined;
@@ -95,14 +103,15 @@ export class XAiVideoClient {
     videoBytesBase64: string[];
   }> {
     const env = getVideoServiceEnv();
-    if (!env.XAI_API_KEY) {
+    const apiKey = normalizeValue(input.apiKey) ?? env.XAI_API_KEY ?? null;
+    const baseUrl = (input.baseUrl?.trim() || env.XAI_BASE_URL).replace(/\/+$/, "");
+
+    if (!apiKey) {
       throw new Error("XAI_API_KEY is required for xAI video generation.");
     }
-
-    const baseUrl = env.XAI_BASE_URL.replace(/\/+$/, "");
     const headers = {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${env.XAI_API_KEY}`,
+      Authorization: `Bearer ${apiKey}`,
     };
 
     const startResponse = await fetch(`${baseUrl}/videos/generations`, {

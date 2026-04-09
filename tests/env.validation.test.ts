@@ -1,10 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
-const FIXED_REVENUE_WALLET =
-  "J1TrcMgc5sE8Me6jQUry1hrrzPawSiTsn66c7VJfJDga";
 const VALID_MASTER_SEED =
   "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
-const VALID_WEBHOOK_ID = "b22ab57c-ed5f-4674-90d7-11a540ecafe6";
 
 function applyBaseEnv(): void {
   process.env.HELIUS_API_KEY = "test-helius";
@@ -16,19 +13,9 @@ function applyBaseEnv(): void {
 }
 
 describe.sequential("environment validation", () => {
-  it("uses the fixed revenue wallet address", async () => {
+  it("trims whitespace from strict env vars", async () => {
     vi.resetModules();
     applyBaseEnv();
-
-    const { getRevenueWalletAddress } = await import("@/lib/payments/solana-pay");
-
-    expect(getRevenueWalletAddress()).toBe(FIXED_REVENUE_WALLET);
-  });
-
-  it("trims whitespace from strict webhook/video env vars", async () => {
-    vi.resetModules();
-    applyBaseEnv();
-    process.env.HELIUS_WEBHOOK_ID = ` ${VALID_WEBHOOK_ID}\n`;
     process.env.VIDEO_ENGINE = " google_veo ";
     process.env.VIDEO_VEO_MODEL = " veo-3.1-fast-generate-001\n";
     process.env.VIDEO_RESOLUTION = " 1080p ";
@@ -36,20 +23,19 @@ describe.sequential("environment validation", () => {
     const { getEnv } = await import("@/lib/env");
     const env = getEnv();
 
-    expect(env.HELIUS_WEBHOOK_ID).toBe(VALID_WEBHOOK_ID);
     expect(env.VIDEO_ENGINE).toBe("google_veo");
     expect(env.VIDEO_VEO_MODEL).toBe("veo-3.1-fast-generate-001");
     expect(env.VIDEO_RESOLUTION).toBe("1080p");
   });
 
-  it("treats blank HELIUS_WEBHOOK_ID as undefined", async () => {
+  it("treats blank HELIUS_API_KEY as undefined", async () => {
     vi.resetModules();
     applyBaseEnv();
-    process.env.HELIUS_WEBHOOK_ID = " \n";
+    process.env.HELIUS_API_KEY = " \n";
 
     const { getEnv } = await import("@/lib/env");
     const env = getEnv();
 
-    expect(env.HELIUS_WEBHOOK_ID).toBeUndefined();
+    expect(env.HELIUS_API_KEY).toBeUndefined();
   });
 });

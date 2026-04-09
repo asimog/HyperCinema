@@ -1,17 +1,12 @@
 // MythX generation endpoint with rate limits
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import {
-  createDiscountWaivedPromptVideoJob,
-  createPromptVideoJob,
-} from "@/lib/jobs/repository";
+import { createPromptVideoJob } from "@/lib/jobs/repository";
 import { videoStyleSchema } from "@/lib/styles/video-style-validation";
-import { validatePromoCode } from "@/lib/promocodes/manager";
 import { logger } from "@/lib/logging/logger";
 import { randomUUID } from "crypto";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { getRequestIp } from "@/lib/security/request-ip";
-import { dispatchSingleJob } from "@/lib/jobs/dispatch";
 
 export const runtime = "nodejs";
 
@@ -27,7 +22,6 @@ const mythxRequestSchema = z.object({
   packageType: z.enum(["30s", "60s"]).default("60s"),
   style: videoStyleSchema.optional(),
   maxTweets: z.coerce.number().int().min(1).max(100).default(42),
-  promoCode: z.string().optional(),
   wallet: z.string().optional(),
 });
 
@@ -46,11 +40,12 @@ export async function POST(request: NextRequest) {
     if (!rateLimit.allowed) {
       return NextResponse.json(
         {
-          error: "Rate limit exceeded. Please wait before generating another video.",
+          error:
+            "Rate limit exceeded. Please wait before generating another video.",
           retryAfterSec: rateLimit.retryAfterSec,
           rule: rateLimit.exceededRule,
         },
-        { status: 429 }
+        { status: 429 },
       );
     }
 
@@ -63,25 +58,12 @@ export async function POST(request: NextRequest) {
           error: "Invalid request",
           details: validation.error.issues,
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
-    const { profileInput, packageType, style, maxTweets, promoCode, wallet } = validation.data;
-
-    // Check promo code validity if provided
-    if (promoCode) {
-      const validation = await validatePromoCode(promoCode);
-      if (!validation.isValid) {
-        return NextResponse.json(
-          {
-            error: "Invalid promo code",
-            message: validation.errorMessage,
-          },
-          { status: 400 }
-        );
-      }
-    }
+    const { profileInput, packageType, style, maxTweets, wallet } =
+      validation.data;
 
     logger.info("mythx_generation_started", {
       component: "api",
@@ -89,12 +71,11 @@ export async function POST(request: NextRequest) {
       profileInput,
       style,
       maxTweets,
-      promoCode,
       ip,
     });
 
-    const jobInput = {
-      requestKind: "mythx" as const,
+    const job = await createPromptVideoJob({
+      requestKind: "mythx",
       packageType,
       subjectName: profileInput,
       subjectDescription: `Autobiography generated from the latest ${maxTweets} tweets.`,
@@ -105,22 +86,11 @@ export async function POST(request: NextRequest) {
       stylePreset: style ?? "vhs_cinema",
       requestedPrompt: `Build a MythX autobiographical cut from ${maxTweets} recent tweets.`,
       audioEnabled: true,
-      visibility: "public" as const,
-      pricingMode: "public" as const,
-      experience: "mythx" as const,
+      visibility: "public",
+      pricingMode: "public",
+      experience: "mythx",
       creatorId: wallet || `web-${randomUUID()}`,
-    };
-
-    const job = promoCode
-      ? await createDiscountWaivedPromptVideoJob({
-          ...jobInput,
-          discountCode: promoCode,
-        })
-      : await createPromptVideoJob(jobInput);
-
-    if (promoCode) {
-      await dispatchSingleJob(job.jobId);
-    }
+    });
 
     logger.info("mythx_generation_completed", {
       component: "api",
@@ -138,9 +108,6 @@ export async function POST(request: NextRequest) {
       status: job.status,
       progress: job.progress,
       paymentRequired: !job.paymentWaived,
-      paymentAddress: job.paymentAddress,
-      amountSol: job.priceSol,
-      promoCodeUsed: job.discountCode,
     });
   } catch (error) {
     logger.error("mythx_generation_failed", {
@@ -155,7 +122,7 @@ export async function POST(request: NextRequest) {
         error: "Failed to generate MythX video",
         message: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

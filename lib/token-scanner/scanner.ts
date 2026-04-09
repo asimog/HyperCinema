@@ -41,7 +41,7 @@ export interface WalletScanResult {
 
 export async function scanToken(
   address: string,
-  chain: string = "solana"
+  chain: string = "solana",
 ): Promise<TokenScanResult> {
   const env = getEnv();
   const heliusKey = env.HELIUS_API_KEY;
@@ -65,16 +65,20 @@ export async function scanToken(
             method: "getAsset",
             params: { id: address },
           }),
-        }
+        },
       );
 
       if (response.ok) {
         const data = await response.json();
         const asset = data?.result;
         if (asset) {
-          name = asset.content?.metadata?.name || asset.content?.json_uri || name;
+          name =
+            asset.content?.metadata?.name || asset.content?.json_uri || name;
           symbol = asset.content?.metadata?.symbol || symbol;
-          imageUri = asset.content?.files?.[0]?.uri || asset.content?.links?.image || null;
+          imageUri =
+            asset.content?.files?.[0]?.uri ||
+            asset.content?.links?.image ||
+            null;
           description = asset.content?.metadata?.description || null;
         }
       }
@@ -111,7 +115,12 @@ export async function scanToken(
     hasDescription: !!description,
   });
 
-  const recommendedStyle = riskScore < 40 ? "trench_neon" : riskScore < 70 ? "hyperflow_assembly" : "glass_signal";
+  const recommendedStyle =
+    riskScore < 40
+      ? "trench_neon"
+      : riskScore < 70
+        ? "hyperflow_assembly"
+        : "glass_signal";
 
   return {
     address,
@@ -137,7 +146,14 @@ function generateTokenRecommendation(input: {
   hasImage: boolean;
   hasDescription: boolean;
 }): string {
-  const { name, symbol, riskScore, riskFactors, hasImage, hasDescription } = input;
+  const {
+    name,
+    symbol,
+    riskScore,
+    riskFactors,
+    hasImage: _hasImage,
+    hasDescription: _hasDescription,
+  } = input;
 
   if (riskScore < 30) {
     return `🔥 "${name}" (${symbol}) looks solid! Low risk score. Perfect for a cinematic trading story with neon aesthetics.`;
@@ -150,7 +166,7 @@ function generateTokenRecommendation(input: {
 
 export async function scanWallet(
   address: string,
-  chain: string = "solana"
+  chain: string = "solana",
 ): Promise<WalletScanResult> {
   const env = getEnv();
   const heliusKey = env.HELIUS_API_KEY;
@@ -175,7 +191,7 @@ export async function scanWallet(
             method: "getSignaturesForAddress",
             params: { address, limit: 50 },
           }),
-        }
+        },
       );
 
       if (response.ok) {
@@ -206,9 +222,10 @@ export async function scanWallet(
     topToken = null;
   }
 
-  const recommendation = totalTrades > 20
-    ? `📊 Active wallet with ${totalTrades} transactions. "${personality}" profile - perfect for a full trading story video!`
-    : `🆕 ${totalTrades} transactions found. Growing portfolio - great for a "beginning of the journey" video.`;
+  const recommendation =
+    totalTrades > 20
+      ? `📊 Active wallet with ${totalTrades} transactions. "${personality}" profile - perfect for a full trading story video!`
+      : `🆕 ${totalTrades} transactions found. Growing portfolio - great for a "beginning of the journey" video.`;
 
   return {
     address,

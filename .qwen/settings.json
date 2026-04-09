@@ -10,7 +10,9 @@
       "Bash(git push *)",
       "Bash(npm run *)",
       "Bash(gcloud *)",
-      "Bash(curl *)"
+      "Bash(curl *)",
+      "Bash(npm test)",
+      "Bash(npm install *)"
     ]
   },
   "$version": 3

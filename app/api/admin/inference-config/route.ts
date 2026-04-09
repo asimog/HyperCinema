@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { cockpitSessionCookie } from "@/lib/admin/cockpit-auth";
-import { getInferenceRuntimeConfig, updateInferenceRuntimeConfig } from "@/lib/inference/config";
+import {
+  type InferenceProviderConfig,
+  getInferenceRuntimeConfig,
+  updateInferenceRuntimeConfig,
+} from "@/lib/inference/config";
 import {
   TEXT_INFERENCE_PROVIDER_OPTIONS,
   VIDEO_INFERENCE_PROVIDER_OPTIONS,
@@ -44,6 +48,10 @@ export async function POST(request: NextRequest) {
   const body = (await request.json()) as {
     text?: { provider?: string; model?: string | null; baseUrl?: string | null; apiKey?: string | null };
     video?: { provider?: string; model?: string | null; baseUrl?: string | null; apiKey?: string | null };
+    providers?: {
+      text?: Partial<Record<string, InferenceProviderConfig>>;
+      video?: Partial<Record<string, InferenceProviderConfig>>;
+    };
   };
 
   const textProvider = body.text?.provider;
@@ -54,6 +62,30 @@ export async function POST(request: NextRequest) {
   const videoProvider = body.video?.provider;
   if (videoProvider && !isVideoInferenceProvider(videoProvider)) {
     return NextResponse.json({ error: `Unsupported video provider: ${videoProvider}` }, { status: 400 });
+  }
+
+  const textProviderPatches = body.providers?.text;
+  if (textProviderPatches) {
+    for (const provider of Object.keys(textProviderPatches)) {
+      if (!isTextInferenceProvider(provider)) {
+        return NextResponse.json(
+          { error: `Unsupported text provider patch: ${provider}` },
+          { status: 400 },
+        );
+      }
+    }
+  }
+
+  const videoProviderPatches = body.providers?.video;
+  if (videoProviderPatches) {
+    for (const provider of Object.keys(videoProviderPatches)) {
+      if (!isVideoInferenceProvider(provider)) {
+        return NextResponse.json(
+          { error: `Unsupported video provider patch: ${provider}` },
+          { status: 400 },
+        );
+      }
+    }
   }
 
   const next = await updateInferenceRuntimeConfig({
@@ -75,6 +107,32 @@ export async function POST(request: NextRequest) {
             apiKey: trimOrNull(body.video.apiKey),
           }
         : undefined,
+    providers: {
+      text: textProviderPatches
+        ? Object.fromEntries(
+            Object.entries(textProviderPatches).map(([provider, value]) => [
+              provider,
+              {
+                model: trimOrNull(value?.model),
+                baseUrl: trimOrNull(value?.baseUrl),
+                apiKey: trimOrNull(value?.apiKey),
+              },
+            ]),
+          ) as Partial<Record<TextInferenceProviderId, InferenceProviderConfig>>
+        : undefined,
+      video: videoProviderPatches
+        ? Object.fromEntries(
+            Object.entries(videoProviderPatches).map(([provider, value]) => [
+              provider,
+              {
+                model: trimOrNull(value?.model),
+                baseUrl: trimOrNull(value?.baseUrl),
+                apiKey: trimOrNull(value?.apiKey),
+              },
+            ]),
+          ) as Partial<Record<VideoInferenceProviderId, InferenceProviderConfig>>
+        : undefined,
+    },
     updatedBy: "cockpit",
   });
 

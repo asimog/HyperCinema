@@ -77,12 +77,9 @@ async function requestChatCompletion(input: {
   temperature: number;
   maxTokens: number;
   baseUrl: string;
+  apiKey: string;
 }): Promise<OpenRouterResponse> {
   const env = getEnv();
-  const apiKey = env.OPENROUTER_API_KEY;
-  if (!apiKey) {
-    throw new Error("OPENROUTER_API_KEY is required for OpenRouter chat completions.");
-  }
 
   return withRetry(
     async () => {
@@ -92,7 +89,7 @@ async function requestChatCompletion(input: {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${apiKey}`,
+            Authorization: `Bearer ${input.apiKey}`,
             ...(env.OPENROUTER_SITE_URL
               ? { "HTTP-Referer": env.OPENROUTER_SITE_URL }
               : {}),
@@ -139,8 +136,13 @@ export async function openRouterChat(params: {
   maxTokens?: number;
   baseUrl?: string;
   model?: string;
+  apiKey?: string;
 }): Promise<string> {
   const env = getEnv();
+  const apiKey = params.apiKey ?? env.OPENROUTER_API_KEY;
+  if (!apiKey) {
+    throw new Error("OPENROUTER_API_KEY is required for OpenRouter chat completions.");
+  }
   const modelCandidates = [
     params.model?.trim(),
     ...resolveModelCandidates(env),
@@ -159,6 +161,7 @@ export async function openRouterChat(params: {
         temperature,
         maxTokens,
         baseUrl,
+        apiKey,
       });
 
       const content = payload.choices?.[0]?.message?.content?.trim();
@@ -210,6 +213,7 @@ export async function openRouterJson<T>(params: {
   maxTokens?: number;
   baseUrl?: string;
   model?: string;
+  apiKey?: string;
 }): Promise<T> {
   const content = await openRouterChat(params);
   const jsonText = extractJson(content);

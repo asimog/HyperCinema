@@ -118,6 +118,50 @@ function buildPayload(jobId: string) {
   };
 }
 
+function buildElizaPayload(jobId: string) {
+  return {
+    jobId,
+    wallet: "wallet",
+    durationSeconds: 30,
+    withSound: false,
+    resolution: "1080p",
+    hookLine: "hook line",
+    scenes: [
+      {
+        sceneNumber: 1,
+        visualPrompt: "visual prompt",
+        narration: "narration prompt",
+        durationSeconds: 10,
+        imageUrl: "https://cdn.example.com/image.png",
+      },
+    ],
+    videoEngine: "elizaos",
+    provider: "elizaos",
+    prompt: "global prompt",
+    elizaos: {
+      provider: "elizaos",
+      model: "default",
+      aspectRatio: "16:9",
+      prompt: "global prompt",
+      sceneMetadata: [
+        {
+          sceneNumber: 1,
+          durationSeconds: 10,
+          narration: "narration prompt",
+          visualPrompt: "visual prompt",
+          imageUrl: "https://cdn.example.com/image.png",
+        },
+      ],
+      storyMetadata: {
+        wallet: "wallet",
+        rangeDays: 1,
+        packageType: "30s",
+        durationSeconds: 30,
+      },
+    },
+  };
+}
+
 describe("video-service /render contract", () => {
   let app: FastifyInstance;
   let service: InMemoryRenderService;
@@ -260,5 +304,20 @@ describe("video-service /render contract", () => {
     expect(ready.statusCode).toBe(200);
     expect(ready.json().renderStatus).toBe("ready");
     expect(ready.json().videoUrl).toContain("final.mp4");
+  });
+
+  it("accepts ElizaOS render payloads as a first-class provider", async () => {
+    const response = await app.inject({
+      method: "POST",
+      url: "/render",
+      headers: {
+        authorization: "Bearer video-secret",
+      },
+      payload: buildElizaPayload("job-elizaos"),
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().id).toBe("job-elizaos");
+    expect(response.json().statusUrl).toBe("http://video.test/render/job-elizaos");
   });
 });

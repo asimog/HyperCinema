@@ -1,11 +1,11 @@
-// Gallery route - shows all completed videos
-import { getDb } from "@/lib/firebase/admin";
+// Gallery route - shows all completed videos with TikTok-style feed
+import { db } from "@/lib/db";
 import GalleryPage from "@/components/gallery/GalleryPage";
 
 // Disable caching - always show latest videos
 export const dynamic = "force-dynamic";
 
-// Job card data shape from Firestore
+// Job card data shape from Prisma
 interface JobCard {
   jobId: string;
   subjectName: string | null;
@@ -14,25 +14,42 @@ interface JobCard {
   requestKind: string | null;
   videoStyle: string | null;
   wallet: string | null;
-  completedAt: any;
+  createdAt: Date | null;
   status: string;
 }
 
-// Fetch completed jobs from Firestore
+// Fetch completed jobs from Prisma
 async function getAllJobs(limit: number = 100): Promise<JobCard[]> {
   try {
-    const db = getDb();
-    const snapshot = await db
-      .collection("jobs")
-      .where("status", "==", "complete")
-      .orderBy("completedAt", "desc")
-      .limit(limit)
-      .get();
+    const jobs = await db.job.findMany({
+      where: { status: "complete" },
+      orderBy: { createdAt: "desc" },
+      take: limit,
+    });
 
-    return snapshot.docs.map(doc => ({
-      jobId: doc.id,
-      ...doc.data(),
-    })) as JobCard[];
+    return jobs.map(
+      (job: {
+        jobId: string;
+        subjectName: string | null;
+        sourceMediaUrl: string | null;
+        videoSeconds: number | null;
+        requestKind: string | null;
+        stylePreset: string | null;
+        wallet: string | null;
+        createdAt: Date | null;
+        status: string;
+      }) => ({
+        jobId: job.jobId,
+        subjectName: job.subjectName,
+        sourceMediaUrl: job.sourceMediaUrl,
+        videoSeconds: job.videoSeconds,
+        requestKind: job.requestKind,
+        videoStyle: job.stylePreset,
+        wallet: job.wallet,
+        createdAt: job.createdAt,
+        status: job.status,
+      }),
+    ) as JobCard[];
   } catch {
     return [];
   }
@@ -40,6 +57,6 @@ async function getAllJobs(limit: number = 100): Promise<JobCard[]> {
 
 // Server component - fetches jobs and renders gallery
 export default async function GalleryRoute() {
-  const jobs = await getAllJobs(100);
+  const jobs = await getAllJobs(200);
   return <GalleryPage jobs={jobs} />;
 }

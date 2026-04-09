@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { getInferenceRuntimeConfig, resolveTextProviderSelection } from "@/lib/inference/config";
 import { generateTextInference } from "@/lib/inference/text";
 import type { TextInferenceProviderId } from "@/lib/inference/providers";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
@@ -66,10 +67,12 @@ export async function POST(request: NextRequest) {
       temperature: body.temperature,
       maxTokens: body.maxTokens,
     });
+    const runtime = await getInferenceRuntimeConfig();
+    const { provider, selection } = resolveTextProviderSelection(runtime, body.provider);
 
     return NextResponse.json({
-      provider: body.provider ?? null,
-      model: body.model ?? null,
+      provider,
+      model: body.model ?? selection.model ?? null,
       content,
     });
   } catch (error) {

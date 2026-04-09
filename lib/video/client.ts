@@ -7,6 +7,8 @@ import {
   withRetry,
 } from "@/lib/network/retry";
 import { GeneratedCinematicScript } from "@/lib/types/domain";
+import { ElizaOSRenderPayload } from "@/lib/video/elizaos";
+import { GenericRestVideoRenderPayload } from "@/lib/video/generic-rest";
 import { OpenMontageRenderPayload } from "@/lib/video/openmontage";
 import { GoogleVeoRenderPayload } from "@/lib/video/veo";
 import { XAiVideoRenderPayload } from "@/lib/video/xai";
@@ -38,7 +40,9 @@ export async function renderCinematicVideo(params: {
   script: GeneratedCinematicScript;
   googleVeo?: GoogleVeoRenderPayload;
   xai?: XAiVideoRenderPayload;
+  elizaos?: ElizaOSRenderPayload;
   openMontage?: OpenMontageRenderPayload;
+  generic?: GenericRestVideoRenderPayload;
 }): Promise<{ videoUrl: string; thumbnailUrl: string | null }> {
   const env = getEnv();
   const inferenceConfig = await getInferenceRuntimeConfig();
@@ -54,20 +58,30 @@ export async function renderCinematicVideo(params: {
     includeAudio: params.googleVeo?.generateAudio ?? false,
   }));
   const isXaiProvider = Boolean(params.xai);
+  const isElizaOSProvider = Boolean(params.elizaos);
   const isOpenMontageProvider = Boolean(params.openMontage);
+  const isGenericProvider = Boolean(params.generic);
   const withSound =
     params.googleVeo?.generateAudio ??
     params.openMontage?.storyMetadata.audioEnabled ??
     false;
   const provider = isXaiProvider
     ? "xai"
+    : isElizaOSProvider
+      ? "elizaos"
     : isOpenMontageProvider
       ? "openmontage"
+    : isGenericProvider
+      ? params.generic!.provider
       : inferenceConfig.video.provider;
   const videoEngine = isXaiProvider
     ? "xai"
+    : isElizaOSProvider
+      ? "elizaos"
     : isOpenMontageProvider
       ? "openmontage"
+    : isGenericProvider
+      ? "generic"
       : env.VIDEO_ENGINE;
   const baseRequestPayload = {
     jobId: params.jobId,
@@ -81,6 +95,7 @@ export async function renderCinematicVideo(params: {
     provider,
     model:
       params.xai?.model ??
+      params.elizaos?.model ??
       inferenceConfig.video.model ??
       params.googleVeo?.model ??
       env.VIDEO_VEO_MODEL,
@@ -93,6 +108,14 @@ export async function renderCinematicVideo(params: {
         prompt: params.xai?.prompt ?? params.script.hookLine,
         xai: params.xai,
       }
+    : isElizaOSProvider
+      ? {
+          ...baseRequestPayload,
+          provider: "elizaos",
+          videoEngine: "elizaos",
+          prompt: params.elizaos?.prompt ?? params.script.hookLine,
+          elizaos: params.elizaos,
+        }
     : isOpenMontageProvider
       ? {
           ...baseRequestPayload,
@@ -100,6 +123,14 @@ export async function renderCinematicVideo(params: {
           videoEngine: "openmontage",
           prompt: params.openMontage?.prompt ?? params.script.hookLine,
           openMontage: params.openMontage,
+        }
+    : isGenericProvider
+      ? {
+          ...baseRequestPayload,
+          provider: params.generic!.provider,
+          videoEngine: "generic",
+          prompt: params.generic!.prompt,
+          generic: params.generic,
         }
     : provider === "google_veo"
       ? {

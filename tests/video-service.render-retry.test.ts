@@ -14,6 +14,10 @@ const repositoryMocks = vi.hoisted(() => ({
 
 vi.mock("../video-service/src/repository", () => repositoryMocks);
 
+vi.mock("../video-service/src/inference-config", () => ({
+  getVideoProviderRuntimeConfig: () => Promise.resolve({ apiKey: null, baseUrl: null, model: null }),
+}));
+
 vi.mock("../video-service/src/env", () => ({
   getVideoServiceEnv: () => ({
     VERTEX_VEO_MODEL: "veo-3.1-fast-generate-001",

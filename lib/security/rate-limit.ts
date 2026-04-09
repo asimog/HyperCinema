@@ -1,7 +1,4 @@
-import { getDb } from "@/lib/firebase/admin";
-import { Timestamp } from "firebase-admin/firestore";
-
-const RATE_LIMIT_COLLECTION = "rate_limits";
+import { db, Prisma } from "@/lib/db";
 
 export interface RateLimitRule {
   windowSec: number;
@@ -23,43 +20,36 @@ function bucketStart(nowSec: number, windowSec: number): number {
   return Math.floor(nowSec / windowSec) * windowSec;
 }
 
-interface CounterSnapshot {
-  count: number;
-}
-
 export async function enforceRateLimit(input: {
   scope: string;
   key: string;
   rules: RateLimitRule[];
   now?: Date;
 }): Promise<RateLimitResult> {
-  const db = getDb();
   const now = input.now ?? new Date();
   const nowSec = Math.floor(now.getTime() / 1000);
   const encodedKey = encodeKey(`${input.scope}:${input.key}`);
 
-  return db.runTransaction(async (tx) => {
-    const refs = input.rules.map((rule) => {
-      const start = bucketStart(nowSec, rule.windowSec);
-      const id = `${input.scope}:${rule.name}:${rule.windowSec}:${start}:${encodedKey}`;
-      return {
-        rule,
-        start,
-        ref: db.collection(RATE_LIMIT_COLLECTION).doc(id),
-      };
-    });
+  const ruleEntries = input.rules.map((rule) => {
+    const start = bucketStart(nowSec, rule.windowSec);
+    const id = `${input.scope}:${rule.name}:${rule.windowSec}:${start}:${encodedKey}`;
+    return { rule, start, id };
+  });
 
-    const snapshots = await Promise.all(refs.map((entry) => tx.get(entry.ref)));
-    const parsed = snapshots.map((snapshot) =>
-      snapshot.exists ? (snapshot.data() as CounterSnapshot) : { count: 0 },
+  return db.$transaction(async (tx: Prisma.TransactionClient) => {
+    // Read all counters in parallel
+    const reads = ruleEntries.map((entry) =>
+      tx.rateLimit.findUnique({ where: { id: entry.id } }),
     );
+    const existing = await Promise.all(reads);
 
     let retryAfterSec = 0;
     let exceededRule: string | undefined;
-    for (let index = 0; index < refs.length; index += 1) {
-      const entry = refs[index]!;
-      const current = parsed[index]!;
-      if ((current.count ?? 0) >= entry.rule.limit) {
+    for (let index = 0; index < ruleEntries.length; index += 1) {
+      const entry = ruleEntries[index]!;
+      const current = existing[index];
+      const count = current?.count ?? 0;
+      if (count >= entry.rule.limit) {
         const remaining = entry.start + entry.rule.windowSec - nowSec;
         retryAfterSec = Math.max(retryAfterSec, Math.max(1, remaining));
         exceededRule = entry.rule.name;
@@ -74,25 +64,23 @@ export async function enforceRateLimit(input: {
       };
     }
 
-    for (let index = 0; index < refs.length; index += 1) {
-      const entry = refs[index]!;
-      const current = parsed[index]!;
-      tx.set(
-        entry.ref,
-        {
-          scope: input.scope,
-          key: encodedKey,
-          rule: entry.rule.name,
-          windowSec: entry.rule.windowSec,
-          bucketStart: entry.start,
-          count: (current.count ?? 0) + 1,
-          updatedAt: Timestamp.fromDate(now),
-          expiresAt: Timestamp.fromMillis(
-            (entry.start + entry.rule.windowSec) * 1000,
-          ),
+    // Increment all counters via upsert
+    for (let index = 0; index < ruleEntries.length; index += 1) {
+      const entry = ruleEntries[index]!;
+      const expiresAt = new Date((entry.start + entry.rule.windowSec) * 1000);
+      await tx.rateLimit.upsert({
+        where: { id: entry.id },
+        create: {
+          id: entry.id,
+          count: 1,
+          windowEnd: expiresAt,
+          updatedAt: now,
         },
-        { merge: true },
-      );
+        update: {
+          count: { increment: 1 },
+          updatedAt: now,
+        },
+      });
     }
 
     return {

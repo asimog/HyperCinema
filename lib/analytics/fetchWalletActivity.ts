@@ -1,4 +1,4 @@
-import { fetchRecentTransactionsByWallet } from "@/lib/helius/fetch-transactions";
+// Helius integration removed - wallet activity fetching will use alternative data sources
 import type { EnhancedTransaction } from "helius-sdk/enhanced/types";
 import { AnalysisRangeHours } from "./types";
 
@@ -6,6 +6,6 @@ export async function fetchWalletActivity(input: {
   wallet: string;
   rangeHours: AnalysisRangeHours;
 }): Promise<EnhancedTransaction[]> {
-  const rangeDays = input.rangeHours / 24;
-  return fetchRecentTransactionsByWallet(input.wallet, rangeDays);
+  // Helius integration removed; return empty array until alternative data source is configured
+  return [];
 }

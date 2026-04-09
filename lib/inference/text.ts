@@ -2,7 +2,11 @@ import { fetchWithTimeout } from "@/lib/network/http";
 import { isRetryableHttpStatus, RetryableError, withRetry } from "@/lib/network/retry";
 import { getEnv } from "@/lib/env";
 import { openRouterJson, openRouterChat } from "@/lib/ai/openrouter";
-import { getInferenceRuntimeConfig } from "@/lib/inference/config";
+import {
+  getInferenceRuntimeConfig,
+  resolveTextProviderSelection,
+  type ProviderRuntimeSelection,
+} from "@/lib/inference/config";
 import {
   TextInferenceProviderId,
   TEXT_INFERENCE_PROVIDER_OPTIONS,
@@ -98,15 +102,21 @@ async function callOpenAICompatible(input: {
   return content;
 }
 
-async function callXaiResponses(messages: TextInferenceMessage[], model: string, temperature: number, maxTokens: number): Promise<string> {
-  const env = getEnv();
-  const apiKey = env.XAI_API_KEY;
+async function callXaiResponses(
+  selection: ProviderRuntimeSelection,
+  messages: TextInferenceMessage[],
+  model: string,
+  temperature: number,
+  maxTokens: number,
+): Promise<string> {
+  const apiKey = selection.apiKey;
+  const baseUrl = selection.baseUrl;
   if (!apiKey) {
-    throw new Error("XAI_API_KEY is required for the xAI provider.");
+    throw new Error("The selected xAI text provider is missing an API key.");
   }
-
-  const runtime = await getInferenceRuntimeConfig();
-  const baseUrl = runtime.text.baseUrl ?? env.XAI_BASE_URL;
+  if (!baseUrl) {
+    throw new Error("The selected xAI text provider is missing a base URL.");
+  }
 
   const response = await withRetry(
     async () => {
@@ -152,14 +162,21 @@ async function callXaiResponses(messages: TextInferenceMessage[], model: string,
   return content;
 }
 
-async function callClaude(messages: TextInferenceMessage[], model: string, temperature: number, maxTokens: number): Promise<string> {
-  const env = getEnv();
-  const runtime = await getInferenceRuntimeConfig();
-  const apiKey = env.ANTHROPIC_API_KEY;
+async function callClaude(
+  selection: ProviderRuntimeSelection,
+  messages: TextInferenceMessage[],
+  model: string,
+  temperature: number,
+  maxTokens: number,
+): Promise<string> {
+  const apiKey = selection.apiKey;
+  const baseUrl = selection.baseUrl;
   if (!apiKey) {
-    throw new Error("ANTHROPIC_API_KEY is required for the Claude provider.");
+    throw new Error("The selected Claude provider is missing an API key.");
   }
-  const baseUrl = runtime.text.baseUrl ?? env.ANTHROPIC_BASE_URL;
+  if (!baseUrl) {
+    throw new Error("The selected Claude provider is missing a base URL.");
+  }
 
   const system = messages
     .filter((message) => message.role === "system")
@@ -217,10 +234,17 @@ async function callClaude(messages: TextInferenceMessage[], model: string, tempe
   return content;
 }
 
-async function callOllama(messages: TextInferenceMessage[], model: string, temperature: number, maxTokens: number): Promise<string> {
-  const env = getEnv();
-  const runtime = await getInferenceRuntimeConfig();
-  const baseUrl = runtime.text.baseUrl ?? env.OLLAMA_BASE_URL;
+async function callOllama(
+  selection: ProviderRuntimeSelection,
+  messages: TextInferenceMessage[],
+  model: string,
+  temperature: number,
+  maxTokens: number,
+): Promise<string> {
+  const baseUrl = selection.baseUrl;
+  if (!baseUrl) {
+    throw new Error("The selected Ollama provider is missing a base URL.");
+  }
   const response = await fetchWithTimeout(
     `${baseUrl.replace(/\/+$/, "")}/api/chat`,
     {
@@ -256,14 +280,21 @@ async function callOllama(messages: TextInferenceMessage[], model: string, tempe
   return content;
 }
 
-async function callHuggingFace(messages: TextInferenceMessage[], model: string, temperature: number, maxTokens: number): Promise<string> {
-  const env = getEnv();
-  const runtime = await getInferenceRuntimeConfig();
-  const apiKey = env.HUGGINGFACE_API_TOKEN;
+async function callHuggingFace(
+  selection: ProviderRuntimeSelection,
+  messages: TextInferenceMessage[],
+  model: string,
+  temperature: number,
+  maxTokens: number,
+): Promise<string> {
+  const apiKey = selection.apiKey;
+  const baseUrl = selection.baseUrl;
   if (!apiKey) {
-    throw new Error("HUGGINGFACE_API_TOKEN is required for the Hugging Face provider.");
+    throw new Error("The selected Hugging Face provider is missing an API key.");
   }
-  const baseUrl = runtime.text.baseUrl ?? env.HUGGINGFACE_TEXT_BASE_URL;
+  if (!baseUrl) {
+    throw new Error("The selected Hugging Face provider is missing a base URL.");
+  }
 
   const prompt = messages.map((message) => `${message.role.toUpperCase()}: ${message.content}`).join("\n\n");
   const response = await withRetry(
@@ -309,6 +340,65 @@ async function callHuggingFace(messages: TextInferenceMessage[], model: string, 
   return content;
 }
 
+async function callFal(
+  selection: ProviderRuntimeSelection,
+  messages: TextInferenceMessage[],
+  model: string,
+  temperature: number,
+  maxTokens: number,
+): Promise<string> {
+  const apiKey = selection.apiKey;
+  const baseUrl = (selection.baseUrl ?? "https://fal.run").replace(/\/+$/, "");
+  if (!apiKey) {
+    throw new Error("The selected Fal provider is missing an API key (FAL_API_KEY).");
+  }
+
+  const prompt = messages.map((m) => `${m.role.toUpperCase()}: ${m.content}`).join("\n\n");
+
+  const response = await withRetry(
+    async () => {
+      const res = await fetchWithTimeout(
+        `${baseUrl}/${encodeURIComponent(model)}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            // FAL uses "Key" prefix, not "Bearer"
+            Authorization: `Key ${apiKey}`,
+          },
+          body: JSON.stringify({
+            prompt,
+            max_new_tokens: maxTokens,
+          }),
+        },
+        20_000,
+      );
+
+      if (!res.ok) {
+        const body = await res.text();
+        if (isRetryableHttpStatus(res.status)) {
+          throw new RetryableError(`Fal retryable request failed (${res.status}): ${body}`);
+        }
+        throw new Error(`Fal request failed (${res.status}): ${body}`);
+      }
+
+      return res;
+    },
+    { attempts: 3, baseDelayMs: 700, maxDelayMs: 4_000 },
+  );
+
+  const payload = (await response.json()) as {
+    output?: string;
+    text?: string;
+    generated_text?: string;
+  };
+  const content = (payload.output ?? payload.text ?? payload.generated_text ?? "").trim();
+  if (!content) {
+    throw new Error("Fal returned an empty response.");
+  }
+  return content;
+}
+
 export async function generateTextInference(params: {
   provider?: TextInferenceProviderId;
   model?: string | null;
@@ -318,13 +408,13 @@ export async function generateTextInference(params: {
 }): Promise<string> {
   const env = getEnv();
   const runtime = await getInferenceRuntimeConfig();
-  const provider = params.provider ?? (runtime.text.provider as TextInferenceProviderId) ?? env.TEXT_INFERENCE_PROVIDER;
-  const model = resolveProviderModel(provider, params.model ?? runtime.text.model ?? env.TEXT_INFERENCE_MODEL);
+  const { provider, selection } = resolveTextProviderSelection(runtime, params.provider);
+  const model = resolveProviderModel(provider, params.model ?? selection.model);
   const temperature = params.temperature ?? 0.2;
   const maxTokens = params.maxTokens ?? 1200;
 
   if (provider === "xai") {
-    return callXaiResponses(params.messages, model, temperature, maxTokens);
+    return callXaiResponses(selection, params.messages, model, temperature, maxTokens);
   }
 
   if (provider === "openrouter") {
@@ -335,7 +425,7 @@ export async function generateTextInference(params: {
         content: message.content,
       }));
 
-    if (!env.OPENROUTER_API_KEY) {
+    if (!selection.apiKey) {
       throw new Error("OPENROUTER_API_KEY is required for the OpenRouter provider.");
     }
 
@@ -343,20 +433,21 @@ export async function generateTextInference(params: {
       messages: openRouterMessages,
       temperature,
       maxTokens,
-      baseUrl: runtime.text.baseUrl ?? env.OPENROUTER_BASE_URL,
+      baseUrl: selection.baseUrl ?? env.OPENROUTER_BASE_URL,
       model,
     });
   }
 
   if (provider === "openai") {
-    const apiKey = env.OPENAI_API_KEY;
+    const apiKey = selection.apiKey;
     if (!apiKey) {
       throw new Error("OPENAI_API_KEY is required for the OpenAI provider.");
     }
+    const baseUrl = selection.baseUrl ?? env.OPENAI_BASE_URL;
 
     return callOpenAICompatible({
       providerLabel: "OpenAI",
-      baseUrl: runtime.text.baseUrl ?? env.OPENAI_BASE_URL,
+      baseUrl,
       apiKey,
       messages: params.messages,
       model,
@@ -366,31 +457,33 @@ export async function generateTextInference(params: {
   }
 
   if (provider === "claude") {
-    return callClaude(params.messages, model, temperature, maxTokens);
+    return callClaude(selection, params.messages, model, temperature, maxTokens);
   }
 
   if (provider === "ollama") {
-    return callOllama(params.messages, model, temperature, maxTokens);
+    return callOllama(selection, params.messages, model, temperature, maxTokens);
   }
 
   if (provider === "huggingface") {
-    return callHuggingFace(params.messages, model, temperature, maxTokens);
+    return callHuggingFace(selection, params.messages, model, temperature, maxTokens);
+  }
+
+  if (provider === "fal") {
+    return callFal(selection, params.messages, model, temperature, maxTokens);
   }
 
   if (provider === "replicate" || provider === "others") {
     if (provider === "others") {
-      const baseUrl = runtime.text.baseUrl ?? env.TEXT_INFERENCE_BASE_URL;
-      const apiKey = env.TEXT_INFERENCE_API_KEY;
-      if (!baseUrl || !apiKey) {
+      if (!selection.baseUrl || !selection.apiKey) {
         throw new Error(
-          "TEXT_INFERENCE_BASE_URL and TEXT_INFERENCE_API_KEY are required for the Others provider.",
+          "The selected custom text provider is missing an API key or base URL.",
         );
       }
 
       return callOpenAICompatible({
         providerLabel: "Custom text API",
-        baseUrl,
-        apiKey,
+        baseUrl: selection.baseUrl,
+        apiKey: selection.apiKey,
         messages: params.messages,
         model,
         temperature,
@@ -415,7 +508,7 @@ export async function generateTextInferenceJson<T>(params: {
 }): Promise<T> {
   const env = getEnv();
   const runtime = await getInferenceRuntimeConfig();
-  const provider = params.provider ?? (runtime.text.provider as TextInferenceProviderId) ?? env.TEXT_INFERENCE_PROVIDER;
+  const { provider, selection } = resolveTextProviderSelection(runtime, params.provider);
   if (provider === "openrouter") {
     const openRouterMessages = params.messages
       .filter((message) => message.role === "system" || message.role === "user")
@@ -428,8 +521,8 @@ export async function generateTextInferenceJson<T>(params: {
       messages: openRouterMessages,
       temperature: params.temperature,
       maxTokens: params.maxTokens,
-      baseUrl: runtime.text.baseUrl ?? env.OPENROUTER_BASE_URL,
-      model: resolveProviderModel(provider, params.model ?? runtime.text.model ?? env.TEXT_INFERENCE_MODEL),
+      baseUrl: selection.baseUrl ?? env.OPENROUTER_BASE_URL,
+      model: resolveProviderModel(provider, params.model ?? selection.model),
     });
   }
 

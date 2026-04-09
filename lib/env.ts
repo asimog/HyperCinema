@@ -125,7 +125,7 @@ const envSchema = z.object({
   OPENROUTER_APP_NAME: z.string().default("HYPERCINEMA"),
   OPENROUTER_SITE_URL: z.string().url().optional(),
   VIDEO_API_BASE_URL: z.string().url().optional(),
-  VIDEO_RESOLUTION: z.enum(["720p", "1080p"]).default("1080p"),
+  VIDEO_RESOLUTION: z.enum(["480p", "720p", "1080p"]).default("480p"),
   // MoltBook AI social network
   MOLTBOOK_API_BASE_URL: z.string().url().optional(),
   MOLTBOOK_AGENT_API_KEY: z.string().optional(),

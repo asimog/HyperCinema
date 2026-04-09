@@ -71,9 +71,9 @@ function normalizeVeoModel(value: unknown, fallback: string): string {
 
 function normalizeResolution(
   value: unknown,
-  fallback: "720p" | "1080p",
-): "720p" | "1080p" {
-  if (value === "720p" || value === "1080p") {
+  fallback: "480p" | "720p" | "1080p",
+): "480p" | "720p" | "1080p" {
+  if (value === "480p" || value === "720p" || value === "1080p") {
     return value;
   }
   return fallback;
@@ -83,8 +83,8 @@ export function resolveRenderConfig(input: {
   metadata?: { model?: unknown; resolution?: unknown } | null;
   requestResolution?: unknown;
   envModel: string;
-  envResolution: "720p" | "1080p";
-}): { model: string; resolution: "720p" | "1080p" } {
+  envResolution: "480p" | "720p" | "1080p";
+}): { model: string; resolution: "480p" | "720p" | "1080p" } {
   return {
     model: normalizeVeoModel(input.metadata?.model, input.envModel),
     resolution: normalizeResolution(
@@ -270,7 +270,7 @@ export class RenderService {
       elizaosMetadata?.model ??
       elizaosProviderConfig.model ??
       env.ELIZAOS_VIDEO_MODEL;
-    const xaiResolution = (xaiMetadata?.resolution ?? "720p") as
+    const xaiResolution = (xaiMetadata?.resolution ?? "480p") as
       | "480p"
       | "720p";
     const veoModel = veoConfig.model;
@@ -414,11 +414,11 @@ export class RenderService {
           ? await this.xaiClipGenerator.generateClip({
               model:
                 workerModel ?? xaiProviderConfig.model ?? env.XAI_VIDEO_MODEL,
-              resolution: "720p",
+              resolution: "480p",
               prompt: chunk.prompt,
               durationSeconds: chunk.durationSeconds,
               imageUrl: chunk.imageUrl,
-              aspectRatio: "16:9",
+              aspectRatio: "1:1",
               apiKey: xaiProviderConfig.apiKey,
               baseUrl: xaiProviderConfig.baseUrl,
               onProgress: () => touchRenderJob(record.id),

@@ -18,7 +18,10 @@
       "Bash(gh *)",
       "Bash(echo *)",
       "Bash(git rm *)",
-      "Bash(supabase *)"
+      "Bash(supabase *)",
+      "Bash(vercel *)",
+      "Bash(railway *)",
+      "Bash(set *)"
     ]
   },
   "$version": 3

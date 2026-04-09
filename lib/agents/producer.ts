@@ -1,7 +1,11 @@
 import { getInferenceRuntimeConfig } from "@/lib/inference/config";
 import { getEnv } from "@/lib/env";
 import { fetchWithTimeout } from "@/lib/network/http";
-import { isRetryableHttpStatus, RetryableError, withRetry } from "@/lib/network/retry";
+import {
+  isRetryableHttpStatus,
+  RetryableError,
+  withRetry,
+} from "@/lib/network/retry";
 import { logger } from "@/lib/logging/logger";
 import type { ScriptOutput } from "@/lib/agents/writer";
 import type { VisualDirection } from "@/lib/agents/director";
@@ -118,7 +122,8 @@ export async function renderWithxAI(
   const selection = inferenceConfig.providers.video["xai"];
 
   const apiKey = selection?.apiKey ?? env.XAI_VIDEO_API_KEY ?? env.XAI_API_KEY;
-  const baseUrl = selection?.baseUrl ?? env.XAI_VIDEO_BASE_URL ?? env.XAI_BASE_URL;
+  const baseUrl =
+    selection?.baseUrl ?? env.XAI_VIDEO_BASE_URL ?? env.XAI_BASE_URL;
 
   if (!apiKey) {
     return {
@@ -167,7 +172,9 @@ export async function renderWithxAI(
         if (!res.ok) {
           const body = await res.text();
           if (isRetryableHttpStatus(res.status)) {
-            throw new RetryableError(`xAI video request failed (${res.status}): ${body}`);
+            throw new RetryableError(
+              `xAI video request failed (${res.status}): ${body}`,
+            );
           }
           throw new Error(`xAI video request failed (${res.status}): ${body}`);
         }
@@ -220,7 +227,11 @@ export async function renderWithxAI(
  * Falls back to OpenMontage for complex multi-clip compositions.
  */
 export async function renderWithOpenMontage(
-  scenes: Array<{ narration: string; visualPrompt: string; durationSeconds: number }>,
+  scenes: Array<{
+    narration: string;
+    visualPrompt: string;
+    durationSeconds: number;
+  }>,
   aspectRatio: string,
 ): Promise<RenderResult> {
   const env = getEnv();
@@ -268,7 +279,7 @@ export async function renderWithOpenMontage(
               wallet: "agent-pipeline",
               durationSeconds: totalDuration,
               withSound: false,
-              resolution: env.VIDEO_RESOLUTION ?? "1080p",
+              resolution: env.VIDEO_RESOLUTION ?? "480p",
               hookLine: scenes[0]?.narration ?? "Opening scene",
               scenes: scenePayload,
               videoEngine: "openmontage",
@@ -290,9 +301,13 @@ export async function renderWithOpenMontage(
         if (!res.ok) {
           const body = await res.text();
           if (isRetryableHttpStatus(res.status)) {
-            throw new RetryableError(`OpenMontage render request failed (${res.status}): ${body}`);
+            throw new RetryableError(
+              `OpenMontage render request failed (${res.status}): ${body}`,
+            );
           }
-          throw new Error(`OpenMontage render request failed (${res.status}): ${body}`);
+          throw new Error(
+            `OpenMontage render request failed (${res.status}): ${body}`,
+          );
         }
 
         return res;
@@ -311,7 +326,9 @@ export async function renderWithOpenMontage(
     }
 
     const renderId = startPayload.id ?? startPayload.jobId;
-    const statusUrl = startPayload.statusUrl ?? `${videoBaseUrl.replace(/\/+$/, "")}/render/${renderId}`;
+    const statusUrl =
+      startPayload.statusUrl ??
+      `${videoBaseUrl.replace(/\/+$/, "")}/render/${renderId}`;
 
     if (!renderId && !startPayload.statusUrl) {
       return {
@@ -332,7 +349,8 @@ export async function renderWithOpenMontage(
 
     return {
       success: false,
-      error: error instanceof Error ? error.message : "OpenMontage render failed.",
+      error:
+        error instanceof Error ? error.message : "OpenMontage render failed.",
     };
   }
 }
@@ -370,7 +388,11 @@ export async function checkRenderStatus(
     }
 
     const payload = (await response.json()) as RenderPollResponse;
-    const status = (payload.renderStatus ?? payload.status ?? "unknown").toLowerCase();
+    const status = (
+      payload.renderStatus ??
+      payload.status ??
+      "unknown"
+    ).toLowerCase();
 
     return {
       status,
@@ -424,7 +446,11 @@ export async function retryFailedRender(
 
   const status = await checkRenderStatus(jobId);
 
-  if (status.status === "completed" || status.status === "complete" || status.status === "ready") {
+  if (
+    status.status === "completed" ||
+    status.status === "complete" ||
+    status.status === "ready"
+  ) {
     return {
       success: true,
       videoUrl: status.videoUrl,
@@ -450,8 +476,8 @@ function mapAspectRatioToxAISize(aspectRatio: string): string {
   if (ratio.includes("1:1") || ratio.includes("square")) {
     return "1024x1024";
   }
-  // Default 16:9
-  return "1280x720";
+  // Default 1:1
+  return "1024x1024";
 }
 
 function sleep(ms: number): Promise<void> {
@@ -485,7 +511,11 @@ async function pollRenderStatus(
       }
 
       const payload = (await response.json()) as RenderPollResponse;
-      const status = (payload.renderStatus ?? payload.status ?? "").toLowerCase();
+      const status = (
+        payload.renderStatus ??
+        payload.status ??
+        ""
+      ).toLowerCase();
 
       if (status === "failed" || status === "error") {
         return {

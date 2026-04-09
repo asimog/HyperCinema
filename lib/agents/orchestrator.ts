@@ -1,6 +1,14 @@
 import { gatherContext, type AnalystReport } from "@/lib/agents/analyst";
-import { writeScript, type ScriptOutput, adaptForFormat } from "@/lib/agents/writer";
-import { directVisuals, chooseStyle, type VisualDirection } from "@/lib/agents/director";
+import {
+  writeScript,
+  type ScriptOutput,
+  adaptForFormat,
+} from "@/lib/agents/writer";
+import {
+  directVisuals,
+  chooseStyle,
+  type VisualDirection,
+} from "@/lib/agents/director";
 import { generateVideo, type RenderResult } from "@/lib/agents/producer";
 import { logger } from "@/lib/logging/logger";
 
@@ -91,7 +99,7 @@ export async function runPipeline(
       jobId,
     });
 
-    const aspectRatio = "16:9"; // Default; can be made configurable
+    const aspectRatio = "1:1"; // Default square
     const direction = await directVisuals(script, aspectRatio);
 
     logger.info("orchestrator_stage_director_complete", {
@@ -156,7 +164,10 @@ export async function runPipeline(
 
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Pipeline failed with an unknown error.",
+      error:
+        error instanceof Error
+          ? error.message
+          : "Pipeline failed with an unknown error.",
     };
   }
 }
@@ -212,7 +223,8 @@ export async function runPreviewPipeline(
 
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Preview pipeline failed.",
+      error:
+        error instanceof Error ? error.message : "Preview pipeline failed.",
     };
   }
 }

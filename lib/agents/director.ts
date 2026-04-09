@@ -1,4 +1,7 @@
-import { generateTextInference, generateTextInferenceJson } from "@/lib/inference/text";
+import {
+  generateTextInference,
+  generateTextInferenceJson,
+} from "@/lib/inference/text";
 import { logger } from "@/lib/logging/logger";
 import type { AnalystReport } from "@/lib/agents/analyst";
 import type { ScriptOutput } from "@/lib/agents/writer";
@@ -30,15 +33,18 @@ interface VisualSchema {
 const STYLE_LIBRARY: Record<string, { label: string; description: string }> = {
   trench_neon: {
     label: "Trench Neon",
-    description: "Neon-lit cyberpunk aesthetic with rain-soaked streets and glowing signage",
+    description:
+      "Neon-lit cyberpunk aesthetic with rain-soaked streets and glowing signage",
   },
   cyberpunk_neon: {
     label: "Cyberpunk Neon",
-    description: "High-tech low-life visuals with neon blues, pinks, and purples",
+    description:
+      "High-tech low-life visuals with neon blues, pinks, and purples",
   },
   film_grain_70s: {
     label: "70s Film Grain",
-    description: "Warm analog film look with visible grain and vintage color grading",
+    description:
+      "Warm analog film look with visible grain and vintage color grading",
   },
   vhs_cinema: {
     label: "VHS Cinema",
@@ -46,27 +52,33 @@ const STYLE_LIBRARY: Record<string, { label: string; description: string }> = {
   },
   black_and_white_noir: {
     label: "Black & White Noir",
-    description: "High-contrast monochrome with deep shadows and dramatic lighting",
+    description:
+      "High-contrast monochrome with deep shadows and dramatic lighting",
   },
   anime_cel: {
     label: "Anime Cel",
-    description: "Traditional anime cel-shaded look with bold outlines and flat colors",
+    description:
+      "Traditional anime cel-shaded look with bold outlines and flat colors",
   },
   studio_ghibli_watercolor: {
     label: "Studio Ghibli Watercolor",
-    description: "Soft watercolor backgrounds with hand-drawn character aesthetic",
+    description:
+      "Soft watercolor backgrounds with hand-drawn character aesthetic",
   },
   vaporwave_mall: {
     label: "Vaporwave Mall",
-    description: "Pastel neon, classical statues, and retro-futuristic architecture",
+    description:
+      "Pastel neon, classical statues, and retro-futuristic architecture",
   },
   retrowave_sunset: {
     label: "Retrowave Sunset",
-    description: "80s synthwave aesthetic with grid lines, sunsets, and neon gradients",
+    description:
+      "80s synthwave aesthetic with grid lines, sunsets, and neon gradients",
   },
   wes_anderson_pastel: {
     label: "Wes Anderson Pastel",
-    description: "Symmetrical compositions with pastel color palettes and meticulous framing",
+    description:
+      "Symmetrical compositions with pastel color palettes and meticulous framing",
   },
   wong_kar_wai_neon: {
     label: "Wong Kar-Wai Neon",
@@ -74,11 +86,13 @@ const STYLE_LIBRARY: Record<string, { label: string; description: string }> = {
   },
   space_odyssey: {
     label: "Space Odyssey",
-    description: "Epic sci-fi visuals with vast cosmic landscapes and minimalist compositions",
+    description:
+      "Epic sci-fi visuals with vast cosmic landscapes and minimalist compositions",
   },
   glitch_digital: {
     label: "Glitch Digital",
-    description: "Digital corruption aesthetic with datamoshing and pixel sorting effects",
+    description:
+      "Digital corruption aesthetic with datamoshing and pixel sorting effects",
   },
   double_exposure: {
     label: "Double Exposure",
@@ -86,7 +100,8 @@ const STYLE_LIBRARY: Record<string, { label: string; description: string }> = {
   },
   hyperflow_assembly: {
     label: "Hyperflow Assembly",
-    description: "Dynamic montage with rapid cuts and high-energy visual transitions",
+    description:
+      "Dynamic montage with rapid cuts and high-energy visual transitions",
   },
 };
 
@@ -117,7 +132,7 @@ Match the style to the mood, themes, and subject matter. Consider:
  */
 export async function directVisuals(
   script: ScriptOutput,
-  aspectRatio: "16:9" | "1:1" | "9:16" = "16:9",
+  aspectRatio: "16:9" | "1:1" | "9:16" = "1:1",
 ): Promise<VisualDirection> {
   logger.info("director_planning_visuals", {
     component: "agents_director",
@@ -128,9 +143,9 @@ export async function directVisuals(
   });
 
   const aspectRatioLabels: Record<string, string> = {
-    "16:9": "Widescreen cinematic (16:9)",
     "1:1": "Square format (1:1)",
-    "9:16": "Vertical/portrait format (9:16)",
+    "9:16": "Vertical TikTok/Reels (9:16)",
+    "16:9": "Widescreen cinematic (16:9)",
   };
 
   const userPrompt = `Create a visual direction plan for this cinematic script.
@@ -168,13 +183,15 @@ Return your visual direction in this exact JSON format:
 
     const direction: VisualDirection = {
       style: result.style ?? "cinematic",
-      cameraAngles: Array.isArray(result.cameraAngles) && result.cameraAngles.length > 0
-        ? result.cameraAngles
-        : ["medium shot", "close-up", "wide shot"],
+      cameraAngles:
+        Array.isArray(result.cameraAngles) && result.cameraAngles.length > 0
+          ? result.cameraAngles
+          : ["medium shot", "close-up", "wide shot"],
       lighting: result.lighting ?? "Cinematic lighting with contrast and depth",
-      colorPalette: Array.isArray(result.colorPalette) && result.colorPalette.length > 0
-        ? result.colorPalette
-        : ["deep blue", "warm gold", "neutral gray"],
+      colorPalette:
+        Array.isArray(result.colorPalette) && result.colorPalette.length > 0
+          ? result.colorPalette
+          : ["deep blue", "warm gold", "neutral gray"],
       aspectRatio: result.aspectRatio ?? aspectRatio,
       pacing: result.pacing ?? "moderate",
       mood: result.mood ?? script.mood,
@@ -272,31 +289,67 @@ Respond with ONLY the style ID (e.g., "trench_neon") that best matches this cont
 function matchStyleByMood(mood: string): string {
   const moodLower = mood.toLowerCase();
 
-  if (moodLower.includes("cyber") || moodLower.includes("neon") || moodLower.includes("tech")) {
+  if (
+    moodLower.includes("cyber") ||
+    moodLower.includes("neon") ||
+    moodLower.includes("tech")
+  ) {
     return "cyberpunk_neon";
   }
-  if (moodLower.includes("dark") || moodLower.includes("noir") || moodLower.includes("mysterious")) {
+  if (
+    moodLower.includes("dark") ||
+    moodLower.includes("noir") ||
+    moodLower.includes("mysterious")
+  ) {
     return "black_and_white_noir";
   }
-  if (moodLower.includes("warm") || moodLower.includes("nostalg") || moodLower.includes("retro")) {
+  if (
+    moodLower.includes("warm") ||
+    moodLower.includes("nostalg") ||
+    moodLower.includes("retro")
+  ) {
     return "film_grain_70s";
   }
-  if (moodLower.includes("anime") || moodLower.includes("cartoon") || moodLower.includes("playful")) {
+  if (
+    moodLower.includes("anime") ||
+    moodLower.includes("cartoon") ||
+    moodLower.includes("playful")
+  ) {
     return "anime_cel";
   }
-  if (moodLower.includes("dream") || moodLower.includes("soft") || moodLower.includes("gentle")) {
+  if (
+    moodLower.includes("dream") ||
+    moodLower.includes("soft") ||
+    moodLower.includes("gentle")
+  ) {
     return "studio_ghibli_watercolor";
   }
-  if (moodLower.includes("epic") || moodLower.includes("grand") || moodLower.includes("cosmic")) {
+  if (
+    moodLower.includes("epic") ||
+    moodLower.includes("grand") ||
+    moodLower.includes("cosmic")
+  ) {
     return "space_odyssey";
   }
-  if (moodLower.includes("glitch") || moodLower.includes("digital") || moodLower.includes("chaos")) {
+  if (
+    moodLower.includes("glitch") ||
+    moodLower.includes("digital") ||
+    moodLower.includes("chaos")
+  ) {
     return "glitch_digital";
   }
-  if (moodLower.includes("80s") || moodLower.includes("retro") || moodLower.includes("synth")) {
+  if (
+    moodLower.includes("80s") ||
+    moodLower.includes("retro") ||
+    moodLower.includes("synth")
+  ) {
     return "retrowave_sunset";
   }
-  if (moodLower.includes("symmetric") || moodLower.includes("pastel") || moodLower.includes("quirky")) {
+  if (
+    moodLower.includes("symmetric") ||
+    moodLower.includes("pastel") ||
+    moodLower.includes("quirky")
+  ) {
     return "wes_anderson_pastel";
   }
 
@@ -310,8 +363,13 @@ function buildFallbackVisualDirection(
 ): VisualDirection {
   return {
     style: "cinematic",
-    cameraAngles: ["medium establishing shot", "close-up for emotional moments", "wide closing shot"],
-    lighting: "Cinematic three-point lighting with atmospheric haze and subtle rim light",
+    cameraAngles: [
+      "medium establishing shot",
+      "close-up for emotional moments",
+      "wide closing shot",
+    ],
+    lighting:
+      "Cinematic three-point lighting with atmospheric haze and subtle rim light",
     colorPalette: ["deep navy", "warm amber", "soft white"],
     aspectRatio,
     pacing: "moderate",

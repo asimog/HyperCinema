@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 const ALLOWED_VEO_MODEL = "veo-3.1-fast-generate-001" as const;
-const resolutionSchema = z.enum(["720p", "1080p"]);
+const resolutionSchema = z.enum(["480p", "720p", "1080p"]);
 const xaiResolutionSchema = z.enum(["480p", "720p"]);
 
 const sceneSchema = z.object({
@@ -135,8 +135,8 @@ const googleVeoMetadataSchema = z.object({
 const xaiMetadataSchema = z.object({
   provider: z.literal("xai"),
   model: z.string().min(1),
-  resolution: xaiResolutionSchema.default("720p"),
-  aspectRatio: z.literal("16:9").default("16:9"),
+  resolution: xaiResolutionSchema.default("480p"),
+  aspectRatio: z.literal("1:1").default("1:1"),
   prompt: z.string().min(1),
   styleHints: z.array(z.string()).default([]),
   sceneMetadata: z.array(sceneMetadataSchema).min(1),
@@ -146,7 +146,7 @@ const xaiMetadataSchema = z.object({
 const elizaosMetadataSchema = z.object({
   provider: z.literal("elizaos"),
   model: z.string().min(1),
-  aspectRatio: z.literal("16:9").default("16:9"),
+  aspectRatio: z.literal("1:1").default("1:1"),
   prompt: z.string().min(1),
   style: z.string().min(1).optional(),
   sceneMetadata: z.array(sceneMetadataSchema).min(1),
@@ -156,7 +156,7 @@ const elizaosMetadataSchema = z.object({
 const openMontageMetadataSchema = z.object({
   provider: z.literal("openmontage"),
   compositionId: z.string().min(1).default("CinematicRenderer"),
-  resolution: resolutionSchema.default("1080p"),
+  resolution: resolutionSchema.default("480p"),
   prompt: z.string().min(1),
   workerProvider: z.enum(["google_veo", "xai", "mythx"]).optional(),
   workerModel: z.string().min(1).optional(),
@@ -198,7 +198,13 @@ export const renderRequestSchema = z.object({
   resolution: resolutionSchema.optional(),
   hookLine: z.string().min(1),
   scenes: z.array(sceneSchema).min(1),
-  videoEngine: z.enum(["google_veo", "xai", "elizaos", "openmontage", "generic"]),
+  videoEngine: z.enum([
+    "google_veo",
+    "xai",
+    "elizaos",
+    "openmontage",
+    "generic",
+  ]),
   provider: z.string().optional(),
   prompt: z.string().optional(),
   metadata: googleVeoMetadataSchema.optional(),
@@ -217,8 +223,16 @@ export type ElizaOSMetadata = z.infer<typeof elizaosMetadataSchema>;
 export type OpenMontageMetadata = z.infer<typeof openMontageMetadataSchema>;
 export type GenericVideoMetadata = z.infer<typeof genericVideoMetadataSchema>;
 
-export interface NormalizedRenderRequest
-  extends Omit<RenderRequest, "metadata" | "googleVeo" | "xai" | "elizaos" | "openMontage" | "generic" | "resolution"> {
+export interface NormalizedRenderRequest extends Omit<
+  RenderRequest,
+  | "metadata"
+  | "googleVeo"
+  | "xai"
+  | "elizaos"
+  | "openMontage"
+  | "generic"
+  | "resolution"
+> {
   resolution?: "480p" | "720p" | "1080p";
   metadata?: GoogleVeoMetadata;
   googleVeo?: GoogleVeoMetadata;
@@ -258,15 +272,21 @@ export function parseRenderRequest(payload: unknown): NormalizedRenderRequest {
       throw new Error("xai metadata is required when videoEngine=xai");
     }
 
-    if (!metadata.model || !metadata.sceneMetadata?.length || !metadata.storyMetadata) {
+    if (
+      !metadata.model ||
+      !metadata.sceneMetadata?.length ||
+      !metadata.storyMetadata
+    ) {
       throw new Error(
         "xai.model, xai.sceneMetadata, and xai.storyMetadata are required for xAI renders",
       );
     }
 
-    const requestedResolution = metadata.resolution ?? "720p";
+    const requestedResolution = metadata.resolution ?? "480p";
     if (parsed.resolution && parsed.resolution !== requestedResolution) {
-      throw new Error("resolution mismatch between request.resolution and xai.resolution.");
+      throw new Error(
+        "resolution mismatch between request.resolution and xai.resolution.",
+      );
     }
 
     return {
@@ -281,12 +301,16 @@ export function parseRenderRequest(payload: unknown): NormalizedRenderRequest {
 
   if (parsed.videoEngine === "openmontage") {
     if (parsed.provider !== "openmontage") {
-      throw new Error("provider must be 'openmontage' when videoEngine=openmontage");
+      throw new Error(
+        "provider must be 'openmontage' when videoEngine=openmontage",
+      );
     }
 
     const metadata = parsed.openMontage;
     if (!metadata) {
-      throw new Error("openMontage metadata is required when videoEngine=openmontage");
+      throw new Error(
+        "openMontage metadata is required when videoEngine=openmontage",
+      );
     }
 
     if (!metadata.sceneMetadata?.length || !metadata.storyMetadata) {
@@ -322,7 +346,11 @@ export function parseRenderRequest(payload: unknown): NormalizedRenderRequest {
       throw new Error("elizaos metadata is required when videoEngine=elizaos");
     }
 
-    if (!metadata.model || !metadata.sceneMetadata?.length || !metadata.storyMetadata) {
+    if (
+      !metadata.model ||
+      !metadata.sceneMetadata?.length ||
+      !metadata.storyMetadata
+    ) {
       throw new Error(
         "elizaos.model, elizaos.sceneMetadata, and elizaos.storyMetadata are required for ElizaOS renders",
       );
@@ -330,7 +358,7 @@ export function parseRenderRequest(payload: unknown): NormalizedRenderRequest {
 
     return {
       ...parsed,
-      resolution: parsed.resolution ?? "1080p",
+      resolution: parsed.resolution ?? "480p",
       elizaos: metadata,
     };
   }
@@ -351,13 +379,15 @@ export function parseRenderRequest(payload: unknown): NormalizedRenderRequest {
     }
     return {
       ...parsed,
-      resolution: parsed.resolution ?? "1080p",
+      resolution: parsed.resolution ?? "480p",
       generic: metadata,
     };
   }
 
   if (parsed.provider !== "google_veo") {
-    throw new Error("provider must be 'google_veo' when videoEngine=google_veo");
+    throw new Error(
+      "provider must be 'google_veo' when videoEngine=google_veo",
+    );
   }
 
   if (!parsed.prompt || !parsed.prompt.trim()) {
@@ -366,14 +396,22 @@ export function parseRenderRequest(payload: unknown): NormalizedRenderRequest {
 
   const metadata = parsed.metadata ?? parsed.googleVeo;
   if (!metadata) {
-    throw new Error("metadata or googleVeo is required when videoEngine=google_veo");
+    throw new Error(
+      "metadata or googleVeo is required when videoEngine=google_veo",
+    );
   }
 
   if (parsed.withSound !== Boolean(metadata.generateAudio)) {
-    throw new Error("withSound must match metadata.generateAudio for Veo renders.");
+    throw new Error(
+      "withSound must match metadata.generateAudio for Veo renders.",
+    );
   }
 
-  if (!metadata.model || !metadata.sceneMetadata?.length || !metadata.storyMetadata) {
+  if (
+    !metadata.model ||
+    !metadata.sceneMetadata?.length ||
+    !metadata.storyMetadata
+  ) {
     throw new Error(
       "metadata.model, metadata.sceneMetadata, and metadata.storyMetadata are required for Veo renders",
     );
@@ -387,8 +425,14 @@ export function parseRenderRequest(payload: unknown): NormalizedRenderRequest {
   if (!requestedResolution) {
     throw new Error("resolution is required and must be 720p or 1080p.");
   }
-  if (parsed.resolution && metadata.resolution && parsed.resolution !== metadata.resolution) {
-    throw new Error("resolution mismatch between request.resolution and metadata.resolution.");
+  if (
+    parsed.resolution &&
+    metadata.resolution &&
+    parsed.resolution !== metadata.resolution
+  ) {
+    throw new Error(
+      "resolution mismatch between request.resolution and metadata.resolution.",
+    );
   }
 
   return {

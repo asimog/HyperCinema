@@ -1,291 +1,331 @@
-// Chat homepage — conversational AI with video generation
+// HyperCinema — AI chat homepage.
+// Streams responses from xAI Grok. Detects @handles + wallet addresses and
+// offers one-click video generation inline.
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import {
-  SendIcon,
-  SparkIcon,
-  FilmIcon,
-  HashIcon,
-  TrendingIcon,
-} from "@/components/ui/AppIcons";
 
-type Message = {
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface Message {
   id: string;
   role: "user" | "assistant";
-  text: string;
+  content: string;
   streaming?: boolean;
+}
+
+// ─── Input detection ──────────────────────────────────────────────────────────
+
+function detectInputType(input: string): "mythx" | "hashmyth" | null {
+  const t = input.trim();
+  if (!t) return null;
+  if (/^@/.test(t) || /^[a-zA-Z][a-zA-Z0-9_]{1,14}$/.test(t)) return "mythx";
+  if (/x\.com|twitter\.com/i.test(t)) return "mythx";
+  if (/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(t)) return "hashmyth";
+  if (/^0x[a-fA-F0-9]{40}$/.test(t)) return "hashmyth";
+  return null;
+}
+
+const VIDEO_HINT: Record<string, string> = {
+  mythx: "→ GENERATE MYTHX VIDEO",
+  hashmyth: "→ GENERATE HASHMYTH VIDEO",
 };
 
-type QuickAction = {
-  id: string;
-  label: string;
-  icon: React.FC<React.SVGProps<SVGSVGElement>>;
-  prompt?: string;
-  href?: string;
-};
+// ─── System prompt ────────────────────────────────────────────────────────────
 
-const QUICK_ACTIONS: QuickAction[] = [
-  {
-    id: "mythx",
-    label: "MythX",
-    icon: FilmIcon,
-    prompt: "Create an autobiography video from an X profile",
-    href: "/creator/mythx",
-  },
-  {
-    id: "hashmyth",
-    label: "HashMyth",
-    icon: HashIcon,
-    prompt: "Scan a wallet or memecoin and generate a cinematic video",
-    href: "/creator/hashmyth",
-  },
-  {
-    id: "random",
-    label: "Random Video",
-    icon: SparkIcon,
-    prompt: "Generate a random TikTok-style video",
-    href: "/creator/random",
-  },
-  {
-    id: "gallery",
-    label: "Browse Gallery",
-    icon: TrendingIcon,
-    href: "/gallery",
-  },
-];
+const SYSTEM_PROMPT = `You are HyperCinema AI — sharp, concise, crypto-native. You know DeFi, memecoins, Solana, Ethereum, X (Twitter) culture deeply. You help users understand wallets, tokens, and on-chain activity. Keep answers brief and direct. No filler. If asked about generating videos, tell the user to type a wallet address or @handle and hit the yellow button.`;
 
-const INITIAL_MESSAGE: Message = {
-  id: "intro",
-  role: "assistant",
-  text: "Hey, I'm your HyperCinema assistant. Tell me what you'd like to create — a video from an X profile, a token story, or just something random. I can also point you to the right creator tool.",
-};
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function uid() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-export default function ChatHomePage() {
-  const [messages, setMessages] = useState<Message[]>([INITIAL_MESSAGE]);
-  const [input, setInput] = useState("");
-  const [isStreaming, setIsStreaming] = useState(false);
-  const threadRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+// ─── Chat bubble ─────────────────────────────────────────────────────────────
 
-  useEffect(() => {
-    threadRef.current?.scrollTo({
-      top: threadRef.current.scrollHeight,
-      behavior: "smooth",
-    });
-  }, [messages]);
-
-  const sendMessage = useCallback(
-    (text: string) => {
-      if (!text.trim() || isStreaming) return;
-
-      const userMsg: Message = { id: uid(), role: "user", text: text.trim() };
-      setMessages((prev) => [...prev, userMsg]);
-      setInput("");
-      setIsStreaming(true);
-
-      // Placeholder assistant message for streaming
-      const assistantId = uid();
-      setMessages((prev) => [
-        ...prev,
-        { id: assistantId, role: "assistant", text: "", streaming: true },
-      ]);
-
-      // Call the AI chat API via fetch
-      fetch("/api/inference/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text.trim() }),
-      })
-        .then(async (res) => {
-          if (!res.ok) {
-            const err = await res.json().catch(() => ({}));
-            throw new Error(err.error || "Something went wrong. Try again.");
-          }
-
-          // Handle SSE streaming
-          const reader = res.body?.getReader();
-          if (!reader) throw new Error("Streaming not available");
-
-          const decoder = new TextDecoder();
-          let fullText = "";
-
-          const read = (): Promise<void> =>
-            reader.read().then(({ done, value }) => {
-              if (done) return;
-              const chunk = decoder.decode(value, { stream: true });
-              // Parse SSE lines
-              const lines = chunk.split("\n");
-              for (const line of lines) {
-                if (line.startsWith("data:")) {
-                  const data = line.slice(5).trim();
-                  if (data) fullText += data;
-                }
-              }
-              setMessages((prev) =>
-                prev.map((m) =>
-                  m.id === assistantId ? { ...m, text: fullText } : m,
-                ),
-              );
-              return read();
-            });
-
-          return read().then(() => {
-            setMessages((prev) =>
-              prev.map((m) =>
-                m.id === assistantId
-                  ? { ...m, text: fullText, streaming: false }
-                  : m,
-              ),
-            );
-            setIsStreaming(false);
-          });
-        })
-        .catch((err) => {
-          const errorMsg =
-            err instanceof Error ? err.message : "Failed to get a response.";
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.id === assistantId
-                ? { ...m, text: errorMsg, streaming: false }
-                : m,
-            ),
-          );
-          setIsStreaming(false);
-        });
-    },
-    [isStreaming],
-  );
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    sendMessage(input);
-  };
-
-  const handleQuickAction = (action: QuickAction) => {
-    if (action.href) {
-      window.location.href = action.href;
-    } else if (action.prompt) {
-      sendMessage(action.prompt);
-    }
-  };
-
+function Bubble({ msg }: { msg: Message }) {
+  const isUser = msg.role === "user";
   return (
-    <div className="cinema-shell cinema-noise min-h-[100dvh] text-[#f4efe8] flex flex-col">
-      <div className="flex-1 flex flex-col max-w-3xl mx-auto w-full px-4 py-4 md:px-6 md:py-6">
-        {/* Header */}
-        <div className="panel mb-4">
-          <p className="eyebrow">HyperCinema Chat</p>
-          <h1 className="font-display text-3xl md:text-4xl">
-            What do you want to create?
-          </h1>
-          <p className="route-summary mt-2">
-            Describe your idea and I'll help you generate it. Free to use.
-          </p>
-        </div>
-
-        {/* Quick Actions */}
-        <div className="flex flex-wrap gap-2 mb-4">
-          {QUICK_ACTIONS.map((action) => {
-            const Icon = action.icon;
-            return (
-              <button
-                key={action.id}
-                onClick={() => handleQuickAction(action)}
-                className="surface-card inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm text-gray-300 hover:text-white hover:border-purple-500/40 transition-all"
-              >
-                <Icon className="w-4 h-4 text-purple-400" />
-                {action.label}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Chat Thread */}
-        <div
-          ref={threadRef}
-          className="flex-1 overflow-y-auto space-y-4 pb-4 min-h-0"
-        >
-          {messages.map((msg) => (
-            <div
-              key={msg.id}
-              className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-            >
-              <div
-                className={`max-w-[85%] rounded-2xl px-4 py-3 ${
-                  msg.role === "user"
-                    ? "bg-purple-600/30 border border-purple-500/30 text-white"
-                    : "surface-card text-gray-200"
-                }`}
-              >
-                <p className="whitespace-pre-wrap text-sm leading-relaxed">
-                  {msg.text}
-                  {msg.streaming && (
-                    <span className="inline-block w-1.5 h-4 bg-purple-400 ml-1 animate-pulse" />
-                  )}
-                </p>
-                {/* Video generation button if message suggests it */}
-                {msg.role === "assistant" &&
-                  !msg.streaming &&
-                  msg.text.length > 0 && (
-                    <GenerateVideoButton text={msg.text} />
-                  )}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Chat Input */}
-        <form onSubmit={handleSubmit} className="mt-2">
-          <div className="surface-card flex items-center gap-2 px-4 py-2 rounded-2xl border border-purple-500/20">
-            <input
-              ref={inputRef}
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Describe the video you want to create..."
-              className="flex-1 bg-transparent text-sm text-white placeholder-gray-500 focus:outline-none py-2"
-              disabled={isStreaming}
-            />
-            <button
-              type="submit"
-              disabled={isStreaming || !input.trim()}
-              className="p-2 rounded-xl bg-purple-600 text-white disabled:opacity-40 hover:bg-purple-500 transition-colors"
-            >
-              <SendIcon className="w-4 h-4" />
-            </button>
-          </div>
-        </form>
+    <div className={`flex ${isUser ? "justify-end" : "justify-start"} mb-3`}>
+      <div
+        className={`max-w-[80%] px-4 py-2.5 font-mono text-[0.78rem] leading-relaxed whitespace-pre-wrap ${
+          isUser
+            ? "bg-[#FFE500] text-black"
+            : "bg-[#111] text-[#e0e0e0] border border-[#222]"
+        }`}
+      >
+        {msg.content || (msg.streaming ? <span className="animate-pulse text-[#555]">▌</span> : "")}
       </div>
     </div>
   );
 }
 
-// Show a "Generate Video" button if the assistant response mentions video
-function GenerateVideoButton({ text }: { text: string }) {
-  const lower = text.toLowerCase();
-  const mentionsVideo =
-    lower.includes("video") ||
-    lower.includes("generate") ||
-    lower.includes("create") ||
-    lower.includes("mythx") ||
-    lower.includes("hashmyth") ||
-    lower.includes("cinema");
+// ─── Main ─────────────────────────────────────────────────────────────────────
 
-  if (!mentionsVideo) return null;
+export default function ChatPage() {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const detectedType = detectInputType(input);
+
+  // Auto-scroll on new messages
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [messages]);
+
+  // Send chat message (streaming)
+  const sendChat = useCallback(async () => {
+    const text = input.trim();
+    if (!text || loading) return;
+
+    setInput("");
+    setError(null);
+
+    const userMsg: Message = { id: uid(), role: "user", content: text };
+    const assistantId = uid();
+    const assistantMsg: Message = { id: assistantId, role: "assistant", content: "", streaming: true };
+
+    setMessages((prev) => [...prev, userMsg, assistantMsg]);
+    setLoading(true);
+
+    try {
+      const history = [...messages, userMsg];
+      const apiMessages = [
+        { role: "system", content: SYSTEM_PROMPT },
+        ...history.map((m) => ({ role: m.role, content: m.content })),
+      ];
+
+      const res = await fetch("/api/chat/stream", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: apiMessages }),
+      });
+
+      if (!res.ok || !res.body) {
+        throw new Error(`Chat failed (${res.status})`);
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let fullText = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed || trimmed.startsWith(":")) continue;
+          if (trimmed.startsWith("data: ")) {
+            const dataStr = trimmed.slice(6).trim();
+            try {
+              const parsed = JSON.parse(dataStr);
+              if (parsed.content) {
+                fullText += parsed.content;
+                setMessages((prev) =>
+                  prev.map((m) =>
+                    m.id === assistantId
+                      ? { ...m, content: fullText, streaming: true }
+                      : m,
+                  ),
+                );
+              }
+            } catch {}
+          }
+        }
+      }
+
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === assistantId ? { ...m, content: fullText || "...", streaming: false } : m,
+        ),
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
+      setMessages((prev) => prev.filter((m) => m.id !== assistantId));
+    } finally {
+      setLoading(false);
+    }
+  }, [input, loading, messages]);
+
+  // Generate video (delegate to /api/generate/auto)
+  const generateVideo = useCallback(async () => {
+    const text = input.trim();
+    if (!text || loading) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/generate/auto", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ input: text }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(res.status === 429 ? "Rate limit hit. Try again in a minute." : (data.error ?? "Generation failed"));
+        setLoading(false);
+        return;
+      }
+      window.location.href = `/job/${data.jobId}`;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
+      setLoading(false);
+    }
+  }, [input, loading]);
+
+  const handleKey = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        sendChat();
+      }
+    },
+    [sendChat],
+  );
 
   return (
-    <Link
-      href="/creator"
-      className="inline-flex items-center gap-2 mt-3 px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-xs font-semibold text-white hover:from-purple-500 hover:to-pink-500 transition-all"
-    >
-      <FilmIcon className="w-3.5 h-3.5" />
-      Go to Creator
-    </Link>
+    <div className="min-h-dvh bg-black text-white flex flex-col">
+
+      {/* Nav */}
+      <nav className="border-b border-[#1a1a1a] px-6 py-3 flex items-center justify-between font-mono text-[0.65rem] tracking-widest uppercase shrink-0">
+        <span className="text-[#FFE500] font-bold">HYPERCINEMA</span>
+        <div className="flex gap-6 text-[#555]">
+          <Link href="/creator" className="hover:text-[#FFE500] transition-colors">MEDIA</Link>
+          <Link href="/autonomous" className="hover:text-[#FFE500] transition-colors">FEED</Link>
+          <Link href="/admin/inference" className="hover:text-[#FFE500] transition-colors">ADMIN</Link>
+        </div>
+      </nav>
+
+      {/* Chat area */}
+      <div
+        ref={scrollRef}
+        className="flex-1 overflow-y-auto px-4 py-6 max-w-2xl w-full mx-auto"
+      >
+        {messages.length === 0 && (
+          <div className="flex flex-col items-center justify-center h-full min-h-[40vh] text-center space-y-6">
+            <div>
+              <p className="font-mono text-[0.6rem] tracking-[0.25em] uppercase text-[#FFE500] mb-3">
+                AI · Crypto · Cinema
+              </p>
+              <h1 className="font-display text-[clamp(2.5rem,8vw,4rem)] font-black leading-[0.88] tracking-tighter">
+                ASK ANYTHING.<br />
+                <span className="text-[#FFE500]">OR GENERATE.</span>
+              </h1>
+            </div>
+
+            {/* Quick starters */}
+            <div className="w-full max-w-sm space-y-2">
+              {[
+                { label: "What is this?", text: "What is HyperCinema and what can I do here?" },
+                { label: "Explain a memecoin", text: "How do I check if a Solana memecoin is safe to buy?" },
+                { label: "MythX demo", text: "Generate a MythX video for @elonmusk" },
+              ].map((s) => (
+                <button
+                  key={s.label}
+                  type="button"
+                  onClick={() => { setInput(s.text); inputRef.current?.focus(); }}
+                  className="w-full text-left border border-[#222] text-[#555] px-3 py-2 font-mono text-[0.62rem] tracking-wide hover:border-[#FFE500] hover:text-[#FFE500] transition-colors bg-transparent cursor-pointer"
+                >
+                  {s.label} →
+                </button>
+              ))}
+            </div>
+
+            {/* 3 capabilities */}
+            <div className="grid grid-cols-3 gap-4 text-center w-full max-w-sm pt-4 border-t border-[#111]">
+              {[
+                { icon: "🎬", title: "MythX", desc: "@handle → video" },
+                { icon: "📊", title: "HashMyth", desc: "wallet → cinema" },
+                { icon: "💬", title: "Chat", desc: "ask anything" },
+              ].map((item) => (
+                <div key={item.title}>
+                  <div className="text-xl mb-1">{item.icon}</div>
+                  <div className="font-mono text-[0.58rem] font-bold tracking-widest uppercase text-white mb-0.5">
+                    {item.title}
+                  </div>
+                  <div className="text-[0.62rem] text-[#444]">{item.desc}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {messages.map((msg) => (
+          <Bubble key={msg.id} msg={msg} />
+        ))}
+      </div>
+
+      {/* Input dock */}
+      <div className="shrink-0 border-t border-[#1a1a1a] bg-black px-4 py-4">
+        <div className="max-w-2xl mx-auto space-y-2">
+
+          {/* Video generation hint */}
+          {detectedType && (
+            <div className="flex items-center gap-3">
+              <span className="font-mono text-[0.58rem] tracking-[0.15em] text-[#FFE500]">
+                {VIDEO_HINT[detectedType]}
+              </span>
+              <button
+                type="button"
+                onClick={generateVideo}
+                disabled={loading}
+                className="px-3 py-1 bg-[#FFE500] text-black font-mono text-[0.6rem] font-black tracking-widest uppercase disabled:opacity-40 hover:bg-white transition-colors cursor-pointer"
+              >
+                {loading ? "..." : "GENERATE →"}
+              </button>
+            </div>
+          )}
+
+          {/* Error */}
+          {error && (
+            <div className="border border-[#FF3333] bg-[rgba(255,51,51,0.05)] px-3 py-2 font-mono text-[0.65rem] text-[#FF6666]">
+              {error}
+            </div>
+          )}
+
+          {/* Input row */}
+          <form
+            onSubmit={(e) => { e.preventDefault(); sendChat(); }}
+            className="flex gap-2"
+          >
+            <div className="flex-1 border border-[#333] focus-within:border-[#FFE500] transition-colors">
+              <input
+                ref={inputRef}
+                type="text"
+                value={input}
+                onChange={(e) => { setInput(e.target.value); setError(null); }}
+                onKeyDown={handleKey}
+                placeholder="Ask anything · @handle · wallet address"
+                disabled={loading}
+                autoFocus
+                className="w-full bg-black text-white px-4 py-3 outline-none placeholder-[#333] font-mono text-sm"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={loading || !input.trim()}
+              className="px-5 py-3 bg-[#FFE500] text-black font-mono font-black text-sm tracking-widest uppercase disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white transition-colors"
+            >
+              {loading ? "..." : "→"}
+            </button>
+          </form>
+
+          <p className="font-mono text-[0.55rem] tracking-wide text-[#333]">
+            ENTER to send · wallet/handle auto-detected for video · <Link href="/creator" className="text-[#444] hover:text-[#FFE500]">media studio</Link> · <a href="https://x.com/HyperMythX" target="_blank" rel="noopener noreferrer" className="text-[#444] hover:text-[#FFE500]">@HyperMythsX</a>
+          </p>
+        </div>
+      </div>
+    </div>
   );
 }

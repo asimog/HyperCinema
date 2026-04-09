@@ -13,11 +13,16 @@ export default async function ModerationPage({
 }) {
   const resolvedSearchParams = await searchParams;
   const error =
-    typeof resolvedSearchParams.error === "string" ? resolvedSearchParams.error : undefined;
+    typeof resolvedSearchParams.error === "string"
+      ? resolvedSearchParams.error
+      : undefined;
   const isAuthed = await hasCockpitAccess();
 
   if (!isAuthed) {
-    const errorMessage = error === "invalid" ? "Invalid username or password. Please try again." : undefined;
+    const errorMessage =
+      error === "invalid"
+        ? "Invalid username or password. Please try again."
+        : undefined;
 
     return (
       <CredentialLoginCard
@@ -35,12 +40,13 @@ export default async function ModerationPage({
       <section className="panel rail-panel">
         <div className="panel-header">
           <div>
-            <p className="eyebrow">HyperMyths Cockpit</p>
+            <p className="eyebrow">HyperCinema Cockpit</p>
             <h2>Gallery moderation</h2>
           </div>
         </div>
         <p className="route-summary">
-          Review finished jobs, flag anything questionable, and hide anything that should not remain public.
+          Review finished jobs, flag anything questionable, and hide anything
+          that should not remain public.
         </p>
       </section>
     </div>
@@ -56,20 +62,21 @@ export default async function ModerationPage({
           </div>
         </div>
         <div className="button-row">
-          <Link href="/admin/discount-codes" className="button button-secondary">
-            Discount codes
-          </Link>
           <Link href="/admin/inference" className="button button-secondary">
             Inference
           </Link>
           <Link href="/" className="button button-secondary">
             Home
           </Link>
-          <Link href="/gallery" className="button button-secondary">
-            Gallery
+          <Link href="/autonomous" className="button button-secondary">
+            Live Feed
           </Link>
         </div>
-        <form action="/api/cockpit/logout" method="POST" style={{ marginTop: "0.75rem" }}>
+        <form
+          action="/api/cockpit/logout"
+          method="POST"
+          style={{ marginTop: "0.75rem" }}
+        >
           <button type="submit" className="button button-secondary">
             Log out
           </button>
@@ -83,10 +90,10 @@ export default async function ModerationPage({
       <HyperflowAssemblyScaffold leftRail={leftRail} rightRail={rightRail}>
         <section className="panel">
           <div className="panel-header">
-          <div>
-            <p className="eyebrow">Admin</p>
-            <h1>Moderation cockpit</h1>
-          </div>
+            <div>
+              <p className="eyebrow">Admin</p>
+              <h1>Moderation cockpit</h1>
+            </div>
           </div>
         </section>
         <ModerationTable
@@ -106,4 +113,3 @@ export default async function ModerationPage({
     </div>
   );
 }
-

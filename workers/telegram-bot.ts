@@ -1,163 +1,117 @@
+// Telegram bot — free video generation for individuals and groups.
+//
+// Commands (DMs and groups):
+//   /start               — welcome + help
+//   /video @handle       — MythX: X profile → video
+//   /video <address>     — HashMyth: wallet/token → video (Solana/ETH/Base/BNB)
+//   /random              — Random cinema video
+//   /status <jobId>      — Check job status
+//
+// Group admin commands:
+//   /settoken <address>  — Pin a token to this group (future /random in group uses it)
+//   /cleartoken          — Remove pinned token
+//
+// Plain text in group with pinned token:
+//   "video" or "generate" — generates a video for the pinned token
+//
+// Rate limits (per chat):
+//   Profile: 2/day · Wallet: 2/day · Random: 5/day
+
 import TelegramBot from "node-telegram-bot-api";
 import { existsSync, createReadStream } from "fs";
 import { stat } from "fs/promises";
-import { getEnv } from "@/lib/env";
 import { logger } from "@/lib/logging/logger";
 import {
   createPromptVideoJob,
   createTokenVideoJob,
+  getJob,
+  getVideo,
 } from "@/lib/jobs/repository";
-import { getJob, getVideo } from "@/lib/jobs/repository";
 import { triggerJobProcessing } from "@/lib/jobs/trigger";
 import { fetchXProfileTweets } from "@/lib/x/api";
 import { resolveMemecoinMetadata } from "@/lib/memecoins/metadata";
 import { JobDocument, SupportedTokenChain } from "@/lib/types/domain";
 
-const RAILWAY_VIDEO_DIR = "/data/videos";
+const APP_BASE_URL = process.env.APP_BASE_URL || "https://hypercinema.app";
+const VIDEO_DIR = "/data/videos";
 
-// ── Rate limiting (mirrors web limits) ──────────────────────────────
+// ── Input detection ─────────────────────────────────────────────────
 
-interface RateWindow {
-  count: number;
-  resetAt: number;
+function detectInput(input: string): "mythx" | "hashmyth" | "random" {
+  const t = input.trim();
+  if (!t) return "random";
+  if (t.startsWith("@") || /^https?:\/\/(x|twitter)\.com\//.test(t)) return "mythx";
+  if (/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(t)) return "hashmyth";  // Solana
+  if (/^0x[a-fA-F0-9]{40}$/.test(t)) return "hashmyth";             // EVM
+  // Short handles without @
+  if (/^[a-zA-Z][a-zA-Z0-9_]{1,14}$/.test(t)) return "mythx";
+  return "mythx";
 }
 
+// ── Rate limiting ────────────────────────────────────────────────────
+
+interface RateWindow { count: number; resetAt: number }
 const rateLimitStore = new Map<string, RateWindow>();
 
-function checkRateLimit(key: string, maxPerDay: number): boolean {
+function checkRateLimit(key: string, max: number): boolean {
   const now = Date.now();
-  const window = rateLimitStore.get(key);
-  if (!window || now > window.resetAt) {
+  const w = rateLimitStore.get(key);
+  if (!w || now > w.resetAt) {
     rateLimitStore.set(key, { count: 1, resetAt: now + 24 * 60 * 60 * 1000 });
     return true;
   }
-  if (window.count >= maxPerDay) return false;
-  window.count++;
+  if (w.count >= max) return false;
+  w.count++;
   return true;
 }
 
-function profileRateKey(chatId: number): string {
-  return `tg:profile:${chatId}`;
-}
-function walletRateKey(chatId: number): string {
-  return `tg:wallet:${chatId}`;
-}
-function ipRateKey(chatId: number): string {
-  return `tg:ip:${chatId}`;
-}
+// ── Group token store (in-memory, per-process) ───────────────────────
 
-// ── Video delivery helpers ──────────────────────────────────────────
+const groupTokens = new Map<number, string>(); // chatId → tokenAddress
 
-function getLocalVideoPath(jobId: string): string {
-  return `${RAILWAY_VIDEO_DIR}/${jobId}.mp4`;
-}
+// ── Job creation helpers ─────────────────────────────────────────────
 
-function getLocalThumbnailPath(jobId: string): string {
-  return `${RAILWAY_VIDEO_DIR}/${jobId}-thumbnail.jpg`;
-}
-
-async function sendVideoFile(
-  bot: TelegramBot,
-  chatId: number,
-  jobId: string,
-): Promise<boolean> {
-  const localPath = getLocalVideoPath(jobId);
-  if (!existsSync(localPath)) {
-    logger.warn("tg_video_file_not_found", {
-      component: "telegram-bot",
-      stage: "send_video",
-      jobId,
-      chatId,
-      localPath,
-    });
-    return false;
-  }
-
-  const fileStats = await stat(localPath);
-  const thumbPath = getLocalThumbnailPath(jobId);
-  const thumb = existsSync(thumbPath) ? thumbPath : undefined;
-
-  await bot
-    .sendVideo(chatId, createReadStream(localPath), {
-      caption: "Your autobiography, from HyperMythsX",
-      thumbnail: thumb,
-      supports_streaming: true,
-    })
-    .then(() => {
-      logger.info("tg_video_sent", {
-        component: "telegram-bot",
-        stage: "send_video",
-        jobId,
-        chatId,
-        sizeBytes: fileStats.size,
-      });
-    })
-    .catch((err) => {
-      logger.error("tg_send_video_failed", {
-        component: "telegram-bot",
-        stage: "send_video",
-        jobId,
-        chatId,
-        errorCode: "tg_send_failed",
-        errorMessage: err instanceof Error ? err.message : "unknown",
-      });
-    });
-
-  return true;
-}
-
-// ── Job creation helpers ────────────────────────────────────────────
+const RANDOM_PROMPTS = [
+  "The rise and fall of a forgotten memecoin, told through blockchain whispers.",
+  "A whale silently moves markets at midnight. What are they planning?",
+  "From penny to moon: the untold story of a Solana airdrop nobody expected.",
+  "DeFi summer: one year later. A documentary.",
+  "The last block before the rug pull. A cinematic thriller.",
+];
 
 async function createMythxJob(profileInput: string): Promise<JobDocument> {
-  let subjectName = profileInput.startsWith("@")
-    ? profileInput
-    : `@${profileInput}`;
+  let subjectName = profileInput.startsWith("@") ? profileInput : `@${profileInput}`;
   let sourceMediaUrl: string | null = null;
   let sourceTranscript: string | null = null;
 
   try {
     const profile = await fetchXProfileTweets({ profileInput, maxTweets: 42 });
-    subjectName =
-      profile.profile.displayName ||
-      (profile.profile.username ? `@${profile.profile.username}` : subjectName);
+    subjectName = profile.profile.displayName || (profile.profile.username ? `@${profile.profile.username}` : subjectName);
     sourceMediaUrl = profile.profile.profileUrl;
     sourceTranscript = profile.transcript;
   } catch (err) {
     logger.warn("tg_mythx_profile_hydration_failed", {
-      component: "telegram-bot",
-      stage: "hydrate_mythx_profile",
-      profileInput,
-      errorCode: "mythx_profile_hydration_failed",
+      component: "telegram-bot", stage: "hydrate_mythx_profile", profileInput,
       errorMessage: err instanceof Error ? err.message : "unknown",
     });
   }
 
   return createPromptVideoJob({
-    requestKind: "mythx",
-    packageType: "60s",
-    subjectName,
-    subjectDescription: `Autobiography built from ${profileInput}'s tweets.`,
-    sourceMediaUrl,
-    sourceMediaProvider: "x",
-    sourceTranscript,
-    videoSeconds: 60,
-    paymentWaived: true,
+    requestKind: "mythx", packageType: "30s",
+    subjectName, sourceMediaUrl, sourceMediaProvider: "x",
+    sourceTranscript, paymentWaived: true, experience: "mythx",
   });
 }
 
-async function createHashmythJob(input: string): Promise<JobDocument> {
-  const trimmed = input.trim();
+async function createHashmythJob(address: string): Promise<JobDocument> {
   let subjectName: string | null = null;
   let subjectSymbol: string | null = null;
   let subjectImage: string | null = null;
   let subjectDescription: string | null = null;
-  let chain: SupportedTokenChain | null = null;
+  let chain: SupportedTokenChain = "solana";
 
   try {
-    const token = await resolveMemecoinMetadata({
-      address: trimmed,
-      chain: "auto",
-    });
+    const token = await resolveMemecoinMetadata({ address, chain: "auto" });
     subjectName = token.name;
     subjectSymbol = token.symbol;
     subjectImage = token.image;
@@ -165,409 +119,306 @@ async function createHashmythJob(input: string): Promise<JobDocument> {
     chain = token.chain;
   } catch (err) {
     logger.warn("tg_hashmyth_metadata_failed", {
-      component: "telegram-bot",
-      stage: "resolve_token",
-      address: trimmed,
-      errorCode: "token_metadata_failed",
+      component: "telegram-bot", stage: "resolve_token", address,
       errorMessage: err instanceof Error ? err.message : "unknown",
     });
   }
 
   return createTokenVideoJob({
-    tokenAddress: trimmed,
-    packageType: "60s",
-    subjectChain: chain ?? "solana",
-    subjectName,
-    subjectSymbol,
-    subjectImage,
-    subjectDescription,
-    paymentWaived: true,
+    tokenAddress: address, packageType: "30s",
+    subjectChain: chain, subjectName, subjectSymbol,
+    subjectImage, subjectDescription, paymentWaived: true,
   });
 }
 
-async function createRandomJob(): Promise<JobDocument> {
-  const randomTopics = [
-    "The rise and fall of Dogecoin, told through blockchain whispers.",
-    "A midnight trader's journey through Solana memecoins.",
-    "From zero to hero: the story of a forgotten memecoin.",
-    "The whale who moved markets and vanished.",
-    "A DeFi degenerate's love letter to liquidity pools.",
-  ];
-  const prompt = randomTopics[Math.floor(Math.random() * randomTopics.length)];
-
+async function createRandomJob(pinnedToken?: string): Promise<JobDocument> {
+  if (pinnedToken) return createHashmythJob(pinnedToken);
+  const prompt = RANDOM_PROMPTS[Math.floor(Math.random() * RANDOM_PROMPTS.length)];
   return createPromptVideoJob({
-    requestKind: "generic_cinema",
-    packageType: "30s",
-    subjectName: "Random Cinema",
-    subjectDescription: prompt,
-    requestedPrompt: prompt,
-    videoSeconds: 30,
-    paymentWaived: true,
+    requestKind: "generic_cinema", packageType: "30s",
+    subjectName: "Random Cinema", subjectDescription: prompt,
+    requestedPrompt: prompt, paymentWaived: true,
   });
 }
 
-// ── Bot setup ───────────────────────────────────────────────────────
+// ── Video delivery ───────────────────────────────────────────────────
+
+async function sendVideoFile(bot: TelegramBot, chatId: number, jobId: string): Promise<boolean> {
+  const path = `${VIDEO_DIR}/${jobId}.mp4`;
+  if (!existsSync(path)) return false;
+  const fileStat = await stat(path);
+  const thumb = existsSync(`${VIDEO_DIR}/${jobId}-thumbnail.jpg`)
+    ? `${VIDEO_DIR}/${jobId}-thumbnail.jpg` : undefined;
+  try {
+    await bot.sendVideo(chatId, createReadStream(path), {
+      caption: `Your video is ready! Watch online: ${APP_BASE_URL}/job/${jobId}`,
+      thumbnail: thumb, supports_streaming: true,
+    });
+    logger.info("tg_video_sent", { component: "telegram-bot", jobId, chatId, sizeBytes: fileStat.size });
+    return true;
+  } catch (err) {
+    logger.error("tg_send_video_failed", {
+      component: "telegram-bot", jobId, chatId,
+      errorMessage: err instanceof Error ? err.message : "unknown",
+    });
+    return false;
+  }
+}
+
+// ── Job dispatch + delivery loop ─────────────────────────────────────
+
+const pendingDeliveries = new Map<string, number>(); // jobId → chatId
+
+async function dispatchAndTrack(
+  bot: TelegramBot,
+  chatId: number,
+  job: JobDocument,
+  label: string,
+): Promise<void> {
+  const jobUrl = `${APP_BASE_URL}/job/${job.jobId}`;
+
+  await bot.sendMessage(
+    chatId,
+    `✅ *${label}* started!\n\n🔗 Track it live: ${jobUrl}\n\nI'll send your video here when it's done (usually 2-5 min).`,
+    { parse_mode: "Markdown" },
+  );
+
+  pendingDeliveries.set(job.jobId, chatId);
+
+  triggerJobProcessing(job.jobId).catch((err) => {
+    logger.error("tg_trigger_failed", {
+      component: "telegram-bot", jobId: job.jobId, chatId,
+      errorMessage: err instanceof Error ? err.message : "unknown",
+    });
+  });
+}
+
+// ── Admin check ──────────────────────────────────────────────────────
+
+async function isGroupAdmin(bot: TelegramBot, chatId: number, userId: number): Promise<boolean> {
+  try {
+    const member = await bot.getChatMember(chatId, userId);
+    return member.status === "administrator" || member.status === "creator";
+  } catch {
+    return false;
+  }
+}
+
+// ── Bot setup ────────────────────────────────────────────────────────
 
 function setupTelegramBot(): TelegramBot | null {
-  const env = getEnv();
   const token = process.env.TELEGRAM_BOT_TOKEN;
-
   if (!token) {
     logger.warn("tg_bot_disabled", {
-      component: "telegram-bot",
-      stage: "startup",
-      errorCode: "missing_token",
-      errorMessage: "TELEGRAM_BOT_TOKEN not set; Telegram bot will not start.",
+      component: "telegram-bot", stage: "startup", errorMessage: "TELEGRAM_BOT_TOKEN not set",
     });
     return null;
   }
 
   const bot = new TelegramBot(token, { polling: true });
 
-  // ── /start ────────────────────────────────────────────────────────
+  // /start ────────────────────────────────────────────────────────────
   bot.onText(/\/start/, async (msg) => {
     const chatId = msg.chat.id;
-    const welcome = [
-      "Welcome to HyperMythsX! I can generate AI autobiography videos for you.",
+    const isGroup = msg.chat.type !== "private";
+    const pinned = isGroup ? groupTokens.get(chatId) : null;
+
+    const lines = [
+      "🎬 *HyperCinema Bot* — free AI video generator",
       "",
-      "Available commands:",
-      "  /mythx @username — Generate an autobiography video from an X profile",
-      "  /hashmyth <address> — Scan a wallet or memecoin, generate a video",
-      "  /random — Generate a random TikTok-style cinema video",
-      "  /status <jobId> — Check the status of a video job",
+      "Commands:",
+      "  /video @username — X profile autobiography video",
+      "  /video <address> — Wallet or token video (SOL · ETH · Base · BNB)",
+      "  /random — Random cinema video",
+      "  /status <jobId> — Check job progress",
       "",
-      "Rate limits: 2 profile videos/day, 2 wallet videos/day, 5 random/day.",
-    ].join("\n");
+      isGroup ? "Group admin commands:" : "",
+      isGroup ? "  /settoken <address> — Pin a token to this group" : "",
+      isGroup ? "  /cleartoken — Remove pinned token" : "",
+      isGroup && pinned ? `\nPinned token: \`${pinned}\`` : "",
+      "",
+      "Rate limits: 2 profile · 2 wallet · 5 random per chat per day.",
+      `\nAll videos are public: ${APP_BASE_URL}/autonomous`,
+      "\nAlso on X: @HyperMythsX — https://x.com/HyperMythX",
+    ].filter((l) => l !== "");
 
-    await bot.sendMessage(chatId, welcome);
-    logger.info("tg_start", {
-      component: "telegram-bot",
-      stage: "start_command",
-      chatId,
-      username: msg.from?.username,
-    });
+    await bot.sendMessage(chatId, lines.join("\n"), { parse_mode: "Markdown" });
   });
 
-  // ── /mythx ────────────────────────────────────────────────────────
-  bot.onText(/\/mythx\s+(.+)/, async (msg, match) => {
+  // /video <input> ────────────────────────────────────────────────────
+  bot.onText(/\/video\s+(.+)/, async (msg, match) => {
     const chatId = msg.chat.id;
-    const profileInput = match![1].trim();
+    const input = match![1].trim();
+    const type = detectInput(input);
 
-    if (!checkRateLimit(profileRateKey(chatId), 2)) {
-      await bot.sendMessage(
-        chatId,
-        "Rate limit reached: 2 profile videos per day. Please try again tomorrow.",
-      );
-      return;
-    }
+    if (type === "mythx") {
+      if (!checkRateLimit(`tg:profile:${chatId}`, 2)) {
+        await bot.sendMessage(chatId, "⏳ Rate limit: 2 profile videos per day. Try again tomorrow.");
+        return;
+      }
+      await bot.sendMessage(chatId, `🎬 Generating autobiography for *${input}*...`, { parse_mode: "Markdown" });
+      try {
+        const job = await createMythxJob(input);
+        await dispatchAndTrack(bot, chatId, job, `MythX — ${input}`);
+      } catch (err) {
+        await bot.sendMessage(chatId, `❌ Failed: ${err instanceof Error ? err.message : "unknown error"}`);
+      }
 
-    await bot.sendMessage(
-      chatId,
-      `Generating MythX autobiography for ${profileInput}... This will take a few minutes.`,
-    );
-
-    try {
-      const job = await createMythxJob(profileInput);
-      logger.info("tg_mythx_job_created", {
-        component: "telegram-bot",
-        stage: "mythx_command",
-        chatId,
-        jobId: job.jobId,
-        profileInput,
-      });
-
-      await bot.sendMessage(
-        chatId,
-        `Video job created: \`${job.jobId}\`\nUse /status ${job.jobId} to check progress.`,
-        {
-          parse_mode: "Markdown",
-        },
-      );
-
-      await triggerJobProcessing(job.jobId).catch((err) => {
-        logger.error("tg_mythx_trigger_failed", {
-          component: "telegram-bot",
-          stage: "trigger_processing",
-          jobId: job.jobId,
-          chatId,
-          errorCode: "trigger_failed",
-          errorMessage: err instanceof Error ? err.message : "unknown",
-        });
-      });
-    } catch (err) {
-      await bot.sendMessage(
-        chatId,
-        `Failed to create video job: ${err instanceof Error ? err.message : "Unknown error"}`,
-      );
-      logger.error("tg_mythx_job_failed", {
-        component: "telegram-bot",
-        stage: "mythx_command",
-        chatId,
-        profileInput,
-        errorCode: "job_creation_failed",
-        errorMessage: err instanceof Error ? err.message : "unknown",
-      });
+    } else {
+      if (!checkRateLimit(`tg:wallet:${chatId}`, 2)) {
+        await bot.sendMessage(chatId, "⏳ Rate limit: 2 wallet videos per day. Try again tomorrow.");
+        return;
+      }
+      await bot.sendMessage(chatId, `📊 Scanning \`${input.slice(0, 20)}...\` and generating video...`, { parse_mode: "Markdown" });
+      try {
+        const job = await createHashmythJob(input);
+        await dispatchAndTrack(bot, chatId, job, `HashMyth — ${input.slice(0, 12)}...`);
+      } catch (err) {
+        await bot.sendMessage(chatId, `❌ Failed: ${err instanceof Error ? err.message : "unknown error"}`);
+      }
     }
   });
 
-  // ── /hashmyth ─────────────────────────────────────────────────────
-  bot.onText(/\/hashmyth\s+(.+)/, async (msg, match) => {
-    const chatId = msg.chat.id;
-    const address = match![1].trim();
-
-    if (!checkRateLimit(walletRateKey(chatId), 2)) {
-      await bot.sendMessage(
-        chatId,
-        "Rate limit reached: 2 wallet videos per day. Please try again tomorrow.",
-      );
-      return;
-    }
-
-    await bot.sendMessage(
-      chatId,
-      `Scanning ${address} and generating video... This will take a few minutes.`,
-    );
-
-    try {
-      const job = await createHashmythJob(address);
-      logger.info("tg_hashmyth_job_created", {
-        component: "telegram-bot",
-        stage: "hashmyth_command",
-        chatId,
-        jobId: job.jobId,
-        address,
-      });
-
-      await bot.sendMessage(
-        chatId,
-        `Video job created: \`${job.jobId}\`\nUse /status ${job.jobId} to check progress.`,
-        {
-          parse_mode: "Markdown",
-        },
-      );
-
-      await triggerJobProcessing(job.jobId).catch((err) => {
-        logger.error("tg_hashmyth_trigger_failed", {
-          component: "telegram-bot",
-          stage: "trigger_processing",
-          jobId: job.jobId,
-          chatId,
-          errorCode: "trigger_failed",
-          errorMessage: err instanceof Error ? err.message : "unknown",
-        });
-      });
-    } catch (err) {
-      await bot.sendMessage(
-        chatId,
-        `Failed to create video job: ${err instanceof Error ? err.message : "Unknown error"}`,
-      );
-      logger.error("tg_hashmyth_job_failed", {
-        component: "telegram-bot",
-        stage: "hashmyth_command",
-        chatId,
-        address,
-        errorCode: "job_creation_failed",
-        errorMessage: err instanceof Error ? err.message : "unknown",
-      });
-    }
-  });
-
-  // ── /random ───────────────────────────────────────────────────────
+  // /random ───────────────────────────────────────────────────────────
   bot.onText(/\/random/, async (msg) => {
     const chatId = msg.chat.id;
-
-    if (!checkRateLimit(ipRateKey(chatId), 5)) {
-      await bot.sendMessage(
-        chatId,
-        "Rate limit reached: 5 random videos per day. Please try again tomorrow.",
-      );
+    if (!checkRateLimit(`tg:random:${chatId}`, 5)) {
+      await bot.sendMessage(chatId, "⏳ Rate limit: 5 random videos per day. Try again tomorrow.");
       return;
     }
-
-    await bot.sendMessage(
-      chatId,
-      "Generating a random TikTok-style cinema video...",
-    );
-
+    const pinned = groupTokens.get(chatId);
+    const label = pinned ? `token ${pinned.slice(0, 8)}...` : "random cinema";
+    await bot.sendMessage(chatId, `🎲 Generating ${label} video...`);
     try {
-      const job = await createRandomJob();
-      logger.info("tg_random_job_created", {
-        component: "telegram-bot",
-        stage: "random_command",
-        chatId,
-        jobId: job.jobId,
-      });
-
-      await bot.sendMessage(
-        chatId,
-        `Video job created: \`${job.jobId}\`\nUse /status ${job.jobId} to check progress.`,
-        {
-          parse_mode: "Markdown",
-        },
-      );
-
-      await triggerJobProcessing(job.jobId).catch((err) => {
-        logger.error("tg_random_trigger_failed", {
-          component: "telegram-bot",
-          stage: "trigger_processing",
-          jobId: job.jobId,
-          chatId,
-          errorCode: "trigger_failed",
-          errorMessage: err instanceof Error ? err.message : "unknown",
-        });
-      });
+      const job = await createRandomJob(pinned);
+      await dispatchAndTrack(bot, chatId, job, `Random — ${label}`);
     } catch (err) {
-      await bot.sendMessage(
-        chatId,
-        `Failed to create video job: ${err instanceof Error ? err.message : "Unknown error"}`,
-      );
-      logger.error("tg_random_job_failed", {
-        component: "telegram-bot",
-        stage: "random_command",
-        chatId,
-        errorCode: "job_creation_failed",
-        errorMessage: err instanceof Error ? err.message : "unknown",
-      });
+      await bot.sendMessage(chatId, `❌ Failed: ${err instanceof Error ? err.message : "unknown error"}`);
     }
   });
 
-  // ── /status ───────────────────────────────────────────────────────
-  bot.onText(/\/status\s+(.+)/, async (msg, match) => {
+  // /settoken <address> — group admin only ────────────────────────────
+  bot.onText(/\/settoken\s+(\S+)/, async (msg, match) => {
     const chatId = msg.chat.id;
-    const jobId = match![1].trim();
-
-    const job = await getJob(jobId);
-    if (!job) {
-      await bot.sendMessage(chatId, `Job ${jobId} not found.`);
+    const userId = msg.from?.id;
+    if (msg.chat.type === "private") {
+      await bot.sendMessage(chatId, "/settoken is for group chats only.");
       return;
     }
+    if (!userId || !(await isGroupAdmin(bot, chatId, userId))) {
+      await bot.sendMessage(chatId, "⛔ Only group admins can set the pinned token.");
+      return;
+    }
+    const address = match![1].trim();
+    const type = detectInput(address);
+    if (type !== "hashmyth") {
+      await bot.sendMessage(chatId, "❌ That doesn't look like a valid wallet/token address.");
+      return;
+    }
+    groupTokens.set(chatId, address);
+    await bot.sendMessage(chatId, `✅ Pinned token set: \`${address}\`\n\nNow /random will generate videos for this token.`, { parse_mode: "Markdown" });
+    logger.info("tg_group_token_set", { component: "telegram-bot", chatId, address });
+  });
 
-    const statusMessages: Record<string, string> = {
-      pending: "Job is waiting to be processed.",
-      processing: `Job is processing. Current step: ${job.progress}`,
-      complete: "Video is ready!",
-      failed: `Job failed: ${job.errorMessage || "Unknown error"}`,
-    };
+  // /cleartoken ───────────────────────────────────────────────────────
+  bot.onText(/\/cleartoken/, async (msg) => {
+    const chatId = msg.chat.id;
+    const userId = msg.from?.id;
+    if (msg.chat.type === "private") { await bot.sendMessage(chatId, "/cleartoken is for groups only."); return; }
+    if (!userId || !(await isGroupAdmin(bot, chatId, userId))) {
+      await bot.sendMessage(chatId, "⛔ Only group admins can clear the pinned token."); return;
+    }
+    groupTokens.delete(chatId);
+    await bot.sendMessage(chatId, "✅ Pinned token cleared. /random will now generate truly random videos.");
+  });
 
-    const message = [
-      `Job: \`${job.jobId}\``,
-      `Status: ${job.status}`,
-      `Progress: ${job.progress}`,
-      statusMessages[job.status] || "",
-    ]
-      .filter(Boolean)
-      .join("\n");
+  // /status <jobId> ───────────────────────────────────────────────────
+  bot.onText(/\/status\s+(\S+)/, async (msg, match) => {
+    const chatId = msg.chat.id;
+    const jobId = match![1].trim();
+    const job = await getJob(jobId);
+    if (!job) { await bot.sendMessage(chatId, `Job \`${jobId}\` not found.`, { parse_mode: "Markdown" }); return; }
 
-    await bot.sendMessage(chatId, message, { parse_mode: "Markdown" });
+    const statusLine = job.status === "complete"
+      ? "✅ Ready!"
+      : job.status === "failed"
+        ? `❌ Failed: ${(job as unknown as Record<string, string>).errorMessage ?? "unknown"}`
+        : `⏳ ${job.status} — ${job.progress ?? "working..."}`;
 
-    // If complete, try to send the video file
+    await bot.sendMessage(
+      chatId,
+      `*Job* \`${jobId}\`\n${statusLine}\n🔗 ${APP_BASE_URL}/job/${jobId}`,
+      { parse_mode: "Markdown" },
+    );
+
     if (job.status === "complete") {
       const video = await getVideo(jobId);
-      if (video && video.renderStatus === "ready") {
-        await bot.sendMessage(chatId, "Sending your video now...");
+      if (video?.renderStatus === "ready") {
         const sent = await sendVideoFile(bot, chatId, jobId);
-        if (!sent) {
-          const videoUrl = video.videoUrl;
-          if (videoUrl) {
-            await bot.sendMessage(chatId, `Video is ready: ${videoUrl}`);
-          } else {
-            await bot.sendMessage(
-              chatId,
-              "Video file not found on disk. It may have been moved to cloud storage.",
-            );
-          }
+        if (!sent && video.videoUrl) {
+          await bot.sendMessage(chatId, `📹 Video: ${video.videoUrl}`);
         }
       }
     }
-
-    logger.info("tg_status_check", {
-      component: "telegram-bot",
-      stage: "status_command",
-      chatId,
-      jobId,
-      jobStatus: job.status,
-    });
   });
 
-  // ── Watch for job completions and push videos ─────────────────────
-  // Poll for completed jobs every 15 seconds and send videos to waiting users
-  const pendingDeliveries = new Map<string, number>(); // jobId -> chatId
+  // Plain text trigger: "video" or "generate" in group with pinned token ──
+  bot.on("message", async (msg) => {
+    if (!msg.text || msg.chat.type === "private") return;
+    if (msg.text.startsWith("/")) return; // handled above
+    const chatId = msg.chat.id;
+    const pinned = groupTokens.get(chatId);
+    if (!pinned) return;
 
-  // Override: when a user creates a job, we track it for delivery
-  const originalCreateMythxJob = createMythxJob;
+    const trigger = msg.text.toLowerCase().trim();
+    if (trigger === "video" || trigger === "generate" || trigger === "gen") {
+      if (!checkRateLimit(`tg:random:${chatId}`, 5)) {
+        await bot.sendMessage(chatId, "⏳ Rate limit reached. Try again tomorrow.");
+        return;
+      }
+      await bot.sendMessage(chatId, `📊 Generating video for pinned token \`${pinned.slice(0, 8)}...\``, { parse_mode: "Markdown" });
+      try {
+        const job = await createHashmythJob(pinned);
+        await dispatchAndTrack(bot, chatId, job, `Token video — ${pinned.slice(0, 10)}...`);
+      } catch (err) {
+        await bot.sendMessage(chatId, `❌ Failed: ${err instanceof Error ? err.message : "unknown error"}`);
+      }
+    }
+  });
 
+  // Delivery poll ──────────────────────────────────────────────────────
   setInterval(async () => {
     const entries = Array.from(pendingDeliveries.entries());
     for (const [jobId, chatId] of entries) {
-      const job = await getJob(jobId);
-      if (!job) {
-        pendingDeliveries.delete(jobId);
-        continue;
-      }
+      try {
+        const job = await getJob(jobId);
+        if (!job) { pendingDeliveries.delete(jobId); continue; }
 
-      if (job.status === "complete") {
-        pendingDeliveries.delete(jobId);
-        const video = await getVideo(jobId);
-        if (video && video.renderStatus === "ready") {
-          await bot.sendMessage(chatId, "Your video is ready!");
-          await sendVideoFile(bot, chatId, jobId);
-        } else if (video && video.renderStatus === "failed") {
-          await bot.sendMessage(
-            chatId,
-            "Video generation failed. Please try again.",
-          );
+        if (job.status === "complete") {
+          pendingDeliveries.delete(jobId);
+          const video = await getVideo(jobId);
+          if (video?.renderStatus === "ready") {
+            const sent = await sendVideoFile(bot, chatId, jobId);
+            if (!sent) {
+              const url = video.videoUrl || `${APP_BASE_URL}/job/${jobId}`;
+              await bot.sendMessage(chatId, `🎬 Your video is ready!\n\n📹 Watch: ${url}`);
+            }
+          } else {
+            await bot.sendMessage(chatId, `🎬 Job complete! Watch: ${APP_BASE_URL}/job/${jobId}`);
+          }
+        } else if (job.status === "failed") {
+          pendingDeliveries.delete(jobId);
+          await bot.sendMessage(chatId, `❌ Video generation failed. Try again: ${APP_BASE_URL}`);
         }
-        continue;
-      }
-
-      if (job.status === "failed") {
-        pendingDeliveries.delete(jobId);
-        await bot.sendMessage(
-          chatId,
-          `Job failed: ${job.errorMessage || "Unknown error"}. Please try again.`,
-        );
-        continue;
-      }
-
-      if (job.status === "processing") {
-        // Progress update every 60s
-        const jobAge = Date.now() - Date.parse(job.updatedAt);
-        if (jobAge > 60_000 && jobAge % 120_000 < 30_000) {
-          await bot.sendMessage(
-            chatId,
-            `Still working on your video... Current step: ${job.progress}`,
-          );
-        }
+      } catch (err) {
+        logger.error("tg_delivery_poll_error", {
+          component: "telegram-bot", jobId, errorMessage: err instanceof Error ? err.message : "unknown",
+        });
       }
     }
   }, 15_000);
 
-  // Track jobs for delivery by wrapping command handlers
-  // We use a simpler approach: store chatId on job creation via a side map
-  const jobChatMap = new Map<string, number>();
-
-  // Patch: after each job creation, track for delivery
-  // We do this by intercepting the sendMessage with jobId
-  const origSendMessage = bot.sendMessage.bind(bot);
-  bot.sendMessage = async function (
-    chatId: number,
-    text: string,
-    options?: any,
-  ) {
-    // Extract jobId from status message
-    const jobIdMatch = text.match(/Video job created: `([a-f0-9-]+)`/);
-    if (jobIdMatch) {
-      jobChatMap.set(jobIdMatch[1], chatId);
-      pendingDeliveries.set(jobIdMatch[1], chatId);
-    }
-    return origSendMessage(chatId, text, options);
-  };
-
-  logger.info("tg_bot_started", {
-    component: "telegram-bot",
-    stage: "startup",
-  });
-
+  logger.info("tg_bot_started", { component: "telegram-bot", stage: "startup" });
   return bot;
 }
 

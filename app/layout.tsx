@@ -22,9 +22,9 @@ const displayFont = Syne({
 });
 
 export const metadata: Metadata = {
-  title: "HyperMyths",
+  title: "HyperCinema",
   description:
-    "HyperMyths turns profiles, ideas, music, memories, and on-chain stories into cinematic short-form video.",
+    "HyperCinema turns X profiles, wallets, and memecoins into cinematic short-form video. Free. Powered by xAI. Follow @HyperMythsX on X.",
 };
 
 export const viewport: Viewport = {

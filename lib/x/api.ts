@@ -101,7 +101,7 @@ function buildXAuthHeaders(input: {
   const env = getEnv();
   const headers: Record<string, string> = {
     Accept: "application/json",
-    "User-Agent": "HyperMythsX/1.0",
+    "User-Agent": "HyperMythsX/1.0 (+https://x.com/HyperMythX)",
   };
 
   if (env.X_API_BEARER_TOKEN) {

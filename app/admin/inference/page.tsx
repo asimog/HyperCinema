@@ -29,24 +29,29 @@ export default async function InferencePage() {
       <section className="panel rail-panel">
         <div className="panel-header">
           <div>
-            <p className="eyebrow">HyperMyths Cockpit</p>
+            <p className="eyebrow">HyperCinema Cockpit</p>
             <h2>Inference routing</h2>
           </div>
         </div>
         <p className="route-summary">
-          Switch the active text and video providers without editing deployment code. Keep API
-          keys in env vars and use this cockpit to move between models.
+          Switch the active text and video providers without editing deployment
+          code. Keep API keys in env vars and use this cockpit to move between
+          models.
         </p>
         <div className="grid gap-3 md:grid-cols-2">
           <div className="surface-card grid gap-1">
             <strong>Active text</strong>
             <div>{config.text.provider}</div>
-            <div className="route-summary compact">{config.text.model ?? "No model set"}</div>
+            <div className="route-summary compact">
+              {config.text.model ?? "No model set"}
+            </div>
           </div>
           <div className="surface-card grid gap-1">
             <strong>Active video</strong>
             <div>{config.video.provider}</div>
-            <div className="route-summary compact">{config.video.model ?? "No model set"}</div>
+            <div className="route-summary compact">
+              {config.video.model ?? "No model set"}
+            </div>
           </div>
         </div>
       </section>
@@ -66,14 +71,15 @@ export default async function InferencePage() {
           <Link href="/admin/moderation" className="button button-secondary">
             Moderation
           </Link>
-          <Link href="/admin/discount-codes" className="button button-secondary">
-            Discount codes
-          </Link>
           <Link href="/" className="button button-secondary">
             Home
           </Link>
         </div>
-        <form action="/api/cockpit/logout" method="POST" style={{ marginTop: "0.75rem" }}>
+        <form
+          action="/api/cockpit/logout"
+          method="POST"
+          style={{ marginTop: "0.75rem" }}
+        >
           <button type="submit" className="button button-secondary">
             Log out
           </button>
@@ -102,4 +108,3 @@ export default async function InferencePage() {
     </div>
   );
 }
-

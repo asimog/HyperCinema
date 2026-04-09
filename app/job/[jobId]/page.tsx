@@ -248,7 +248,7 @@ export default function JobPage() {
           : job?.subjectName
             ? `${job.subjectName}'s story`
             : "this memecoin";
-    const text = `HyperMyths just turned ${experienceLabel} into a cinematic video.`;
+    const text = `HyperCinema just turned ${experienceLabel} into a cinematic video. Made with @HyperMythsX`;
     return `https://x.com/intent/tweet?text=${encodeURIComponent(
       text,
     )}&url=${encodeURIComponent(publicUrl)}`;
@@ -311,8 +311,8 @@ export default function JobPage() {
           <Link className="button button-secondary" href="/">
             Create another
           </Link>
-          <Link className="button button-secondary" href="/gallery">
-            Open gallery
+          <Link className="button button-secondary" href="/autonomous">
+            Live feed
           </Link>
         </div>
       </section>

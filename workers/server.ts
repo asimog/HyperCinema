@@ -3,7 +3,6 @@ import { createServer } from "http";
 import {
   executeMoltBookSyncCommand,
   executeRetryFailedJobCommand,
-  executeSweepCommand,
 } from "./commands";
 import { processJob } from "./process-job";
 import { setupTelegramBot } from "./telegram-bot";
@@ -103,7 +102,6 @@ const server = createServer(async (request, response) => {
   const isJobRoute =
     request.method === "POST" &&
     (pathname === "/" || pathname === "/jobs/process");
-  const isSweepRoute = request.method === "POST" && pathname === "/sweep";
   const isRetryRoute = request.method === "POST" && pathname === "/retry-job";
   const isMoltBookSyncRoute =
     request.method === "POST" && pathname === "/moltbook-sync";
@@ -116,7 +114,7 @@ const server = createServer(async (request, response) => {
     return;
   }
 
-  if (!isJobRoute && !isSweepRoute && !isRetryRoute && !isMoltBookSyncRoute) {
+  if (!isJobRoute && !isRetryRoute && !isMoltBookSyncRoute) {
     sendJson(response, 404, { error: "Not found" });
     return;
   }
@@ -139,19 +137,6 @@ const server = createServer(async (request, response) => {
     }
     sendJson(response, 400, { error: "Invalid JSON body" });
     return;
-  }
-
-  if (isSweepRoute) {
-    try {
-      const summary = await executeSweepCommand(payload);
-      sendJson(response, 200, { ok: true, ...summary });
-      return;
-    } catch (error) {
-      sendJson(response, 500, {
-        error: error instanceof Error ? error.message : "Sweep failure",
-      });
-      return;
-    }
   }
 
   if (isMoltBookSyncRoute) {

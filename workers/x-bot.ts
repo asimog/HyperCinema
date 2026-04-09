@@ -1,47 +1,88 @@
+// X (Twitter) bot — mention-based video generation.
+// Account: @HyperMythsX — https://x.com/HyperMythX
+//
+// Usage patterns (mention @HyperMythsX):
+//   @HyperMythsX @someone       → MythX: autobiography for @someone
+//   @HyperMythsX wallet <addr>  → HashMyth: token/wallet video
+//   @HyperMythsX <addr>         → HashMyth: auto-detect address
+//   @HyperMythsX random         → Random cinema video
+//
+// Polls mentions every 30s. Replies with job URL immediately,
+// then posts video URL when complete.
+
 import { existsSync, mkdirSync } from "fs";
 import { readFile, writeFile } from "fs/promises";
 import { dirname } from "path";
-import { getEnv } from "@/lib/env";
 import { logger } from "@/lib/logging/logger";
-import { createPromptVideoJob, getJob, getVideo } from "@/lib/jobs/repository";
+import { createPromptVideoJob, createTokenVideoJob, getJob, getVideo } from "@/lib/jobs/repository";
 import { triggerJobProcessing } from "@/lib/jobs/trigger";
 import { fetchXProfileTweets } from "@/lib/x/api";
 import { getXClient } from "@/lib/x/client";
-import { JobDocument } from "@/lib/types/domain";
+import { resolveMemecoinMetadata } from "@/lib/memecoins/metadata";
+import { JobDocument, SupportedTokenChain } from "@/lib/types/domain";
 
+const APP_BASE_URL = process.env.APP_BASE_URL || "https://hypercinema.app";
+const BOT_HANDLE = "hypermythsx"; // @HyperMythsX — https://x.com/HyperMythX
+const BOT_X_URL = "https://x.com/HyperMythX";
 const MENTIONS_FILE = "/data/x-bot/mentions.json";
-const RAILWAY_VIDEO_DIR = "/data/videos";
 const POLL_INTERVAL_MS = 30_000;
 const MAX_RETRIES = 3;
 
-// ── Deduplication store ─────────────────────────────────────────────
+// ── Input detection ──────────────────────────────────────────────────
 
-interface MentionsStore {
-  processedTweetIds: string[];
-  lastPollAt: string | null;
+function detectMentionIntent(text: string): {
+  type: "mythx" | "hashmyth" | "random";
+  target: string;
+} {
+  const clean = text.replace(new RegExp(`@${BOT_HANDLE}`, "gi"), "").trim();
+
+  // Explicit "random"
+  if (/^random$/i.test(clean)) return { type: "random", target: "" };
+
+  // Explicit "wallet <address>"
+  const walletMatch = clean.match(/^wallet\s+(\S+)/i);
+  if (walletMatch) {
+    const addr = walletMatch[1].trim();
+    return { type: "hashmyth", target: addr };
+  }
+
+  // Raw Solana address (32-44 base58 chars)
+  if (/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(clean)) {
+    return { type: "hashmyth", target: clean };
+  }
+
+  // Raw EVM address
+  if (/^0x[a-fA-F0-9]{40}$/.test(clean)) {
+    return { type: "hashmyth", target: clean };
+  }
+
+  // @username (not the bot itself)
+  const handles = (clean.match(/@(\w+)/g) || [])
+    .map((h) => h.slice(1))
+    .filter((h) => h.toLowerCase() !== BOT_HANDLE);
+
+  if (handles.length > 0) return { type: "mythx", target: handles[0] };
+
+  // Bare username without @
+  if (/^[a-zA-Z][a-zA-Z0-9_]{1,14}$/.test(clean)) return { type: "mythx", target: clean };
+
+  // Fallback: random
+  return { type: "random", target: "" };
 }
 
-function ensureMentionsDir(): void {
+// ── Deduplication ────────────────────────────────────────────────────
+
+interface MentionsStore { processedTweetIds: string[]; lastPollAt: string | null }
+
+function ensureMentionsDir() {
   const dir = dirname(MENTIONS_FILE);
-  if (!existsSync(dir)) {
-    mkdirSync(dir, { recursive: true });
-  }
+  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
 }
 
 async function loadMentionsStore(): Promise<MentionsStore> {
   try {
-    if (existsSync(MENTIONS_FILE)) {
-      const raw = await readFile(MENTIONS_FILE, "utf-8");
-      return JSON.parse(raw) as MentionsStore;
-    }
-  } catch (err) {
-    logger.warn("x_bot_load_mentions_failed", {
-      component: "x-bot",
-      stage: "load_mentions",
-      errorCode: "load_mentions_failed",
-      errorMessage: err instanceof Error ? err.message : "unknown",
-    });
-  }
+    if (existsSync(MENTIONS_FILE)) return JSON.parse(await readFile(MENTIONS_FILE, "utf-8"));
+  } catch { /* ignore */ }
   return { processedTweetIds: [], lastPollAt: null };
 }
 
@@ -50,17 +91,118 @@ async function saveMentionsStore(store: MentionsStore): Promise<void> {
   await writeFile(MENTIONS_FILE, JSON.stringify(store, null, 2), "utf-8");
 }
 
-function isProcessed(store: MentionsStore, tweetId: string): boolean {
-  return store.processedTweetIds.includes(tweetId);
-}
-
 function markProcessed(store: MentionsStore, tweetId: string): void {
-  // Keep only last 10000 to prevent unbounded growth
-  const ids = [...store.processedTweetIds, tweetId];
-  store.processedTweetIds = ids.slice(-10_000);
+  store.processedTweetIds = [...store.processedTweetIds, tweetId].slice(-10_000);
 }
 
-// ── Mention extraction ──────────────────────────────────────────────
+// ── Job creation ─────────────────────────────────────────────────────
+
+const RANDOM_PROMPTS = [
+  "The rise and fall of a forgotten memecoin, told through blockchain whispers.",
+  "A whale silently moves markets at midnight. What are they planning?",
+  "From penny to moon: the untold story of a Solana airdrop nobody expected.",
+  "The last block before the rug pull. A cinematic thriller.",
+];
+
+async function createMythxJob(username: string, mentionText: string): Promise<JobDocument> {
+  let subjectName = `@${username}`;
+  let sourceMediaUrl: string | null = null;
+  let sourceTranscript: string | null = null;
+
+  try {
+    const profile = await fetchXProfileTweets({ profileInput: `@${username}`, maxTweets: 16 });
+    subjectName = profile.profile.displayName || `@${profile.profile.username || username}`;
+    sourceMediaUrl = profile.profile.profileUrl;
+    sourceTranscript = profile.transcript;
+  } catch (err) {
+    logger.warn("x_bot_profile_hydration_failed", {
+      component: "x-bot", username, errorMessage: err instanceof Error ? err.message : "unknown",
+    });
+    throw err;
+  }
+
+  return createPromptVideoJob({
+    requestKind: "mythx", packageType: "30s",
+    subjectName,
+    subjectDescription: `Autobiography from @${username}'s tweets. Requested: "${mentionText.slice(0, 100)}"`,
+    sourceMediaUrl, sourceMediaProvider: "x", sourceTranscript,
+    paymentWaived: true, experience: "mythx",
+  });
+}
+
+async function createHashmythJob(address: string): Promise<JobDocument> {
+  let subjectName: string | null = null;
+  let subjectSymbol: string | null = null;
+  let subjectImage: string | null = null;
+  let subjectDescription: string | null = null;
+  let chain: SupportedTokenChain = "solana";
+
+  try {
+    const token = await resolveMemecoinMetadata({ address, chain: "auto" });
+    subjectName = token.name; subjectSymbol = token.symbol;
+    subjectImage = token.image; subjectDescription = token.description;
+    chain = token.chain;
+  } catch (err) {
+    logger.warn("x_bot_hashmyth_metadata_failed", {
+      component: "x-bot", address, errorMessage: err instanceof Error ? err.message : "unknown",
+    });
+  }
+
+  return createTokenVideoJob({
+    tokenAddress: address, packageType: "30s",
+    subjectChain: chain, subjectName, subjectSymbol,
+    subjectImage, subjectDescription, paymentWaived: true,
+  });
+}
+
+async function createRandomJob(): Promise<JobDocument> {
+  const prompt = RANDOM_PROMPTS[Math.floor(Math.random() * RANDOM_PROMPTS.length)];
+  return createPromptVideoJob({
+    requestKind: "generic_cinema", packageType: "30s",
+    subjectName: "Random Cinema", subjectDescription: prompt,
+    requestedPrompt: prompt, paymentWaived: true,
+  });
+}
+
+// ── Posting replies ──────────────────────────────────────────────────
+
+async function postStartReply(
+  client: ReturnType<typeof getXClient>,
+  tweetId: string,
+  authorUsername: string,
+  jobId: string,
+  label: string,
+): Promise<void> {
+  const jobUrl = `${APP_BASE_URL}/job/${jobId}`;
+  const text = `@${authorUsername} 🎬 ${label} started!\n\nTrack it live: ${jobUrl}\n\nWill reply with video when ready.\n\n— @HyperMythsX · ${BOT_X_URL}`;
+  try {
+    await client.replyToTweet({ tweetId, text });
+  } catch (err) {
+    logger.error("x_bot_start_reply_failed", {
+      component: "x-bot", tweetId, errorMessage: err instanceof Error ? err.message : "unknown",
+    });
+  }
+}
+
+async function postCompletionReply(
+  client: ReturnType<typeof getXClient>,
+  tweetId: string,
+  authorUsername: string,
+  jobId: string,
+): Promise<void> {
+  const video = await getVideo(jobId);
+  const videoUrl = video?.videoUrl || `${APP_BASE_URL}/job/${jobId}`;
+  const text = `@${authorUsername} ✅ Your video is ready!\n\n📹 ${videoUrl}`;
+  try {
+    await client.replyToTweet({ tweetId, text });
+  } catch (err) {
+    logger.error("x_bot_completion_reply_failed", {
+      component: "x-bot", tweetId, jobId, errorMessage: err instanceof Error ? err.message : "unknown",
+    });
+  }
+}
+
+// ── Mention processing ───────────────────────────────────────────────
 
 interface MentionInfo {
   tweetId: string;
@@ -70,384 +212,148 @@ interface MentionInfo {
   createdAt: string;
 }
 
-async function fetchMentions(since?: string): Promise<MentionInfo[]> {
-  const env = getEnv();
+async function processMention(mention: MentionInfo, store: MentionsStore): Promise<void> {
   const client = getXClient();
-
-  if (!client.canPost()) {
-    logger.warn("x_bot_oauth_not_configured", {
-      component: "x-bot",
-      stage: "fetch_mentions",
-      errorCode: "oauth_not_configured",
-      errorMessage:
-        "X API OAuth credentials not configured; mention polling disabled.",
-    });
-    return [];
-  }
-
-  const mentions: MentionInfo[] = [];
-
-  try {
-    const result = await client.getMentions({ maxResults: 20 });
-
-    for (const mention of result) {
-      // Skip if we have a since filter
-      if (since) {
-        const mentionTime = new Date(mention.createdAt).getTime();
-        const sinceTime = new Date(since).getTime();
-        if (mentionTime <= sinceTime) continue;
-      }
-
-      mentions.push({
-        tweetId: mention.id,
-        text: mention.text,
-        authorUsername: mention.authorUsername,
-        authorId: mention.authorId,
-        createdAt: mention.createdAt,
-      });
-    }
-  } catch (err) {
-    logger.error("x_bot_fetch_mentions_failed", {
-      component: "x-bot",
-      stage: "fetch_mentions",
-      errorCode: "fetch_mentions_failed",
-      errorMessage: err instanceof Error ? err.message : "unknown",
-    });
-  }
-
-  return mentions;
-}
-
-// ── Extract target username from mention ────────────────────────────
-
-function extractTargetUsername(text: string): string | null {
-  // Look for @username patterns (not @HyperMythsX itself)
-  const botHandle = "hypermythsx";
-  const mentions = text.match(/@(\w+)/g) || [];
-  for (const mention of mentions) {
-    const handle = mention.slice(1).toLowerCase();
-    if (handle !== botHandle && handle !== "hypermythsx") {
-      return mention.slice(1);
-    }
-  }
-  return null;
-}
-
-// ── Job creation from X mention ─────────────────────────────────────
-
-async function createAutobiographyFromMention(
-  username: string,
-  mentionText: string,
-): Promise<JobDocument> {
-  const profileInput = `@${username}`;
-  let subjectName = profileInput;
-  let sourceMediaUrl: string | null = null;
-  let sourceTranscript: string | null = null;
-
-  try {
-    const profile = await fetchXProfileTweets({ profileInput, maxTweets: 16 });
-    subjectName =
-      profile.profile.displayName ||
-      (profile.profile.username
-        ? `@${profile.profile.username}`
-        : profileInput);
-    sourceMediaUrl = profile.profile.profileUrl;
-    sourceTranscript = profile.transcript;
-  } catch (err) {
-    logger.warn("x_bot_profile_hydration_failed", {
-      component: "x-bot",
-      stage: "hydrate_profile",
-      username,
-      errorCode: "profile_hydration_failed",
-      errorMessage: err instanceof Error ? err.message : "unknown",
-    });
-    throw err;
-  }
-
-  return createPromptVideoJob({
-    requestKind: "mythx",
-    packageType: "60s",
-    subjectName,
-    subjectDescription: `Autobiography built from @${username}'s tweets. Mentioned: "${mentionText.slice(0, 120)}"`,
-    sourceMediaUrl,
-    sourceMediaProvider: "x",
-    sourceTranscript,
-    videoSeconds: 60,
-    paymentWaived: true,
-  });
-}
-
-// ── Post video as reply ─────────────────────────────────────────────
-
-function getLocalVideoPath(jobId: string): string {
-  return `${RAILWAY_VIDEO_DIR}/${jobId}.mp4`;
-}
-
-async function waitForVideoCompletion(
-  jobId: string,
-  timeoutMs: number = 10 * 60 * 1000,
-): Promise<boolean> {
-  const started = Date.now();
-  while (Date.now() - started < timeoutMs) {
-    const job = await getJob(jobId);
-    if (!job) return false;
-    if (job.status === "complete") return true;
-    if (job.status === "failed") return false;
-    await new Promise((r) => setTimeout(r, 10_000));
-  }
-  return false;
-}
-
-async function postVideoReply(
-  client: ReturnType<typeof getXClient>,
-  inReplyToTweetId: string,
-  jobId: string,
-  profileUsername: string,
-): Promise<void> {
-  const videoPath = getLocalVideoPath(jobId);
-
-  // For X, we can't directly upload video files via API v2 without media upload endpoint.
-  // Instead, we post a reply with the video URL.
-  const video = await getVideo(jobId);
-  const videoUrl = video?.videoUrl;
-
-  const appBaseUrl = process.env.APP_BASE_URL || "http://localhost:3000";
-  const galleryUrl =
-    videoUrl || `${appBaseUrl}/api/video/${jobId}?download=true`;
-
-  const caption = `Your autobiography, from @HyperMythsX ✨\n\nWatch: ${galleryUrl}`;
-
-  await client.replyToTweet({
-    tweetId: inReplyToTweetId,
-    text: caption,
-  });
-
-  logger.info("x_bot_video_posted", {
-    component: "x-bot",
-    stage: "post_video",
-    jobId,
-    inReplyToTweetId,
-    profileUsername,
-  });
-}
-
-async function postProgressReply(
-  client: ReturnType<typeof getXClient>,
-  inReplyToTweetId: string,
-  profileUsername: string,
-  progress: string,
-): Promise<void> {
-  const messages: Record<string, string> = {
-    started: `Starting your autobiography video, @${profileUsername}! This will take a few minutes.`,
-    processing: `Working on your video, @${profileUsername}...`,
-  };
-
-  const text =
-    messages[progress] || `Processing your request, @${profileUsername}...`;
-
-  await client.replyToTweet({
-    tweetId: inReplyToTweetId,
-    text,
-  });
-}
-
-// ── Main polling loop ───────────────────────────────────────────────
-
-async function processMention(
-  mention: MentionInfo,
-  store: MentionsStore,
-): Promise<void> {
-  const client = getXClient();
-  const username = extractTargetUsername(mention.text);
-
-  if (!username) {
-    logger.info("x_bot_no_username_found", {
-      component: "x-bot",
-      stage: "process_mention",
-      tweetId: mention.tweetId,
-      text: mention.text,
-    });
-    return;
-  }
+  const { type, target } = detectMentionIntent(mention.text);
 
   logger.info("x_bot_processing_mention", {
-    component: "x-bot",
-    stage: "process_mention",
-    tweetId: mention.tweetId,
-    username,
-    authorUsername: mention.authorUsername,
+    component: "x-bot", tweetId: mention.tweetId,
+    author: mention.authorUsername, type, target: target.slice(0, 40),
   });
 
   let retries = 0;
-  let lastError: Error | null = null;
-
   while (retries < MAX_RETRIES) {
     try {
-      // Step 1: Create the job
-      const job = await createAutobiographyFromMention(username, mention.text);
+      let job: JobDocument;
+      let label: string;
+
+      if (type === "random") {
+        job = await createRandomJob();
+        label = "Random cinema video";
+      } else if (type === "hashmyth") {
+        job = await createHashmythJob(target);
+        label = `HashMyth video for ${target.slice(0, 12)}...`;
+      } else {
+        job = await createMythxJob(target, mention.text);
+        label = `MythX autobiography for @${target}`;
+      }
 
       logger.info("x_bot_job_created", {
-        component: "x-bot",
-        stage: "create_job",
-        jobId: job.jobId,
-        tweetId: mention.tweetId,
-        username,
+        component: "x-bot", jobId: job.jobId, tweetId: mention.tweetId, type, target,
       });
 
-      // Step 2: Trigger processing
+      // Reply with job URL immediately
+      await postStartReply(client, mention.tweetId, mention.authorUsername, job.jobId, label);
+
+      // Trigger processing
       await triggerJobProcessing(job.jobId).catch((err) => {
         logger.error("x_bot_trigger_failed", {
-          component: "x-bot",
-          stage: "trigger_processing",
-          jobId: job.jobId,
-          errorCode: "trigger_failed",
+          component: "x-bot", jobId: job.jobId,
           errorMessage: err instanceof Error ? err.message : "unknown",
         });
       });
 
-      // Step 3: Wait for video to complete
-      const completed = await waitForVideoCompletion(job.jobId);
-
-      if (!completed) {
-        const finalJob = await getJob(job.jobId);
-        const failed = finalJob?.status === "failed";
-
-        if (failed) {
-          await postProgressReply(client, mention.tweetId, username, "failed");
-          logger.warn("x_bot_video_generation_failed", {
-            component: "x-bot",
-            stage: "wait_completion",
-            jobId: job.jobId,
-            tweetId: mention.tweetId,
-          });
-        } else {
-          await postProgressReply(
-            client,
-            mention.tweetId,
-            username,
-            "processing",
-          );
-        }
-        return;
+      // Wait for completion (10 min max)
+      const started = Date.now();
+      let completed = false;
+      while (Date.now() - started < 10 * 60 * 1000) {
+        const j = await getJob(job.jobId);
+        if (!j) break;
+        if (j.status === "complete") { completed = true; break; }
+        if (j.status === "failed") break;
+        await new Promise((r) => setTimeout(r, 15_000));
       }
 
-      // Step 4: Post the video reply
-      await postVideoReply(client, mention.tweetId, job.jobId, username);
+      if (completed) {
+        await postCompletionReply(client, mention.tweetId, mention.authorUsername, job.jobId);
+      }
 
-      // Step 5: Mark as processed
       markProcessed(store, mention.tweetId);
       store.lastPollAt = new Date().toISOString();
       await saveMentionsStore(store);
-
-      logger.info("x_bot_mention_complete", {
-        component: "x-bot",
-        stage: "process_mention",
-        jobId: job.jobId,
-        tweetId: mention.tweetId,
-        username,
-      });
-
       return;
+
     } catch (err) {
-      lastError = err instanceof Error ? err : new Error(String(err));
       retries++;
       logger.warn("x_bot_mention_retry", {
-        component: "x-bot",
-        stage: "process_mention",
-        tweetId: mention.tweetId,
-        username,
-        attempt: retries,
-        errorCode: "mention_processing_failed",
-        errorMessage: lastError.message,
+        component: "x-bot", tweetId: mention.tweetId, attempt: retries,
+        errorMessage: err instanceof Error ? err.message : "unknown",
       });
-
-      if (retries < MAX_RETRIES) {
-        await new Promise((r) => setTimeout(r, 5_000 * retries));
-      }
+      if (retries < MAX_RETRIES) await new Promise((r) => setTimeout(r, 5_000 * retries));
     }
   }
 
-  // All retries exhausted
+  // Exhausted retries — still mark processed to avoid infinite loops
   logger.error("x_bot_mention_exhausted", {
-    component: "x-bot",
-    stage: "process_mention",
-    tweetId: mention.tweetId,
-    username,
-    errorCode: "max_retries_exceeded",
-    errorMessage: lastError?.message ?? "Unknown error",
+    component: "x-bot", tweetId: mention.tweetId, type, target,
   });
-
-  // Still mark as processed to avoid infinite retry loops
   markProcessed(store, mention.tweetId);
   store.lastPollAt = new Date().toISOString();
   await saveMentionsStore(store);
 }
 
+// ── Poll loop ────────────────────────────────────────────────────────
+
+async function fetchMentions(since?: string | null): Promise<MentionInfo[]> {
+  const client = getXClient();
+  if (!client.canPost()) return [];
+
+  const mentions: MentionInfo[] = [];
+  try {
+    const result = await client.getMentions({ maxResults: 20 });
+    for (const m of result) {
+      if (since) {
+        if (new Date(m.createdAt).getTime() <= new Date(since).getTime()) continue;
+      }
+      mentions.push({
+        tweetId: m.id, text: m.text,
+        authorUsername: m.authorUsername, authorId: m.authorId, createdAt: m.createdAt,
+      });
+    }
+  } catch (err) {
+    logger.error("x_bot_fetch_mentions_failed", {
+      component: "x-bot", errorMessage: err instanceof Error ? err.message : "unknown",
+    });
+  }
+  return mentions;
+}
+
 async function pollMentions(): Promise<void> {
   const store = await loadMentionsStore();
-  const mentions = await fetchMentions(store.lastPollAt || undefined);
+  const mentions = await fetchMentions(store.lastPollAt);
+  const newMentions = mentions.filter((m) => !store.processedTweetIds.includes(m.tweetId));
 
-  const newMentions = mentions.filter((m) => !isProcessed(store, m.tweetId));
+  if (newMentions.length === 0) return;
 
-  if (newMentions.length === 0) {
-    return;
-  }
-
-  logger.info("x_bot_new_mentions", {
-    component: "x-bot",
-    stage: "poll_mentions",
-    count: newMentions.length,
-  });
-
-  // Process sequentially to avoid race conditions
-  for (const mention of newMentions) {
-    await processMention(mention, store);
-  }
+  logger.info("x_bot_new_mentions", { component: "x-bot", count: newMentions.length });
+  for (const m of newMentions) await processMention(m, store);
 }
 
 function startXBotPolling(): NodeJS.Timeout | null {
-  const env = getEnv();
   const client = getXClient();
-
   if (!client.canPost()) {
     logger.warn("x_bot_disabled", {
-      component: "x-bot",
-      stage: "startup",
-      errorCode: "oauth_not_configured",
-      errorMessage:
-        "X API OAuth credentials not configured; X bot will not start.",
+      component: "x-bot", stage: "startup",
+      errorMessage: "X API OAuth not configured; X bot will not start.",
     });
     return null;
   }
 
-  logger.info("x_bot_started", {
-    component: "x-bot",
-    stage: "startup",
-    pollIntervalMs: POLL_INTERVAL_MS,
-  });
+  logger.info("x_bot_started", { component: "x-bot", stage: "startup", pollIntervalMs: POLL_INTERVAL_MS });
 
-  // Run immediately on start
   void pollMentions().catch((err) => {
     logger.error("x_bot_initial_poll_failed", {
-      component: "x-bot",
-      stage: "initial_poll",
-      errorCode: "poll_failed",
-      errorMessage: err instanceof Error ? err.message : "unknown",
+      component: "x-bot", errorMessage: err instanceof Error ? err.message : "unknown",
     });
   });
 
-  const interval = setInterval(() => {
+  return setInterval(() => {
     void pollMentions().catch((err) => {
       logger.error("x_bot_poll_failed", {
-        component: "x-bot",
-        stage: "poll_mentions",
-        errorCode: "poll_failed",
-        errorMessage: err instanceof Error ? err.message : "unknown",
+        component: "x-bot", errorMessage: err instanceof Error ? err.message : "unknown",
       });
     });
   }, POLL_INTERVAL_MS);
-
-  return interval;
 }
 
 export { startXBotPolling };

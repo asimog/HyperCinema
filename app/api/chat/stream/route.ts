@@ -121,8 +121,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Stream via xAI /responses endpoint with stream=true
-    const stream = await fetch(`${baseUrl.replace(/\/+$/, "")}/responses`, {
+    // Stream via standard /chat/completions (OpenAI-compatible, works with all xAI keys)
+    const stream = await fetch(`${baseUrl.replace(/\/+$/, "")}/chat/completions`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -130,9 +130,9 @@ export async function POST(request: NextRequest) {
       },
       body: JSON.stringify({
         model,
-        input: messages.map((m) => ({ role: m.role, content: m.content })),
+        messages: messages.map((m) => ({ role: m.role, content: m.content })),
         temperature: body.temperature ?? 0.7,
-        max_output_tokens: body.maxTokens ?? 4096,
+        max_tokens: body.maxTokens ?? 4096,
         stream: true,
       }),
     });

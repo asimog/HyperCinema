@@ -54,13 +54,16 @@ const envSchema = z.object({
   VIDEO_VEO_MODEL: z.string().default("veo-3.1-fast-generate-001"),
   // Helius RPC/API key for Solana token metadata (used by lib/token-scanner/scanner.ts)
   HELIUS_API_KEY: z.string().optional(),
-  // Twitter X API auth
+  // Twitter X API auth (OAuth 1.0a)
   X_API_BEARER_TOKEN: z.string().min(1).optional(),
   X_API_CONSUMER_KEY: z.string().min(1).optional(),
   X_API_CONSUMER_SECRET: z.string().min(1).optional(),
   X_API_ACCESS_TOKEN: z.string().min(1).optional(),
   X_API_ACCESS_TOKEN_SECRET: z.string().min(1).optional(),
   X_API_BASE_URL: z.string().url().default("https://api.x.com/2"),
+  // Twitter X OAuth 2.0 (for user-facing login / PKCE flows)
+  X_OAUTH2_CLIENT_ID: z.string().min(1).optional(),
+  X_OAUTH2_CLIENT_SECRET: z.string().min(1).optional(),
   // Telegram Bot
   TELEGRAM_BOT_TOKEN: z.string().min(1).optional(),
   // OpenAI direct access

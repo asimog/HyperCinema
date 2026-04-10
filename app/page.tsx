@@ -28,8 +28,8 @@ function detectInputType(input: string): "mythx" | "hashmyth" | null {
 }
 
 const VIDEO_HINT: Record<string, string> = {
-  mythx: "→ GENERATE MYTHX VIDEO",
-  hashmyth: "→ GENERATE HASHMYTH VIDEO",
+  mythx: "MYTHX VIDEO",
+  hashmyth: "HASHMYTH VIDEO",
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -65,14 +65,7 @@ function Bubble({ msg }: { msg: Message }) {
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export default function ChatPage() {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "greeting",
-      role: "assistant",
-      content:
-        "What do you want to know or see? I only exist as X API wanted a terms of service and privacy policy which nobody cares about. So\n\nI ask again — what do you wana know or see?",
-    },
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -94,22 +87,6 @@ export default function ChatPage() {
     const text = input.trim();
     if (!text || loading) return;
 
-    // After 5 messages without video creation → ooga booga
-    if (messageCount >= 5 && !videoChosen) {
-      const ooga: Message = {
-        id: uid(),
-        role: "assistant",
-        content: "ooga booga",
-      };
-      setMessages((prev) => [
-        ...prev,
-        { id: uid(), role: "user", content: text },
-        ooga,
-      ]);
-      setMessageCount((c) => c + 1);
-      return;
-    }
-
     setInput("");
     setError(null);
 
@@ -126,11 +103,7 @@ export default function ChatPage() {
     setLoading(true);
     setMessageCount((c) => c + 1);
 
-    // Caveman persona after first message
-    const isCaveman = messageCount >= 1 && !videoChosen;
-    const systemPrompt = isCaveman
-      ? `You are a caveman. Answer every question like a caveman. Short. Simple words. UGH. Grunt. FIRE. CAVE. Always talk like a caveman. Do NOT use modern language. Always be funny caveman talk.`
-      : `You are HyperM — sharp, concise, crypto-native. You know DeFi, memecoins, Solana, Ethereum, X (Twitter) culture deeply. You help users understand wallets, tokens, and on-chain activity. Keep answers brief and direct. No filler. If asked about generating videos, tell the user to type a wallet address or @handle and hit the yellow button.`;
+    const systemPrompt = `You are HyperM — sharp, concise, crypto-native. You know DeFi, memecoins, Solana, Ethereum, X (Twitter) culture deeply. Keep answers brief and direct. No filler. If asked about generating videos, tell the user to type a wallet address or @handle and hit the yellow GENERATE button.`;
 
     try {
       const history = [...messages, userMsg];
@@ -197,7 +170,7 @@ export default function ChatPage() {
     } finally {
       setLoading(false);
     }
-  }, [input, loading, messages, messageCount, videoChosen]);
+  }, [input, loading, messages]);
 
   // Generate video (delegate to /api/generate/auto)
   const generateVideo = useCallback(async () => {
@@ -259,89 +232,19 @@ export default function ChatPage() {
             >
               FEED
             </Link>
-            <Link
-              href="/admin/inference"
-              className="hover:text-[#FFE500] transition-colors"
-            >
-              ADMIN
-            </Link>
           </div>
         </nav>
 
-        {/* Chat area — big gap between nav and content */}
+        {/* Chat area */}
         <div
           ref={scrollRef}
-          className="flex-1 overflow-y-auto px-4 pt-32 pb-6 max-w-2xl w-full mx-auto"
+          className="flex-1 overflow-y-auto px-4 pt-48 pb-6 max-w-2xl w-full mx-auto"
         >
-          <div className="flex flex-col items-center justify-center h-full min-h-[40vh] text-center space-y-6">
-            {/* Greeting bubble */}
-            <div className="max-w-lg w-full bg-[#111] border border-[#222] px-5 py-4 rounded-lg text-left">
-              <p className="font-mono text-[0.85rem] leading-relaxed text-[#e0e0e0]">
-                What do you want to know or see? I only exist as X API wanted a
-                terms of service and privacy policy which nobody cares about. So
-              </p>
-              <p className="font-mono text-[0.85rem] leading-relaxed text-[#FFE500] mt-2">
-                I ask again — what do you wana know or see?
-              </p>
-            </div>
-
-            <div>
-              <p className="font-mono text-[0.6rem] tracking-[0.25em] uppercase text-[#FFE500] mb-3">
-                AI · Crypto · Cinema
-              </p>
-              <h1 className="font-display text-[clamp(2rem,7vw,3.5rem)] font-black leading-[0.88] tracking-tighter">
-                ASK ANYTHING.
-                <br />
-                <span className="text-[#FFE500]">OR GENERATE.</span>
-              </h1>
-            </div>
-
-            {/* Quick starters */}
-            <div className="w-full max-w-sm space-y-2">
-              {[
-                {
-                  label: "What is this?",
-                  text: "What is HyperM and what can I do here?",
-                },
-                {
-                  label: "Explain a memecoin",
-                  text: "How do I check if a Solana memecoin is safe to buy?",
-                },
-                {
-                  label: "MythX demo",
-                  text: "Generate a MythX video for @elonmusk",
-                },
-              ].map((s) => (
-                <button
-                  key={s.label}
-                  type="button"
-                  onClick={() => {
-                    setInput(s.text);
-                    inputRef.current?.focus();
-                  }}
-                  className="w-full text-left border border-[#222] text-[#555] px-3 py-2 font-mono text-[0.62rem] tracking-wide hover:border-[#FFE500] hover:text-[#FFE500] transition-colors bg-transparent cursor-pointer"
-                >
-                  {s.label} →
-                </button>
-              ))}
-            </div>
-
-            {/* 3 capabilities */}
-            <div className="grid grid-cols-3 gap-4 text-center w-full max-w-sm pt-4 border-t border-[#111]">
-              {[
-                { icon: "🎬", title: "MythX", desc: "@handle → video" },
-                { icon: "📊", title: "HashMyth", desc: "wallet → cinema" },
-                { icon: "💬", title: "HyperM", desc: "ask anything" },
-              ].map((item) => (
-                <div key={item.title}>
-                  <div className="text-xl mb-1">{item.icon}</div>
-                  <div className="font-mono text-[0.58rem] font-bold tracking-widest uppercase text-white mb-0.5">
-                    {item.title}
-                  </div>
-                  <div className="text-[0.62rem] text-[#444]">{item.desc}</div>
-                </div>
-              ))}
-            </div>
+          <div className="flex flex-col items-center justify-center h-full min-h-[40vh] text-center space-y-8">
+            {/* Single line greeting */}
+            <h1 className="font-mono text-[clamp(1.2rem,4vw,2rem)] font-light text-[#e0e0e0] leading-relaxed">
+              What do you want to know or create?
+            </h1>
           </div>
         </div>
 
@@ -406,7 +309,7 @@ export default function ChatPage() {
             </form>
 
             <p className="font-mono text-[0.55rem] tracking-wide text-[#333]">
-              ENTER to send · wallet/handle auto-detected for video ·{" "}
+              ENTER to send ·{" "}
               <Link
                 href="/creator"
                 className="text-[#444] hover:text-[#FFE500]"
@@ -448,19 +351,13 @@ export default function ChatPage() {
           >
             FEED
           </Link>
-          <Link
-            href="/admin/inference"
-            className="hover:text-[#FFE500] transition-colors"
-          >
-            ADMIN
-          </Link>
         </div>
       </nav>
 
-      {/* Chat area — big gap */}
+      {/* Chat area */}
       <div
         ref={scrollRef}
-        className="flex-1 overflow-y-auto px-4 pt-24 pb-6 max-w-2xl w-full mx-auto"
+        className="flex-1 overflow-y-auto px-4 pt-16 pb-6 max-w-2xl w-full mx-auto"
       >
         {messages.map((msg) => (
           <Bubble key={msg.id} msg={msg} />
@@ -484,15 +381,6 @@ export default function ChatPage() {
               >
                 {loading ? "..." : "GENERATE →"}
               </button>
-            </div>
-          )}
-
-          {/* Ooga booga warning */}
-          {messageCount >= 4 && !videoChosen && (
-            <div className="border border-[#FFE500]/20 bg-[rgba(255,229,0,0.05)] px-3 py-2 font-mono text-[0.65rem] text-[#FFE500]/60">
-              {5 - messageCount === 1
-                ? "Last chance. Next message = ooga booga. Type @handle or wallet for video."
-                : `${5 - messageCount} messages left before ooga booga. Type @handle or wallet for video.`}
             </div>
           )}
 
@@ -535,22 +423,6 @@ export default function ChatPage() {
               {loading ? "..." : "→"}
             </button>
           </form>
-
-          <p className="font-mono text-[0.55rem] tracking-wide text-[#333]">
-            ENTER to send · wallet/handle auto-detected for video ·{" "}
-            <Link href="/creator" className="text-[#444] hover:text-[#FFE500]">
-              mythos studio
-            </Link>{" "}
-            ·{" "}
-            <a
-              href="https://x.com/HyperMythX"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[#444] hover:text-[#FFE500]"
-            >
-              @HyperMythsX
-            </a>
-          </p>
         </div>
       </div>
     </div>

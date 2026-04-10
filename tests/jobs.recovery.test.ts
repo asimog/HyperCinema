@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
   generateReportPdf: vi.fn(),
   uploadBufferToStorage: vi.fn(),
   uploadRemoteFileToStorage: vi.fn(),
+  uploadVideoToStorage: vi.fn(),
   triggerJobProcessing: vi.fn(),
 }));
 
@@ -37,6 +38,11 @@ vi.mock("@/lib/pdf/report", () => ({
 vi.mock("@/lib/storage/upload", () => ({
   uploadBufferToStorage: mocks.uploadBufferToStorage,
   uploadRemoteFileToStorage: mocks.uploadRemoteFileToStorage,
+}));
+
+vi.mock("@/lib/storage/s3", () => ({
+  uploadVideoToStorage: mocks.uploadVideoToStorage,
+  isStorageConfigured: () => true,
 }));
 
 vi.mock("@/lib/jobs/trigger", () => ({
@@ -81,7 +87,7 @@ describe("recoverJobIfNeeded", () => {
         styleClassification: "style",
         summary: "summary",
         timeline: [],
-        downloadUrl: null,
+        downloadUrl: "https://public/report.pdf",
       },
       video: {
         jobId: "job-1",
@@ -103,6 +109,7 @@ describe("recoverJobIfNeeded", () => {
     mocks.uploadRemoteFileToStorage
       .mockResolvedValueOnce("https://public/video.mp4")
       .mockResolvedValueOnce("https://public/thumb.jpg");
+    mocks.uploadVideoToStorage.mockResolvedValue("https://public/video.mp4");
 
     const recovered = await recoverJobIfNeeded("job-1");
 
@@ -114,9 +121,13 @@ describe("recoverJobIfNeeded", () => {
       expect.objectContaining({
         jobId: "job-1",
         videoUrl: "https://public/video.mp4",
-        thumbnailUrl: "https://public/thumb.jpg",
+        thumbnailUrl: "https://internal/thumb.jpg",
         renderStatus: "ready",
       }),
+    );
+    expect(mocks.uploadVideoToStorage).toHaveBeenCalledWith(
+      "https://internal/video.mp4",
+      "videos/job-1.mp4",
     );
     expect(mocks.updateJobStatus).toHaveBeenCalledWith(
       "job-1",
@@ -170,6 +181,7 @@ describe("recoverJobIfNeeded", () => {
     mocks.uploadRemoteFileToStorage
       .mockResolvedValueOnce("https://public/video.mp4")
       .mockResolvedValueOnce("https://public/thumb.jpg");
+    mocks.uploadVideoToStorage.mockResolvedValue("https://public/video.mp4");
 
     const recovered = await recoverJobIfNeeded("job-failed");
 

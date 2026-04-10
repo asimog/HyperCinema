@@ -19,6 +19,8 @@
     "video:start": "node video-service/dist/server.js"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1028.0",
+    "@aws-sdk/lib-storage": "^3.1028.0",
     "@dexterai/x402": "^2.0.0",
     "@google-cloud/storage": "^7.17.3",
     "@prisma/adapter-pg": "^7.7.0",

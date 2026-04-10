@@ -1,5 +1,6 @@
 import { generateReportPdf } from "@/lib/pdf/report";
 import { publishCompletedJobToMoltBook } from "@/lib/social/moltbook-publisher";
+import { uploadVideoToStorage } from "@/lib/storage/s3";
 import { InternalVideoRenderDocument } from "@/lib/types/domain";
 import {
   getInternalVideoRender,
@@ -29,16 +30,19 @@ async function finalizeReadyRender(
     return false;
   }
 
-  const [reportUrl, publicVideoUrl, publicThumbnailUrl] = await Promise.all([
-    report.downloadUrl
-      ? Promise.resolve(report.downloadUrl)
-      : generateReportPdf(report).then((pdfBuffer) => {
-          // Save to local file path on Railway Persistent Volume
-          return `/output/reports/${jobId}.pdf`;
-        }),
-    null, // videoUrl comes from render directly
-    render.thumbnailUrl ? render.thumbnailUrl : null,
-  ]);
+  const [reportUrl, persistentVideoUrl, publicThumbnailUrl] = await Promise.all(
+    [
+      report.downloadUrl
+        ? Promise.resolve(report.downloadUrl)
+        : generateReportPdf(report).then((pdfBuffer) => {
+            // Save to local file path on Railway Persistent Volume
+            return `/output/reports/${jobId}.pdf`;
+          }),
+      // Upload video to S3 for persistent storage (fail-open: falls back to original URL)
+      uploadVideoToStorage(render.videoUrl, `videos/${jobId}.mp4`),
+      render.thumbnailUrl ? render.thumbnailUrl : null,
+    ],
+  );
 
   await Promise.all([
     upsertReport({
@@ -47,7 +51,7 @@ async function finalizeReadyRender(
     }),
     upsertVideo({
       jobId,
-      videoUrl: render.videoUrl,
+      videoUrl: persistentVideoUrl,
       thumbnailUrl: publicThumbnailUrl,
       duration: job.videoSeconds,
       renderStatus: "ready",

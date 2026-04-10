@@ -64,6 +64,13 @@ const envSchema = z.object({
   // Twitter X OAuth 2.0 (for user-facing login / PKCE flows)
   X_OAUTH2_CLIENT_ID: z.string().min(1).optional(),
   X_OAUTH2_CLIENT_SECRET: z.string().min(1).optional(),
+  // S3-compatible video storage (Supabase Storage S3 API)
+  S3_ENDPOINT: z.string().url().optional(),
+  S3_ACCESS_KEY_ID: z.string().min(1).optional(),
+  S3_SECRET_ACCESS_KEY: z.string().min(1).optional(),
+  S3_BUCKET: z.string().min(1).default("videos"),
+  S3_REGION: z.string().min(1).default("us-east-1"),
+  S3_PUBLIC_URL: z.string().url().optional(), // override public URL base if needed
   // Telegram Bot
   TELEGRAM_BOT_TOKEN: z.string().min(1).optional(),
   // OpenAI direct access

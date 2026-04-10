@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { IBM_Plex_Mono, Space_Grotesk, Syne } from "next/font/google";
+import { Fragment_Mono, Space_Grotesk } from "next/font/google";
 import { AppClientProviders } from "@/components/providers/AppClientProviders";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
@@ -10,16 +10,11 @@ const bodyFont = Space_Grotesk({
   subsets: ["latin"],
 });
 
-const monoFont = IBM_Plex_Mono({
-  variable: "--font-ibm-plex-mono",
+const monoFont = Fragment_Mono({
+  variable: "--font-mono",
   subsets: ["latin"],
-  weight: ["400", "500", "600"],
-});
-
-const displayFont = Syne({
-  variable: "--font-syne",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
+  weight: ["400"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -44,7 +39,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`site-body ${bodyFont.variable} ${monoFont.variable} ${displayFont.variable} antialiased`}
+        className={`site-body ${bodyFont.variable} ${monoFont.variable} antialiased`}
       >
         <AppClientProviders>
           <SiteHeader />

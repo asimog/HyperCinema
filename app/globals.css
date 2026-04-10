@@ -1,28 +1,86 @@
 @import "tailwindcss";
 
+/* ── Seafoam Compute System ──────────────────────────────
+   Generated from primary: #6EEAB0 (HyperLiquid seafoam)
+   Pure black background. High-contrast. Brutalist. Digital.
+   ──────────────────────────────────────────────────────── */
+
 :root {
+  /* Background system — pure black base, near-black lifted surfaces */
   --background: #000000;
-  --foreground: #f0f0f0;
-  --panel: #0a0a0a;
-  --panel-soft: #080808;
-  --line: rgba(255, 255, 255, 0.15);
-  --line-strong: rgba(255, 255, 255, 0.3);
-  --muted: #a0a0a0;
-  --text-secondary: #c8c8c8;
-  --text-tertiary: #888888;
-  --accent: #ffe500;
-  --accent-strong: #e6ce00;
-  --accent-soft: #fff9cc;
-  --warning: #ffe500;
-  --danger: #ff3333;
-  --font-display: var(--font-syne);
+  --bg-1: #030605;
+  --bg-2: #060d0a;
+  --bg-3: #0a1210;
+
+  /* Primary seafoam system from #6EEAB0 */
+  --primary: #6eeab0;
+  --primary-bright: #88f5c4;
+  --primary-dim: #4bc48e;
+  --primary-soft: rgba(110, 234, 176, 0.12);
+  --primary-10: rgba(110, 234, 176, 0.1);
+  --primary-25: rgba(110, 234, 176, 0.25);
+  --primary-50: rgba(110, 234, 176, 0.5);
+  --primary-75: rgba(110, 234, 176, 0.75);
+
+  /* Accent system — hue-shifted variants */
+  --accent-cyan: #5ae4d8;
+  --accent-green: #7ef5a0;
+  --accent-blue: #5ec4e0;
+
+  /* Text system */
+  --foreground: #c8eada;
+  --text-primary: #d0f0e2;
+  --text-secondary: rgba(192, 228, 210, 0.65);
+  --text-tertiary: rgba(192, 228, 210, 0.4);
+  --text-inverse: #000000;
+
+  /* Border + divider */
+  --line: rgba(110, 234, 176, 0.12);
+  --line-strong: rgba(110, 234, 176, 0.28);
+
+  /* State colors — derived from primary */
+  --success: #5ae4a0;
+  --warning: #a0d4b0;
+  --danger: #6e4040;
+
+  /* Glow + effects */
+  --glow-primary:
+    0 0 12px rgba(110, 234, 176, 0.35), 0 0 40px rgba(110, 234, 176, 0.12);
+  --glow-soft: 0 0 8px rgba(110, 234, 176, 0.18);
+  --glow-strong:
+    0 0 16px rgba(110, 234, 176, 0.55), 0 0 60px rgba(110, 234, 176, 0.2);
+
+  /* Gradients */
+  --gradient-primary: linear-gradient(
+    180deg,
+    rgba(110, 234, 176, 0.15),
+    transparent
+  );
+  --gradient-cyan: linear-gradient(135deg, #6eeab0, #5ae4d8);
+  --gradient-green: linear-gradient(135deg, #6eeab0, #7ef5a0);
+
+  /* Panels */
+  --panel: var(--bg-1);
+  --panel-soft: var(--bg-2);
+  --muted: var(--text-tertiary);
+
+  /* Legacy compat */
+  --accent: var(--primary);
+  --accent-strong: var(--primary-bright);
+  --accent-soft: var(--primary-25);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-primary-bright: var(--primary-bright);
+  --color-primary-dim: var(--primary-dim);
+  --color-primary-soft: var(--primary-soft);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-tertiary: var(--text-tertiary);
   --font-sans: var(--font-space-grotesk);
-  --font-mono: var(--font-ibm-plex-mono);
+  --font-mono: var(--font-mono);
 }
 
 * {
@@ -41,8 +99,8 @@ body {
   min-height: 100vh;
   margin: 0;
   background: #000000;
-  color: var(--foreground);
-  font-family: var(--font-space-grotesk), "Segoe UI", sans-serif;
+  color: var(--text-primary);
+  font-family: var(--font-mono), monospace;
   line-height: 1.55;
 }
 
@@ -52,8 +110,8 @@ body::before {
   inset: 0;
   pointer-events: none;
   background-image:
-    linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+    linear-gradient(rgba(110, 234, 176, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(110, 234, 176, 0.04) 1px, transparent 1px);
   background-size: 48px 48px;
 }
 
@@ -79,7 +137,7 @@ textarea {
 }
 
 :focus-visible {
-  outline: 2px solid rgba(231, 245, 241, 0.8);
+  outline: 2px solid var(--primary-75);
   outline-offset: 2px;
 }
 
@@ -184,7 +242,7 @@ textarea {
   padding: 0.85rem 0.5rem;
   border-radius: 0.75rem;
   color: var(--text-tertiary);
-  font-family: var(--font-ibm-plex-mono), monospace;
+  font-family: var(--font-mono), monospace;
   font-size: 0.8rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -205,12 +263,12 @@ textarea {
 
 .mobile-menu-link-active {
   background: rgba(255, 229, 0, 0.1);
-  color: #ffe500;
+  color: var(--primary);
   box-shadow: none;
 }
 
 .mobile-menu-link-active .mobile-menu-link-icon {
-  color: #ffe500;
+  color: var(--primary);
   opacity: 1;
 }
 
@@ -239,7 +297,7 @@ textarea {
 
 .site-brand-kicker {
   color: var(--accent);
-  font-family: var(--font-ibm-plex-mono), monospace;
+  font-family: var(--font-mono), monospace;
   font-size: 0.62rem;
   letter-spacing: 0.16em;
   text-transform: uppercase;
@@ -287,7 +345,7 @@ textarea {
   border-radius: 0.2rem;
   border: 1px solid transparent;
   color: var(--text-tertiary);
-  font-family: var(--font-ibm-plex-mono), monospace;
+  font-family: var(--font-mono), monospace;
   font-size: 0.66rem;
   letter-spacing: 0.1em;
   white-space: nowrap;
@@ -313,9 +371,9 @@ textarea {
 }
 
 .nav-link-active {
-  border-color: #ffe500;
+  border-color: var(--primary);
   background: rgba(255, 229, 0, 0.1);
-  color: #ffe500;
+  color: var(--primary);
   box-shadow: none;
 }
 
@@ -518,7 +576,7 @@ textarea {
 }
 
 .selector-card--selected {
-  border-color: #ffe500;
+  border-color: var(--primary);
   background: rgba(255, 229, 0, 0.06);
   box-shadow: none;
 }
@@ -661,7 +719,7 @@ textarea {
     rgba(255, 170, 112, 0.05)
   );
   color: #ffe8d8;
-  font-family: var(--font-ibm-plex-mono), monospace;
+  font-family: var(--font-mono), monospace;
   font-size: 0.64rem;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -678,59 +736,61 @@ textarea {
   min-height: 2.8rem;
   padding: 0.75rem 1.25rem;
   border-radius: 2px;
-  border: 1px solid #333;
-  background: #111;
-  color: #fff;
+  border: 1px solid var(--primary);
+  background: var(--primary);
+  color: #000000;
   cursor: pointer;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
-  font-family: var(--font-ibm-plex-mono), monospace;
+  font-family: var(--font-mono), monospace;
   font-size: 0.75rem;
+  font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   transition:
-    border-color 120ms ease,
     background 120ms ease,
-    color 120ms ease;
+    color 120ms ease,
+    box-shadow 120ms ease;
 }
 
 .button:disabled,
 .cinema-primary-button:disabled,
 .cinema-secondary-button:disabled {
   cursor: not-allowed;
-  opacity: 0.4;
+  opacity: 0.35;
 }
 
 .button:hover,
 .cinema-primary-button:hover,
 .cinema-secondary-button:hover {
-  border-color: #ffe500;
-  color: #ffe500;
+  background: var(--primary-bright);
+  border-color: var(--primary-bright);
+  box-shadow: var(--glow-soft);
 }
 
 .button-primary,
 .cinema-primary-button {
-  background: #ffe500;
-  border-color: #ffe500;
-  color: #000;
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #000000;
   font-weight: 700;
 }
 
 .button-secondary,
 .cinema-secondary-button {
-  background: #000;
-  border-color: #444;
-  color: #ccc;
+  background: #000000;
+  border-color: var(--primary);
+  color: var(--primary);
 }
 
 .button-primary:hover,
 .button-primary:focus-visible,
 .cinema-primary-button:hover,
 .cinema-primary-button:focus-visible {
-  background: #fff;
-  border-color: #fff;
-  color: #000;
-  box-shadow: none;
+  background: var(--primary-bright);
+  border-color: var(--primary-bright);
+  color: #000000;
+  box-shadow: var(--glow-strong);
 }
 
 .mini-list,
@@ -848,7 +908,7 @@ textarea::placeholder {
 input:focus,
 select:focus,
 textarea:focus {
-  border-color: #ffe500;
+  border-color: var(--primary);
   box-shadow: none;
 }
 
@@ -880,7 +940,7 @@ select {
 }
 
 .inline-note code {
-  font-family: var(--font-ibm-plex-mono), monospace;
+  font-family: var(--font-mono), monospace;
   color: var(--accent-soft);
 }
 
@@ -1025,7 +1085,7 @@ select {
 
 .home-admin-link {
   padding: 0.5rem 0.2rem;
-  font-family: var(--font-ibm-plex-mono), monospace;
+  font-family: var(--font-mono), monospace;
   font-size: 0.7rem;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -1151,7 +1211,7 @@ select {
 
 .concierge-role {
   color: var(--muted);
-  font-family: var(--font-ibm-plex-mono), monospace;
+  font-family: var(--font-mono), monospace;
   font-size: 0.62rem;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -1406,7 +1466,7 @@ select {
     rgba(255, 255, 255, 0.04)
   );
   color: var(--foreground);
-  font-family: var(--font-ibm-plex-mono), monospace;
+  font-family: var(--font-mono), monospace;
   font-size: 0.66rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -1670,7 +1730,7 @@ select {
 
 .hero-quad-agent {
   color: rgba(244, 239, 232, 0.86);
-  font-family: var(--font-ibm-plex-mono), monospace;
+  font-family: var(--font-mono), monospace;
   font-size: 0.66rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -1827,7 +1887,7 @@ select {
 
 .concierge-role {
   color: rgba(199, 232, 229, 0.78);
-  font-family: var(--font-ibm-plex-mono), monospace;
+  font-family: var(--font-mono), monospace;
   font-size: 0.62rem;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -2166,7 +2226,7 @@ select {
   border: 1px solid rgba(255, 255, 255, 0.14);
   background: rgba(255, 255, 255, 0.08);
   color: rgba(255, 255, 255, 0.9);
-  font-family: var(--font-ibm-plex-mono), monospace;
+  font-family: var(--font-mono), monospace;
   font-size: 0.67rem;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -2288,7 +2348,7 @@ select {
   border: 1px solid rgba(255, 255, 255, 0.12);
   background: rgba(255, 255, 255, 0.06);
   color: rgba(255, 245, 233, 0.88);
-  font-family: var(--font-ibm-plex-mono), monospace;
+  font-family: var(--font-mono), monospace;
   font-size: 0.64rem;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -2643,7 +2703,7 @@ select {
 }
 
 .footer-nav-link {
-  font-family: var(--font-ibm-plex-mono), monospace;
+  font-family: var(--font-mono), monospace;
   font-size: 0.7rem;
   color: #aaa;
   text-decoration: none;
@@ -2651,5 +2711,5 @@ select {
 }
 
 .footer-nav-link:hover {
-  color: #ffe500;
+  color: var(--primary);
 }

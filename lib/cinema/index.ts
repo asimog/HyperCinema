@@ -28,7 +28,11 @@ import { generateVeoPromptPackage } from "@/lib/cinema/generateVeoPrompt";
 import { mapVisualMetaphors } from "@/lib/cinema/mapVisualMetaphors";
 import { StoryStateCompiler } from "@/lib/cinema/storyStateCompiler";
 import { veoPromptPackageSchema } from "@/lib/cinema/schemas";
-import type { TokenAsset, VeoPromptPackage, VisualMetaphorMap } from "@/lib/cinema/types";
+import type {
+  TokenAsset,
+  VeoPromptPackage,
+  VisualMetaphorMap,
+} from "@/lib/cinema/types";
 
 function placeholderMetaphorMap(): VisualMetaphorMap {
   return {
@@ -84,7 +88,10 @@ export function buildHyperCinemaVeoPromptPackage(input: {
   return veoPromptPackageSchema.parse(pkg);
 }
 
-export { StoryStateCompiler, compileStoryState } from "@/lib/cinema/storyStateCompiler";
+export {
+  StoryStateCompiler,
+  compileStoryState,
+} from "@/lib/cinema/storyStateCompiler";
 export { deriveEmotionalSignals } from "@/lib/cinema/deriveEmotionalSignals";
 export { selectNarrativeArchetype } from "@/lib/cinema/selectNarrativeArchetype";
 export { selectCharacterArc } from "@/lib/cinema/selectCharacterArc";
@@ -98,5 +105,3 @@ export { generateVeoPromptPackage } from "@/lib/cinema/generateVeoPrompt";
 
 export * from "@/lib/cinema/types";
 export { buildSoundDirectorPackage } from "@/lib/cinema/soundDirector";
-export { executeFinalCut } from "@/lib/cinema/finalCut";
-export type { FinalCutInput, FinalCutResult } from "@/lib/cinema/finalCut";

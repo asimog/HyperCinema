@@ -147,8 +147,8 @@ export class XAiVideoClient {
       throw new Error("xAI video generation did not return a request id.");
     }
 
-    for (let attempt = 0; attempt < env.VERTEX_MAX_POLL_ATTEMPTS; attempt += 1) {
-      await sleep(env.VERTEX_POLL_INTERVAL_MS);
+    for (let attempt = 0; attempt < env.XAI_MAX_POLL_ATTEMPTS; attempt += 1) {
+      await sleep(env.XAI_POLL_INTERVAL_MS);
       await input.onProgress?.();
 
       const statusResponse = await fetch(`${baseUrl}/videos/${encodeURIComponent(requestId)}`, {

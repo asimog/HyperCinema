@@ -1,4 +1,5 @@
-import { getInferenceRuntimeConfig } from "@/lib/inference/config";
+// Video service HTTP client — xAI only
+// Posts render request, polls until video URL is ready
 import { getEnv } from "@/lib/env";
 import { fetchWithTimeout } from "@/lib/network/http";
 import {
@@ -7,12 +8,9 @@ import {
   withRetry,
 } from "@/lib/network/retry";
 import { GeneratedCinematicScript } from "@/lib/types/domain";
-import { ElizaOSRenderPayload } from "@/lib/video/elizaos";
-import { GenericRestVideoRenderPayload } from "@/lib/video/generic-rest";
-import { OpenMontageRenderPayload } from "@/lib/video/openmontage";
-import { GoogleVeoRenderPayload } from "@/lib/video/veo";
 import { XAiVideoRenderPayload } from "@/lib/video/xai";
 
+// Response from POST /render
 interface StartRenderResponse {
   id?: string;
   jobId?: string;
@@ -21,6 +19,7 @@ interface StartRenderResponse {
   thumbnailUrl?: string;
 }
 
+// Response from GET /render/:id
 interface PollRenderResponse {
   status?: string;
   renderStatus?: string;
@@ -33,148 +32,67 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+// Send render job to video-service, poll until done
 export async function renderCinematicVideo(params: {
   jobId: string;
   wallet: string;
   durationSeconds: number;
   script: GeneratedCinematicScript;
-  googleVeo?: GoogleVeoRenderPayload;
-  xai?: XAiVideoRenderPayload;
-  elizaos?: ElizaOSRenderPayload;
-  openMontage?: OpenMontageRenderPayload;
-  generic?: GenericRestVideoRenderPayload;
+  xai: XAiVideoRenderPayload;
 }): Promise<{ videoUrl: string; thumbnailUrl: string | null }> {
   const env = getEnv();
-  const inferenceConfig = await getInferenceRuntimeConfig();
-  const videoBaseUrl = inferenceConfig.video.baseUrl ?? env.VIDEO_API_BASE_URL;
-  if (!videoBaseUrl) {
-    throw new Error(
-      "VIDEO_API_BASE_URL is required to render cinematic videos.",
-    );
+
+  if (!env.VIDEO_API_BASE_URL) {
+    throw new Error("VIDEO_API_BASE_URL is required.");
   }
 
-  const scenePayload = params.script.scenes.map((scene) => ({
-    ...scene,
-    includeAudio: params.googleVeo?.generateAudio ?? false,
-  }));
-  const isXaiProvider = Boolean(params.xai);
-  const isElizaOSProvider = Boolean(params.elizaos);
-  const isOpenMontageProvider = Boolean(params.openMontage);
-  const isGenericProvider = Boolean(params.generic);
-  const withSound =
-    params.googleVeo?.generateAudio ??
-    params.openMontage?.storyMetadata.audioEnabled ??
-    false;
-  const provider = isXaiProvider
-    ? "xai"
-    : isElizaOSProvider
-      ? "elizaos"
-    : isOpenMontageProvider
-      ? "openmontage"
-    : isGenericProvider
-      ? params.generic!.provider
-      : inferenceConfig.video.provider;
-  const videoEngine = isXaiProvider
-    ? "xai"
-    : isElizaOSProvider
-      ? "elizaos"
-    : isOpenMontageProvider
-      ? "openmontage"
-    : isGenericProvider
-      ? "generic"
-      : env.VIDEO_ENGINE;
-  const baseRequestPayload = {
+  const baseUrl = env.VIDEO_API_BASE_URL.replace(/\/+$/, "");
+
+  // Build request payload
+  const payload = {
     jobId: params.jobId,
     wallet: params.wallet,
     durationSeconds: params.durationSeconds,
-    withSound,
-    resolution: params.xai?.resolution ?? params.googleVeo?.resolution ?? env.VIDEO_RESOLUTION,
+    withSound: false,
+    resolution: params.xai.resolution ?? "720p",
     hookLine: params.script.hookLine,
-    scenes: scenePayload,
-    videoEngine,
-    provider,
-    model:
-      params.xai?.model ??
-      params.elizaos?.model ??
-      inferenceConfig.video.model ??
-      params.googleVeo?.model ??
-      env.VIDEO_VEO_MODEL,
+    scenes: params.script.scenes,
+    videoEngine: "xai",
+    provider: "xai",
+    model: params.xai.model,
+    prompt: params.xai.prompt ?? params.script.hookLine,
+    xai: params.xai,
   };
-  const renderRequestPayload = isXaiProvider
-    ? {
-        ...baseRequestPayload,
-        provider: "xai",
-        videoEngine: "xai",
-        prompt: params.xai?.prompt ?? params.script.hookLine,
-        xai: params.xai,
-      }
-    : isElizaOSProvider
-      ? {
-          ...baseRequestPayload,
-          provider: "elizaos",
-          videoEngine: "elizaos",
-          prompt: params.elizaos?.prompt ?? params.script.hookLine,
-          elizaos: params.elizaos,
-        }
-    : isOpenMontageProvider
-      ? {
-          ...baseRequestPayload,
-          provider: "openmontage",
-          videoEngine: "openmontage",
-          prompt: params.openMontage?.prompt ?? params.script.hookLine,
-          openMontage: params.openMontage,
-        }
-    : isGenericProvider
-      ? {
-          ...baseRequestPayload,
-          provider: params.generic!.provider,
-          videoEngine: "generic",
-          prompt: params.generic!.prompt,
-          generic: params.generic,
-        }
-    : provider === "google_veo"
-      ? {
-          ...baseRequestPayload,
-          provider: "google_veo",
-          prompt: params.googleVeo?.prompt ?? params.script.hookLine,
-          metadata: params.googleVeo ?? null,
-          googleVeo: params.googleVeo ?? null,
-        }
-      : baseRequestPayload;
 
+  // POST to /render with retry
   const startPayload = await withRetry(
     async () => {
-      const startResponse = await fetchWithTimeout(
-        `${videoBaseUrl.replace(/\/+$/, "")}/render`,
+      const response = await fetchWithTimeout(
+        `${baseUrl}/render`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${env.VIDEO_API_KEY}`,
           },
-          body: JSON.stringify(renderRequestPayload),
+          body: JSON.stringify(payload),
         },
         20_000,
       );
 
-      if (!startResponse.ok) {
-        const body = await startResponse.text();
-        const message = `Video render request failed (${startResponse.status}): ${body}`;
-        if (isRetryableHttpStatus(startResponse.status)) {
-          throw new RetryableError(message);
-        }
-        throw new Error(message);
+      if (!response.ok) {
+        const body = await response.text();
+        const msg = `Video render request failed (${response.status}): ${body}`;
+        if (isRetryableHttpStatus(response.status)) throw new RetryableError(msg);
+        throw new Error(msg);
       }
 
-      return (await startResponse.json()) as StartRenderResponse;
+      return (await response.json()) as StartRenderResponse;
     },
-    {
-      attempts: 3,
-      baseDelayMs: 900,
-      maxDelayMs: 5_000,
-    },
+    { attempts: 3, baseDelayMs: 900, maxDelayMs: 5_000 },
   );
 
+  // Sync result — video done immediately
   if (startPayload.videoUrl) {
     return {
       videoUrl: startPayload.videoUrl,
@@ -182,82 +100,64 @@ export async function renderCinematicVideo(params: {
     };
   }
 
+  // Async result — poll for completion
   const renderId = startPayload.id ?? startPayload.jobId;
   if (!renderId && !startPayload.statusUrl) {
-    throw new Error("Video API did not return a render identifier.");
+    throw new Error("Video API did not return a render ID.");
   }
 
-  for (
-    let attempt = 0;
-    attempt < env.VIDEO_RENDER_MAX_POLL_ATTEMPTS;
-    attempt += 1
-  ) {
+  for (let attempt = 0; attempt < env.VIDEO_RENDER_MAX_POLL_ATTEMPTS; attempt += 1) {
     await sleep(env.VIDEO_RENDER_POLL_INTERVAL_MS);
+
     const pollUrl =
-      startPayload.statusUrl ?? `${videoBaseUrl.replace(/\/+$/, "")}/render/${renderId}`;
+      startPayload.statusUrl ?? `${baseUrl}/render/${renderId}`;
+
     let pollResponse: Response;
     try {
       pollResponse = await withRetry(
         async () => {
           const response = await fetchWithTimeout(
             pollUrl,
-            {
-              headers: {
-                Authorization: `Bearer ${env.VIDEO_API_KEY}`,
-              },
-            },
+            { headers: { Authorization: `Bearer ${env.VIDEO_API_KEY}` } },
             12_000,
           );
 
           if (!response.ok) {
             const body = await response.text();
-            const message = `Video render polling failed (${response.status}): ${body || "empty response"}`;
-            if (isRetryableHttpStatus(response.status)) {
-              throw new RetryableError(message);
-            }
-            throw new Error(message);
+            const msg = `Video poll failed (${response.status}): ${body || "empty"}`;
+            if (isRetryableHttpStatus(response.status)) throw new RetryableError(msg);
+            throw new Error(msg);
           }
 
           return response;
         },
-        {
-          attempts: 2,
-          baseDelayMs: 500,
-          maxDelayMs: 2_000,
-        },
+        { attempts: 2, baseDelayMs: 500, maxDelayMs: 2_000 },
       );
     } catch (error) {
-      if (error instanceof RetryableError || error instanceof TypeError) {
-        continue;
-      }
+      // Transient errors — keep polling
+      if (error instanceof RetryableError || error instanceof TypeError) continue;
       throw error;
     }
 
-    const pollPayload = (await pollResponse.json()) as PollRenderResponse;
-    const status = (pollPayload.renderStatus ?? pollPayload.status ?? "").toLowerCase();
+    const poll = (await pollResponse.json()) as PollRenderResponse;
+    const status = (poll.renderStatus ?? poll.status ?? "").toLowerCase();
 
     if (status === "failed" || status === "error") {
-      throw new Error(pollPayload.error ?? "Video render failed.");
+      throw new Error(poll.error ?? "Video render failed.");
     }
 
-    if (
-      status === "completed" ||
-      status === "complete" ||
-      status === "ready" ||
-      pollPayload.videoUrl
-    ) {
-      if (!pollPayload.videoUrl) {
-        throw new Error("Video render marked complete but videoUrl is missing.");
+    if (status === "completed" || status === "complete" || status === "ready" || poll.videoUrl) {
+      if (!poll.videoUrl) {
+        throw new Error("Render complete but videoUrl is missing.");
       }
-
       return {
-        videoUrl: pollPayload.videoUrl,
-        thumbnailUrl: pollPayload.thumbnailUrl ?? null,
+        videoUrl: poll.videoUrl,
+        thumbnailUrl: poll.thumbnailUrl ?? null,
       };
     }
   }
 
   throw new Error(
-    `Video rendering timed out after ${env.VIDEO_RENDER_MAX_POLL_ATTEMPTS} polling attempts.`,
+    `Video rendering timed out after ${env.VIDEO_RENDER_MAX_POLL_ATTEMPTS} attempts.`,
   );
 }

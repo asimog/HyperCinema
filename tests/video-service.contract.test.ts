@@ -1,7 +1,22 @@
-﻿import { afterAll, beforeAll, describe, expect, it } from "vitest";
+﻿import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { FastifyInstance } from "fastify";
-import { buildVideoService, RenderServicePort } from "../video-service/src/server";
+import {
+  buildVideoService,
+  RenderServicePort,
+} from "../video-service/src/server";
 import { parseRenderRequest } from "../video-service/src/types";
+
+// Mock repository to prevent Prisma initialization during tests
+vi.mock("../video-service/src/repository", () => ({
+  claimRenderJob: vi.fn(),
+  createOrGetRenderJob: vi.fn(),
+  getRenderJob: vi.fn(),
+  listRecoverableRenderJobs: vi.fn(),
+  markRenderFailed: vi.fn(),
+  markRenderReady: vi.fn(),
+  touchRenderJob: vi.fn(),
+  updateRenderJob: vi.fn(),
+}));
 
 class InMemoryRenderService implements RenderServicePort {
   private readonly records = new Map<
@@ -69,62 +84,12 @@ class InMemoryRenderService implements RenderServicePort {
   }
 }
 
-function buildPayload(jobId: string) {
-  return {
-    jobId,
-    wallet: "wallet",
-    durationSeconds: 30,
-    withSound: true,
-    resolution: "1080p",
-    hookLine: "hook line",
-    scenes: [
-      {
-        sceneNumber: 1,
-        visualPrompt: "visual prompt",
-        narration: "narration prompt",
-        durationSeconds: 10,
-        imageUrl: "https://cdn.example.com/image.png",
-        includeAudio: true,
-      },
-    ],
-    videoEngine: "google_veo",
-    provider: "google_veo",
-    prompt: "global prompt",
-    metadata: {
-      provider: "google_veo",
-      model: "veo-3.1-fast-generate-001",
-      resolution: "1080p",
-      generateAudio: true,
-      prompt: "global prompt",
-      styleHints: ["memetic"],
-      tokenMetadata: [],
-      sceneMetadata: [
-        {
-          sceneNumber: 1,
-          durationSeconds: 10,
-          narration: "narration prompt",
-          visualPrompt: "visual prompt",
-          imageUrl: "https://cdn.example.com/image.png",
-        },
-      ],
-      storyMetadata: {
-        wallet: "wallet",
-        rangeDays: 1,
-        packageType: "30s",
-        durationSeconds: 30,
-        analytics: {},
-      },
-    },
-  };
-}
-
-function buildElizaPayload(jobId: string) {
+function buildXAiPayload(jobId: string) {
   return {
     jobId,
     wallet: "wallet",
     durationSeconds: 30,
     withSound: false,
-    resolution: "1080p",
     hookLine: "hook line",
     scenes: [
       {
@@ -135,14 +100,16 @@ function buildElizaPayload(jobId: string) {
         imageUrl: "https://cdn.example.com/image.png",
       },
     ],
-    videoEngine: "elizaos",
-    provider: "elizaos",
+    videoEngine: "xai" as const,
+    provider: "xai" as const,
     prompt: "global prompt",
-    elizaos: {
-      provider: "elizaos",
-      model: "default",
-      aspectRatio: "16:9",
+    xai: {
+      provider: "xai" as const,
+      model: "grok-imagine-video",
+      resolution: "720p" as const,
+      aspectRatio: "16:9" as const,
       prompt: "global prompt",
+      styleHints: [],
       sceneMetadata: [
         {
           sceneNumber: 1,
@@ -162,7 +129,7 @@ function buildElizaPayload(jobId: string) {
   };
 }
 
-describe("video-service /render contract", () => {
+describe("video-service /render contract (xAI only)", () => {
   let app: FastifyInstance;
   let service: InMemoryRenderService;
 
@@ -184,16 +151,16 @@ describe("video-service /render contract", () => {
     const response = await app.inject({
       method: "POST",
       url: "/render",
-      payload: buildPayload("job-unauthorized"),
+      payload: buildXAiPayload("job-unauthorized"),
     });
 
     expect(response.statusCode).toBe(401);
   });
 
-  it("validates required Veo fields", async () => {
-    const payload = buildPayload("job-invalid");
+  it("validates required xAI fields", async () => {
+    const payload = buildXAiPayload("job-invalid");
     // @ts-expect-error test invalid payload shape
-    delete payload.metadata;
+    delete payload.xai;
 
     const response = await app.inject({
       method: "POST",
@@ -207,26 +174,12 @@ describe("video-service /render contract", () => {
     expect(response.statusCode).toBe(400);
   });
 
-  it("rejects Veo renders when audio is disabled", async () => {
-    const payload = buildPayload("job-audio-disabled");
-    payload.withSound = false;
-
-    const response = await app.inject({
-      method: "POST",
-      url: "/render",
-      headers: {
-        authorization: "Bearer video-secret",
-      },
-      payload,
-    });
-
-    expect(response.statusCode).toBe(400);
-    expect(response.json().error).toContain("withSound must match metadata.generateAudio");
-  });
-
-  it("rejects unsupported Veo model IDs", async () => {
-    const payload = buildPayload("job-wrong-model");
-    payload.metadata.model = "veo-3" as unknown as typeof payload.metadata.model;
+  it("rejects non-xAI videoEngine values", async () => {
+    const payload = buildXAiPayload("job-wrong-engine");
+    // @ts-expect-error test invalid enum value
+    payload.videoEngine = "google_veo";
+    // @ts-expect-error test invalid enum value
+    payload.provider = "google_veo";
 
     const response = await app.inject({
       method: "POST",
@@ -241,7 +194,7 @@ describe("video-service /render contract", () => {
   });
 
   it("returns idempotent async response for duplicate POSTs", async () => {
-    const payload = buildPayload("job-idempotent");
+    const payload = buildXAiPayload("job-idempotent");
 
     const first = await app.inject({
       method: "POST",
@@ -268,7 +221,9 @@ describe("video-service /render contract", () => {
     const secondBody = second.json();
     expect(firstBody.id).toBe("job-idempotent");
     expect(secondBody.id).toBe("job-idempotent");
-    expect(secondBody.statusUrl).toBe("http://video.test/render/job-idempotent");
+    expect(secondBody.statusUrl).toBe(
+      "http://video.test/render/job-idempotent",
+    );
   });
 
   it("supports async status lifecycle via GET /render/:id and /render/status/:id", async () => {
@@ -278,7 +233,7 @@ describe("video-service /render contract", () => {
       headers: {
         authorization: "Bearer video-secret",
       },
-      payload: buildPayload("job-status"),
+      payload: buildXAiPayload("job-status"),
     });
 
     const queued = await app.inject({
@@ -306,18 +261,20 @@ describe("video-service /render contract", () => {
     expect(ready.json().videoUrl).toContain("final.mp4");
   });
 
-  it("accepts ElizaOS render payloads as a first-class provider", async () => {
+  it("accepts valid xAI render payloads", async () => {
     const response = await app.inject({
       method: "POST",
       url: "/render",
       headers: {
         authorization: "Bearer video-secret",
       },
-      payload: buildElizaPayload("job-elizaos"),
+      payload: buildXAiPayload("job-xai-valid"),
     });
 
     expect(response.statusCode).toBe(200);
-    expect(response.json().id).toBe("job-elizaos");
-    expect(response.json().statusUrl).toBe("http://video.test/render/job-elizaos");
+    expect(response.json().id).toBe("job-xai-valid");
+    expect(response.json().statusUrl).toBe(
+      "http://video.test/render/job-xai-valid",
+    );
   });
 });

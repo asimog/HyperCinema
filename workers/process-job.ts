@@ -21,6 +21,7 @@ import { generateReportPdf } from "../lib/pdf/report";
 import { extractPumpTrades } from "../lib/pump/filter";
 import { JobDocument, ReportDocument, WalletStory } from "../lib/types/domain";
 import { buildAndRenderVideo } from "../lib/video/pipeline";
+import { uploadVideoToStorage } from "../lib/storage/s3";
 import { computeAnalyticsFromTrades } from "../lib/analytics/compute";
 import { recoverJobIfNeeded } from "../lib/jobs/recovery";
 import { publishCompletedJobToMoltBook } from "../lib/social/moltbook-publisher";
@@ -198,10 +199,19 @@ async function uploadRenderedAssets(input: {
         generateReportPdf(input.report),
       );
 
-      // Storage upload stubs — return direct URLs since storage module is not available
-      const storedVideoUrl = input.rendered.videoUrl;
+      // Upload video and thumbnail to S3 — falls back to original URL if S3 not configured
+      const storedVideoUrl = await uploadVideoToStorage(
+        input.rendered.videoUrl,
+        `video-renders/${input.jobId}/final.mp4`,
+      );
+      const thumbnailUrl = input.rendered.thumbnailUrl
+        ? await uploadVideoToStorage(
+            input.rendered.thumbnailUrl,
+            `video-renders/${input.jobId}/thumbnail.jpg`,
+          )
+        : null;
+      // PDF served from DB via /api/report/:jobId
       const reportUrl = `/api/report/${input.jobId}`;
-      let thumbnailUrl: string | null = input.rendered.thumbnailUrl;
 
       return {
         storedVideoUrl,

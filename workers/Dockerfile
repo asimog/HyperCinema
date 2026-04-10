@@ -1,31 +1,36 @@
-# Stage 1: Install dependencies
-FROM node:20-bookworm-slim AS deps
+# Stage 1: Install all deps (including dev for ts compilation)
+FROM node:22-alpine AS deps
+# Patch known CVEs in base OS packages
+RUN apk upgrade --no-cache
 WORKDIR /app
+# prisma generate runs postinstall — needs schema present
 COPY package.json package-lock.json ./
-# prisma/schema.prisma must be present before npm install so that
-# the postinstall "prisma generate" step can find the schema.
 COPY prisma ./prisma
 COPY prisma.config.ts ./
 RUN npm install --include=dev --no-audit --no-fund
 
-# Stage 2: Runner
-FROM node:20-bookworm-slim AS runner
+# Stage 2: Runtime image
+FROM node:22-alpine AS runner
+# Patch known CVEs in base OS packages
+RUN apk upgrade --no-cache
 WORKDIR /app
 
 ENV NODE_ENV=production
-# Railway sets PORT dynamically; default to 8080 for local dev
+# Railway sets PORT dynamically; default to 8080
 ENV PORT=8080
 
-# Copy node_modules from deps stage
+# Copy deps and app code
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/package.json ./package.json
 
-# Copy application code
 COPY tsconfig.json ./
 COPY workers ./workers
 COPY lib ./lib
 COPY prompts ./prompts
+COPY prisma ./prisma
+COPY prisma.config.ts ./
 
 EXPOSE ${PORT}
 
-CMD ["npx", "tsx", "workers/server.ts"]
+# Run DB migrations then start worker
+CMD ["sh", "-c", "npx prisma migrate deploy && npx tsx workers/server.ts"]

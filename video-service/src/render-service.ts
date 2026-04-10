@@ -1,3 +1,5 @@
+// Render service — xAI only
+// Generates clips via xAI, concatenates with ffmpeg, uploads to S3
 import { promises as fs } from "fs";
 import path from "path";
 import {
@@ -11,6 +13,7 @@ import {
   updateRenderJob,
 } from "./repository";
 import { getVideoServiceEnv } from "./env";
+import { getVideoProviderConfig } from "./inference-config";
 import { NormalizedRenderRequest, RenderJobRecord } from "./types";
 import { buildSceneChunks, normalizeScenes } from "./pipeline/scene-plan";
 import {
@@ -19,21 +22,9 @@ import {
   stageClipFiles,
   uploadLocalFile,
 } from "./pipeline/media";
-import { getVideoProviderRuntimeConfig } from "./inference-config";
-import {
-  ElizaOSVideoClient,
-  GenerateElizaOSClipInput,
-} from "./providers/elizaos-video";
-import {
-  GenericRestVideoClient,
-  GenerateGenericRestClipInput,
-} from "./providers/generic-rest-video";
-import { MythXVideoClient } from "./providers/mythx-video";
-import { OpenMontageRenderer } from "./providers/openmontage";
-import { GenerateClipInput, VertexVeoClient } from "./providers/vertex-veo";
-import { GenerateXAiClipInput, XAiVideoClient } from "./providers/xai-video";
-import { GenericVideoMetadata, OpenMontageMetadata } from "./types";
+import { XAiVideoClient, GenerateXAiClipInput } from "./providers/xai-video";
 
+// Render finished synchronously — video ready immediately
 export interface RenderServiceResultSync {
   mode: "sync";
   id: string;
@@ -42,6 +33,7 @@ export interface RenderServiceResultSync {
   thumbnailUrl: string | null;
 }
 
+// Render kicked off — poll for completion
 export interface RenderServiceResultAsync {
   mode: "async";
   id: string;
@@ -52,70 +44,23 @@ export type RenderServiceStartResult =
   | RenderServiceResultSync
   | RenderServiceResultAsync;
 
-export interface ClipGenerator {
-  generateClip(input: GenerateClipInput): Promise<{
-    operationName: string;
-    videoUris: string[];
-    videoBytesBase64: string[];
-  }>;
-}
-
-const ALLOWED_VEO_MODEL = "veo-3.1-fast-generate-001" as const;
-
-function normalizeVeoModel(value: unknown, fallback: string): string {
-  if (value === ALLOWED_VEO_MODEL) {
-    return value;
-  }
-  return fallback;
-}
-
-function normalizeResolution(
-  value: unknown,
-  fallback: "480p" | "720p" | "1080p",
-): "480p" | "720p" | "1080p" {
-  if (value === "480p" || value === "720p" || value === "1080p") {
-    return value;
-  }
-  return fallback;
-}
-
-export function resolveRenderConfig(input: {
-  metadata?: { model?: unknown; resolution?: unknown } | null;
-  requestResolution?: unknown;
-  envModel: string;
-  envResolution: "480p" | "720p" | "1080p";
-}): { model: string; resolution: "480p" | "720p" | "1080p" } {
-  return {
-    model: normalizeVeoModel(input.metadata?.model, input.envModel),
-    resolution: normalizeResolution(
-      input.metadata?.resolution ?? input.requestResolution,
-      input.envResolution,
-    ),
-  };
-}
-
 export class RenderService {
+  // Track in-flight renders to prevent duplicates
   private readonly activeRenders = new Set<string>();
+  private readonly xaiClient = new XAiVideoClient();
 
-  constructor(
-    private readonly clipGenerator: ClipGenerator = new VertexVeoClient(),
-    private readonly xaiClipGenerator: XAiVideoClient = new XAiVideoClient(),
-    private readonly elizaosClipGenerator: ElizaOSVideoClient = new ElizaOSVideoClient(),
-    private readonly mythxClipGenerator: MythXVideoClient = new MythXVideoClient(),
-    private readonly openMontageRenderer: OpenMontageRenderer = new OpenMontageRenderer(),
-    private readonly genericClipGenerator: GenericRestVideoClient = new GenericRestVideoClient(),
-  ) {}
-
+  // Start new render or return existing one
   async startOrGet(
     request: NormalizedRenderRequest,
   ): Promise<RenderServiceStartResult> {
-    const normalizedRequest: NormalizedRenderRequest = {
+    const normalized: NormalizedRenderRequest = {
       ...request,
       scenes: normalizeScenes(request.scenes),
     };
 
-    const existing = await getRenderJob(normalizedRequest.jobId);
+    const existing = await getRenderJob(normalized.jobId);
     if (existing) {
+      // Already done — return immediately
       if (existing.status === "ready" && existing.videoUrl) {
         return {
           mode: "sync",
@@ -126,8 +71,8 @@ export class RenderService {
         };
       }
 
+      // Failed — reset so it can retry
       if (existing.status === "failed") {
-        // Failed renders must be re-queued on retries instead of staying permanently terminal.
         await updateRenderJob(existing.id, {
           status: "queued",
           renderStatus: "queued",
@@ -136,22 +81,16 @@ export class RenderService {
           error: null,
           startedAt: null,
           completedAt: null,
-          request: normalizedRequest,
+          request: normalized,
         });
       }
 
       this.kickRender(existing.id);
-      return {
-        mode: "async",
-        id: existing.id,
-        jobId: existing.jobId,
-      };
+      return { mode: "async", id: existing.id, jobId: existing.jobId };
     }
 
-    const created = await createOrGetRenderJob(
-      normalizedRequest.jobId,
-      normalizedRequest,
-    );
+    // New render
+    const created = await createOrGetRenderJob(normalized.jobId, normalized);
     this.kickRender(created.record.id);
 
     if (created.record.status === "ready" && created.record.videoUrl) {
@@ -164,17 +103,15 @@ export class RenderService {
       };
     }
 
-    return {
-      mode: "async",
-      id: created.record.id,
-      jobId: created.record.jobId,
-    };
+    return { mode: "async", id: created.record.id, jobId: created.record.jobId };
   }
 
+  // Get render job status by id
   async getById(id: string): Promise<RenderJobRecord | null> {
     return getRenderJob(id);
   }
 
+  // Resume stale or queued renders on startup
   async resumePendingJobs(limit?: number): Promise<number> {
     const env = getVideoServiceEnv();
     const jobs = await listRecoverableRenderJobs({
@@ -189,391 +126,95 @@ export class RenderService {
     return jobs.length;
   }
 
+  // Fire-and-forget render in background
   private kickRender(jobId: string): void {
-    if (this.activeRenders.has(jobId)) {
-      return;
-    }
-
+    if (this.activeRenders.has(jobId)) return;
     this.activeRenders.add(jobId);
     void this.runRender(jobId).finally(() => {
       this.activeRenders.delete(jobId);
     });
   }
 
+  // Claim and run a render job
   private async runRender(jobId: string): Promise<void> {
     const env = getVideoServiceEnv();
     const claimed = await claimRenderJob(jobId, env.RENDER_STALE_MS);
-    if (!claimed) {
-      return;
-    }
+    if (!claimed) return;
 
     try {
       await this.processRender(claimed);
     } catch (error) {
       await markRenderFailed(
         claimed.id,
-        error instanceof Error ? error.message : "Unknown error",
+        error instanceof Error ? error.message : "Unknown render error",
       );
     }
   }
 
+  // Full xAI render pipeline: generate clips → concat → thumbnail → upload
   private async processRender(record: RenderJobRecord): Promise<void> {
     const env = getVideoServiceEnv();
-    const provider =
-      record.request.videoEngine === "generic" || record.request.generic != null
-        ? "generic"
-        : record.request.provider === "xai" ||
-            record.request.provider === "elizaos" ||
-            record.request.provider === "openmontage"
-          ? record.request.provider
-          : "google_veo";
+    const providerConfig = getVideoProviderConfig();
 
-    if (provider === "openmontage") {
-      if (!record.request.openMontage) {
-        throw new Error(
-          "OpenMontage render requested without openMontage metadata.",
-        );
-      }
-      await this.processOpenMontageRender(record, record.request.openMontage);
-      return;
+    const xaiMeta = record.request.xai;
+    // Use xAI metadata model if present, fall back to env default
+    const model = xaiMeta?.model ?? providerConfig.model ?? env.XAI_VIDEO_MODEL;
+    const resolution = (xaiMeta?.resolution ?? "720p") as "480p" | "720p";
+    const aspectRatio = xaiMeta?.aspectRatio ?? "16:9";
+    const apiKey = providerConfig.apiKey ?? env.XAI_API_KEY ?? null;
+
+    if (!apiKey) {
+      throw new Error("XAI_API_KEY is required for video generation.");
     }
 
-    if (provider === "generic") {
-      const genericMeta = record.request.generic;
-      if (!genericMeta) {
-        throw new Error(
-          "Generic video render requested without generic metadata.",
-        );
-      }
-      await this.processGenericRender(record, genericMeta);
-      return;
-    }
-
-    const metadata = record.request.metadata ?? record.request.googleVeo;
-    const xaiMetadata = record.request.xai;
-    const elizaosMetadata = record.request.elizaos;
-    const [googleVeoProviderConfig, xaiProviderConfig, elizaosProviderConfig] =
-      await Promise.all([
-        getVideoProviderRuntimeConfig("google_veo"),
-        getVideoProviderRuntimeConfig("xai"),
-        getVideoProviderRuntimeConfig("elizaos"),
-      ]);
-    const veoConfig = resolveRenderConfig({
-      metadata,
-      requestResolution: record.request.resolution,
-      envModel: googleVeoProviderConfig.model ?? env.VERTEX_VEO_MODEL,
-      envResolution: env.VEO_OUTPUT_RESOLUTION,
-    });
-    const xaiModel =
-      xaiMetadata?.model ?? xaiProviderConfig.model ?? env.XAI_VIDEO_MODEL;
-    const elizaosModel =
-      elizaosMetadata?.model ??
-      elizaosProviderConfig.model ??
-      env.ELIZAOS_VIDEO_MODEL;
-    const xaiResolution = (xaiMetadata?.resolution ?? "480p") as
-      | "480p"
-      | "720p";
-    const veoModel = veoConfig.model;
-    const veoResolution = veoConfig.resolution;
-    const styleHints =
-      provider === "xai"
-        ? (xaiMetadata?.styleHints ?? [])
-        : (metadata?.styleHints ?? []);
-    const generateAudio = metadata?.generateAudio ?? record.request.withSound;
+    // Split scenes into fixed-length chunks
     const chunks = buildSceneChunks({
       request: record.request,
-      maxClipSeconds: env.VEO_MAX_CLIP_SECONDS,
+      maxClipSeconds: env.MAX_CLIP_SECONDS,
     });
 
     if (!chunks.length) {
-      throw new Error("No scene chunks available for rendering.");
+      throw new Error("No scene chunks to render.");
     }
 
+    // Generate one clip per chunk
     const clipUris: string[] = [];
     for (const chunk of chunks) {
-      const clip =
-        provider === "xai"
-          ? await this.xaiClipGenerator.generateClip({
-              model: xaiModel,
-              resolution: xaiResolution,
-              prompt: chunk.prompt,
-              durationSeconds: chunk.durationSeconds,
-              imageUrl: chunk.imageUrl,
-              aspectRatio: xaiMetadata?.aspectRatio ?? "16:9",
-              apiKey: xaiProviderConfig.apiKey,
-              baseUrl: xaiProviderConfig.baseUrl,
-              onProgress: () => touchRenderJob(record.id),
-            } satisfies GenerateXAiClipInput)
-          : provider === "elizaos"
-            ? await this.elizaosClipGenerator.generateClip({
-                model: elizaosModel,
-                prompt: chunk.prompt,
-                durationSeconds: chunk.durationSeconds,
-                imageUrl: chunk.imageUrl,
-                aspectRatio: elizaosMetadata?.aspectRatio ?? "16:9",
-                style: elizaosMetadata?.style,
-                apiKey: elizaosProviderConfig.apiKey,
-                baseUrl: elizaosProviderConfig.baseUrl,
-                onProgress: () => touchRenderJob(record.id),
-              } satisfies GenerateElizaOSClipInput)
-            : await this.clipGenerator.generateClip({
-                model: veoModel as GenerateClipInput["model"],
-                resolution: veoResolution,
-                prompt: chunk.prompt,
-                durationSeconds: chunk.durationSeconds,
-                imageUrl: chunk.imageUrl,
-                styleHints,
-                generateAudio,
-                storageUri: `gs://${env.FIREBASE_STORAGE_BUCKET}/video-renders/${record.jobId}/clips/${chunk.chunkId}`,
-                apiKey: googleVeoProviderConfig.apiKey,
-                onProgress: () => touchRenderJob(record.id),
-              });
-      const uri = clip.videoUris[0];
-      const inlineVideo = clip.videoBytesBase64[0];
-      if (uri) {
-        clipUris.push(uri);
-      } else if (inlineVideo) {
-        clipUris.push(`data:video/mp4;base64,${inlineVideo}`);
-      } else {
-        throw new Error(
-          `Clip render for job ${record.jobId} completed without a video asset.`,
-        );
-      }
-      await touchRenderJob(record.id);
-    }
-
-    const { directory, clipPaths } = await stageClipFiles({ clipUris });
-    const outputVideoPath = path.join(directory, "final.mp4");
-    const outputThumbPath = path.join(directory, "thumbnail.jpg");
-
-    try {
-      await concatClips({
-        clipPaths,
-        outputPath: outputVideoPath,
-        workingDir: directory,
-      });
-      await generateThumbnail({
-        videoPath: outputVideoPath,
-        outputPath: outputThumbPath,
-        workingDir: directory,
-      });
-
-      const [videoUrl, thumbnailUrl] = await Promise.all([
-        uploadLocalFile({
-          localPath: outputVideoPath,
-          storagePath: `video-renders/${record.jobId}/final.mp4`,
-          contentType: "video/mp4",
-        }),
-        uploadLocalFile({
-          localPath: outputThumbPath,
-          storagePath: `video-renders/${record.jobId}/thumbnail.jpg`,
-          contentType: "image/jpeg",
-        }),
-      ]);
-
-      await markRenderReady(record.id, {
-        videoUrl,
-        thumbnailUrl,
-      });
-    } finally {
-      await fs.rm(directory, { recursive: true, force: true });
-    }
-  }
-
-  private async processOpenMontageRender(
-    record: RenderJobRecord,
-    openMontage: OpenMontageMetadata,
-  ): Promise<void> {
-    const env = getVideoServiceEnv();
-    const chunks = buildSceneChunks({
-      request: record.request,
-      maxClipSeconds: env.VEO_MAX_CLIP_SECONDS,
-    });
-
-    if (!chunks.length) {
-      throw new Error("No scene chunks available for OpenMontage rendering.");
-    }
-
-    const workerProvider =
-      openMontage.workerProvider ?? env.OPENMONTAGE_VIDEO_WORKER_PROVIDER;
-    const workerModel =
-      openMontage.workerModel ??
-      env.OPENMONTAGE_VIDEO_WORKER_MODEL ??
-      undefined;
-    const [googleVeoProviderConfig, xaiProviderConfig, mythxProviderConfig] =
-      await Promise.all([
-        getVideoProviderRuntimeConfig("google_veo"),
-        getVideoProviderRuntimeConfig("xai"),
-        getVideoProviderRuntimeConfig("mythx"),
-      ]);
-    const clipUris: string[] = [];
-
-    for (const chunk of chunks) {
-      const clip =
-        workerProvider === "xai"
-          ? await this.xaiClipGenerator.generateClip({
-              model:
-                workerModel ?? xaiProviderConfig.model ?? env.XAI_VIDEO_MODEL,
-              resolution: "480p",
-              prompt: chunk.prompt,
-              durationSeconds: chunk.durationSeconds,
-              imageUrl: chunk.imageUrl,
-              aspectRatio: "1:1",
-              apiKey: xaiProviderConfig.apiKey,
-              baseUrl: xaiProviderConfig.baseUrl,
-              onProgress: () => touchRenderJob(record.id),
-            } satisfies GenerateXAiClipInput)
-          : workerProvider === "mythx"
-            ? await this.mythxClipGenerator.generateClip({
-                model:
-                  workerModel ??
-                  mythxProviderConfig.model ??
-                  env.MYTHX_VIDEO_MODEL,
-                prompt: chunk.prompt,
-                durationSeconds: chunk.durationSeconds,
-                aspectRatio: "16:9",
-                apiKey: mythxProviderConfig.apiKey,
-                baseUrl: mythxProviderConfig.baseUrl,
-                onProgress: () => touchRenderJob(record.id),
-              })
-            : await this.clipGenerator.generateClip({
-                model: (workerModel ??
-                  googleVeoProviderConfig.model ??
-                  env.VERTEX_VEO_MODEL) as GenerateClipInput["model"],
-                resolution: openMontage.resolution,
-                prompt: chunk.prompt,
-                durationSeconds: chunk.durationSeconds,
-                imageUrl: chunk.imageUrl,
-                styleHints: ["openmontage", "editorial-composition"],
-                generateAudio: false,
-                storageUri: `gs://${env.FIREBASE_STORAGE_BUCKET}/video-renders/${record.jobId}/openmontage/${chunk.chunkId}`,
-                apiKey: googleVeoProviderConfig.apiKey,
-                onProgress: () => touchRenderJob(record.id),
-              });
-      const uri = clip.videoUris[0];
-      const inlineVideo = clip.videoBytesBase64[0];
-      if (uri) {
-        clipUris.push(uri);
-      } else if (inlineVideo) {
-        clipUris.push(`data:video/mp4;base64,${inlineVideo}`);
-      } else {
-        throw new Error(
-          `OpenMontage source clip ${chunk.chunkId} completed without a video asset.`,
-        );
-      }
-      await touchRenderJob(record.id);
-    }
-
-    const { directory, clipPaths } = await stageClipFiles({ clipUris });
-    const renderDirectory = path.resolve(
-      env.OPENMONTAGE_OUTPUT_ROOT,
-      record.jobId,
-    );
-
-    try {
-      const outputVideoPath = await this.openMontageRenderer.render({
-        jobId: record.jobId,
-        outputDirectory: renderDirectory,
-        compositionId: openMontage.compositionId,
-        openingTitle:
-          record.request.hookLine ||
-          openMontage.storyMetadata.subjectName ||
-          null,
-        scenes: chunks.map((chunk, index) => ({
-          clipPath: clipPaths[index]!,
-          sceneNumber: chunk.sceneNumber,
-          durationSeconds: chunk.durationSeconds,
-          narration: chunk.narration,
-          visualPrompt: chunk.visualPrompt,
-        })),
-      });
-      const outputThumbPath = path.join(renderDirectory, "thumbnail.jpg");
-
-      await generateThumbnail({
-        videoPath: outputVideoPath,
-        outputPath: outputThumbPath,
-        workingDir: renderDirectory,
-      });
-
-      const [videoUrl, thumbnailUrl] = await Promise.all([
-        uploadLocalFile({
-          localPath: outputVideoPath,
-          storagePath: `video-renders/${record.jobId}/final.mp4`,
-          contentType: "video/mp4",
-        }),
-        uploadLocalFile({
-          localPath: outputThumbPath,
-          storagePath: `video-renders/${record.jobId}/thumbnail.jpg`,
-          contentType: "image/jpeg",
-        }),
-      ]);
-
-      await markRenderReady(record.id, {
-        videoUrl,
-        thumbnailUrl,
-      });
-    } finally {
-      await fs.rm(directory, { recursive: true, force: true });
-      await fs.rm(renderDirectory, { recursive: true, force: true });
-    }
-  }
-
-  private async processGenericRender(
-    record: RenderJobRecord,
-    genericMeta: GenericVideoMetadata,
-  ): Promise<void> {
-    const env = getVideoServiceEnv();
-    const chunks = buildSceneChunks({
-      request: record.request,
-      maxClipSeconds: env.VEO_MAX_CLIP_SECONDS,
-    });
-
-    if (!chunks.length) {
-      throw new Error("No scene chunks available for generic video rendering.");
-    }
-
-    const clipUris: string[] = [];
-    for (const chunk of chunks) {
-      const clip = await this.genericClipGenerator.generateClip({
-        provider: genericMeta.provider,
-        model: genericMeta.model,
+      const clip = await this.xaiClient.generateClip({
+        model,
+        resolution,
+        aspectRatio,
         prompt: chunk.prompt,
         durationSeconds: chunk.durationSeconds,
-        apiKey: genericMeta.apiKey,
-        baseUrl: genericMeta.baseUrl,
-        imageUrl: chunk.imageUrl ?? null,
+        imageUrl: chunk.imageUrl,
+        apiKey,
+        baseUrl: providerConfig.baseUrl ?? env.XAI_BASE_URL,
         onProgress: () => touchRenderJob(record.id),
-      } satisfies GenerateGenericRestClipInput);
+      } satisfies GenerateXAiClipInput);
 
       const uri = clip.videoUris[0];
-      const inlineVideo = clip.videoBytesBase64[0];
+      const inline = clip.videoBytesBase64[0];
+
       if (uri) {
         clipUris.push(uri);
-      } else if (inlineVideo) {
-        clipUris.push(`data:video/mp4;base64,${inlineVideo}`);
+      } else if (inline) {
+        // Inline base64 video from API
+        clipUris.push(`data:video/mp4;base64,${inline}`);
       } else {
-        throw new Error(
-          `Generic clip render for job ${record.jobId} completed without a video asset.`,
-        );
+        throw new Error(`Clip ${chunk.chunkId} returned no video.`);
       }
+
       await touchRenderJob(record.id);
     }
 
+    // Download clips, concat, generate thumbnail, upload
     const { directory, clipPaths } = await stageClipFiles({ clipUris });
     const outputVideoPath = path.join(directory, "final.mp4");
     const outputThumbPath = path.join(directory, "thumbnail.jpg");
 
     try {
-      await concatClips({
-        clipPaths,
-        outputPath: outputVideoPath,
-        workingDir: directory,
-      });
-      await generateThumbnail({
-        videoPath: outputVideoPath,
-        outputPath: outputThumbPath,
-        workingDir: directory,
-      });
+      await concatClips({ clipPaths, outputPath: outputVideoPath, workingDir: directory });
+      await generateThumbnail({ videoPath: outputVideoPath, outputPath: outputThumbPath, workingDir: directory });
 
       const [videoUrl, thumbnailUrl] = await Promise.all([
         uploadLocalFile({
@@ -590,6 +231,7 @@ export class RenderService {
 
       await markRenderReady(record.id, { videoUrl, thumbnailUrl });
     } finally {
+      // Always clean up temp files
       await fs.rm(directory, { recursive: true, force: true });
     }
   }

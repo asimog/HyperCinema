@@ -1,5 +1,8 @@
 ﻿import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { NormalizedRenderRequest, RenderJobRecord } from "../video-service/src/types";
+import type {
+  NormalizedRenderRequest,
+  RenderJobRecord,
+} from "../video-service/src/types";
 
 const repositoryMocks = vi.hoisted(() => ({
   claimRenderJob: vi.fn(),
@@ -15,29 +18,53 @@ const repositoryMocks = vi.hoisted(() => ({
 vi.mock("../video-service/src/repository", () => repositoryMocks);
 
 vi.mock("../video-service/src/inference-config", () => ({
-  getVideoProviderRuntimeConfig: () => Promise.resolve({ apiKey: null, baseUrl: null, model: null }),
+  getVideoProviderConfig: () => ({ apiKey: null, baseUrl: null, model: null }),
 }));
 
 vi.mock("../video-service/src/env", () => ({
   getVideoServiceEnv: () => ({
-    VERTEX_VEO_MODEL: "veo-3.1-fast-generate-001",
-    VEO_OUTPUT_RESOLUTION: "1080p",
-    VEO_MAX_CLIP_SECONDS: 8,
+    XAI_API_KEY: "xai-test-key",
+    XAI_BASE_URL: "https://api.x.ai/v1",
+    XAI_VIDEO_MODEL: "grok-imagine-video",
+    MAX_CLIP_SECONDS: 8,
+    FFMPEG_PATH: "ffmpeg",
     RENDER_RECOVERY_BATCH_LIMIT: 10,
     RENDER_STALE_MS: 60_000,
-    FIREBASE_STORAGE_BUCKET: "hashart-fun-media",
+    S3_ENDPOINT: "https://test.supabase.co/storage/v1/s3",
+    S3_ACCESS_KEY_ID: "test-key",
+    S3_SECRET_ACCESS_KEY: "test-secret",
+    S3_BUCKET: "videos",
+    S3_REGION: "us-east-1",
   }),
 }));
 
+vi.mock("../video-service/src/providers/xai-video", () => ({
+  XAiVideoClient: class MockXAiVideoClient {
+    private _generateClip: ReturnType<typeof vi.fn> | null = null;
+    setGenerateClip(fn: ReturnType<typeof vi.fn>) {
+      this._generateClip = fn;
+    }
+    async generateClip(input: any) {
+      if (this._generateClip) return this._generateClip(input);
+      await input.onProgress?.();
+      return {
+        operationName: "op-1",
+        videoUris: ["https://example.com/clip-1.mp4"],
+        videoBytesBase64: [],
+      };
+    }
+  },
+}));
+
 import { RenderService } from "../video-service/src/render-service";
+import { XAiVideoClient } from "../video-service/src/providers/xai-video";
 
 function buildRequest(jobId: string): NormalizedRenderRequest {
   return {
     jobId,
     wallet: "wallet",
     durationSeconds: 30,
-    withSound: true,
-    resolution: "1080p",
+    withSound: false,
     hookLine: "hook",
     scenes: [
       {
@@ -46,20 +73,18 @@ function buildRequest(jobId: string): NormalizedRenderRequest {
         narration: "narration",
         durationSeconds: 8,
         imageUrl: "https://example.com/image.png",
-        includeAudio: true,
       },
     ],
-    videoEngine: "google_veo",
-    provider: "google_veo",
+    videoEngine: "xai",
+    provider: "xai",
     prompt: "prompt",
-    metadata: {
-      provider: "google_veo",
-      model: "veo-3.1-fast-generate-001",
-      resolution: "1080p",
-      generateAudio: true,
+    xai: {
+      provider: "xai",
+      model: "grok-imagine-video",
+      resolution: "720p",
+      aspectRatio: "16:9",
       prompt: "prompt",
       styleHints: [],
-      tokenMetadata: [],
       sceneMetadata: [
         {
           sceneNumber: 1,
@@ -74,10 +99,8 @@ function buildRequest(jobId: string): NormalizedRenderRequest {
         rangeDays: 1,
         packageType: "30s",
         durationSeconds: 30,
-        analytics: {},
       },
     },
-    googleVeo: undefined,
   };
 }
 
@@ -109,9 +132,7 @@ describe("video-service failed-render retry behavior", () => {
     const request = buildRequest("job-retry");
     repositoryMocks.getRenderJob.mockResolvedValue(buildFailedRecord(request));
 
-    const service = new RenderService({
-      generateClip: vi.fn(),
-    });
+    const service = new RenderService();
 
     const response = await service.startOrGet(request);
 
@@ -134,7 +155,7 @@ describe("video-service failed-render retry behavior", () => {
     );
   });
 
-  it("passes storageUri and onProgress heartbeat into clip generation", async () => {
+  it("invokes onProgress heartbeat during clip generation", async () => {
     const request = buildRequest("job-heartbeat");
     repositoryMocks.getRenderJob.mockResolvedValue(null);
     repositoryMocks.createOrGetRenderJob.mockResolvedValue({
@@ -162,18 +183,20 @@ describe("video-service failed-render retry behavior", () => {
       await input.onProgress?.();
       return {
         operationName: "op-1",
-        videoUris: ["gs://hashart-fun-media/video-renders/job-heartbeat/clips/1-1/final.mp4"],
+        videoUris: ["https://example.com/clip-1.mp4"],
         videoBytesBase64: [],
       };
     });
 
-    const service = new RenderService({ generateClip } as never);
+    // Patch the XAiVideoClient instance used by RenderService
+    const service = new RenderService();
+    (service as any).xaiClient = { generateClip: generateClip };
+
     await service.startOrGet(request);
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await new Promise((resolve) => setTimeout(resolve, 100));
 
     expect(generateClip).toHaveBeenCalledWith(
       expect.objectContaining({
-        storageUri: "gs://hashart-fun-media/video-renders/job-heartbeat/clips/1-1",
         onProgress: expect.any(Function),
       }),
     );

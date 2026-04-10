@@ -51,31 +51,58 @@ describe("video client polling", () => {
     });
   }, 15_000);
 
-  it("fails fast on non-retryable polling errors", { timeout: 15_000 }, async () => {
-    mocks.fetchWithTimeout
-      .mockResolvedValueOnce(jsonResponse(200, { id: "render-1" }))
-      .mockResolvedValueOnce(textResponse(401, "Unauthorized"));
+  it(
+    "fails fast on non-retryable polling errors",
+    { timeout: 15_000 },
+    async () => {
+      mocks.fetchWithTimeout
+        .mockResolvedValueOnce(jsonResponse(200, { id: "render-1" }))
+        .mockResolvedValueOnce(textResponse(401, "Unauthorized"));
 
-    await expect(
-      renderCinematicVideo({
-        jobId: "job-1",
-        wallet: "wallet-1",
-        durationSeconds: 30,
-        script: {
-          hookLine: "Hook line",
-          scenes: [
-            {
-              sceneNumber: 1,
-              visualPrompt: "visual",
-              narration: "narration",
-              durationSeconds: 5,
-              imageUrl: null,
+      await expect(
+        renderCinematicVideo({
+          jobId: "job-1",
+          wallet: "wallet-1",
+          durationSeconds: 30,
+          script: {
+            hookLine: "Hook line",
+            scenes: [
+              {
+                sceneNumber: 1,
+                visualPrompt: "visual",
+                narration: "narration",
+                durationSeconds: 5,
+                imageUrl: null,
+              },
+            ],
+          },
+          xai: {
+            provider: "xai",
+            model: "grok-imagine-video",
+            resolution: "720p",
+            aspectRatio: "16:9",
+            prompt: "Hook line",
+            styleHints: [],
+            sceneMetadata: [
+              {
+                sceneNumber: 1,
+                durationSeconds: 5,
+                narration: "narration",
+                visualPrompt: "visual",
+                imageUrl: null,
+              },
+            ],
+            storyMetadata: {
+              wallet: "wallet-1",
+              rangeDays: 1,
+              packageType: "30s",
+              durationSeconds: 30,
             },
-          ],
-        },
-      }),
-    ).rejects.toThrow("Video render polling failed (401)");
+          },
+        }),
+      ).rejects.toThrow("Video poll failed (401)");
 
-    expect(mocks.fetchWithTimeout).toHaveBeenCalledTimes(2);
-  });
+      expect(mocks.fetchWithTimeout).toHaveBeenCalledTimes(2);
+    },
+  );
 });

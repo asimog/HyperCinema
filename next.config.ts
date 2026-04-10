@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import path from "path";
 
 const nextConfig: NextConfig = {
   images: {},
@@ -8,6 +9,10 @@ const nextConfig: NextConfig = {
   // Type checking still runs in dev and CI
   typescript: {
     ignoreBuildErrors: true,
+  },
+  // Silence "inferred workspace root" warning from parent package-lock.json
+  turbopack: {
+    root: path.resolve(__dirname),
   },
 };
 

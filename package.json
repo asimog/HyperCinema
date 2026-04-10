@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma migrate deploy && next build",
+    "build": "next build",
+    "db:migrate": "prisma migrate deploy",
     "start": "next start",
     "postinstall": "prisma generate",
     "guard:no-wallet-connect": "node scripts/guard-no-wallet-connect.mjs",

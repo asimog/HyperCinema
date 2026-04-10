@@ -17,9 +17,20 @@ function getPrismaClient(): PrismaClient {
     return undefined as unknown as PrismaClient;
   }
 
-  // Prisma v7 changed the constructor API: must use accelerateUrl (for prisma+postgres://)
-  // or adapter (for direct DB). datasourceUrl/datasources no longer exist.
-  _db = globalForPrisma.prisma ?? new PrismaClient({ accelerateUrl: databaseUrl });
+  // Prisma v7 requires explicit connection config:
+  //   prisma+postgres:// → Prisma Postgres / Accelerate (accelerateUrl)
+  //   postgresql:// / postgres:// → direct connection via pg adapter
+  if (databaseUrl.startsWith("prisma+postgres://") || databaseUrl.startsWith("prisma://")) {
+    _db = globalForPrisma.prisma ?? new PrismaClient({ accelerateUrl: databaseUrl });
+  } else {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { Pool } = require("pg") as typeof import("pg");
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { PrismaPg } = require("@prisma/adapter-pg") as typeof import("@prisma/adapter-pg");
+    const pool = new Pool({ connectionString: databaseUrl });
+    const adapter = new PrismaPg(pool);
+    _db = globalForPrisma.prisma ?? new PrismaClient({ adapter });
+  }
 
   if (process.env.NODE_ENV !== "production") {
     globalForPrisma.prisma = _db;

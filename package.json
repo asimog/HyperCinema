@@ -20,6 +20,7 @@
   "dependencies": {
     "@dexterai/x402": "^2.0.0",
     "@google-cloud/storage": "^7.17.3",
+    "@prisma/adapter-pg": "^7.7.0",
     "@prisma/client": "^7.7.0",
     "@solana/web3.js": "^1.98.4",
     "@supabase/ssr": "^0.10.2",
@@ -31,6 +32,7 @@
     "next": "16.1.6",
     "node-telegram-bot-api": "^0.67.0",
     "pdf-lib": "^1.17.1",
+    "pg": "^8.20.0",
     "prisma": "^7.7.0",
     "qrcode": "^1.5.4",
     "react": "19.2.3",

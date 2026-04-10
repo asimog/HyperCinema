@@ -215,11 +215,11 @@ export default function ChatPage() {
   // ─── Landing screen (no messages yet) ─────────────────────────────────
   if (messageCount === 0) {
     return (
-      <div className="min-h-dvh bg-black text-white flex flex-col">
+      <div className="min-h-dvh bg-black text-white flex flex-col items-center justify-center">
         {/* Nav */}
-        <nav className="border-b border-[#1a1a1a] px-6 py-3 flex items-center justify-between font-mono text-[0.65rem] tracking-widest uppercase shrink-0">
+        <nav className="fixed top-0 left-0 right-0 border-b border-[#1a1a1a] bg-black/80 backdrop-blur px-6 py-3 flex items-center justify-between font-mono text-[0.65rem] tracking-widest uppercase z-10">
           <span className="text-[#FFE500] font-bold">HYPERM</span>
-          <div className="flex gap-6 text-[#555]">
+          <div className="flex gap-6 text-[#888]">
             <Link
               href="/creator"
               className="hover:text-[#FFE500] transition-colors"
@@ -235,98 +235,69 @@ export default function ChatPage() {
           </div>
         </nav>
 
-        {/* Chat area */}
-        <div
-          ref={scrollRef}
-          className="flex-1 overflow-y-auto px-4 pt-48 pb-6 max-w-2xl w-full mx-auto"
-        >
-          <div className="flex flex-col items-center justify-center h-full min-h-[40vh] text-center space-y-8">
-            {/* Single line greeting */}
-            <h1 className="font-mono text-[clamp(1.2rem,4vw,2rem)] font-light text-[#e0e0e0] leading-relaxed">
-              What do you want to know or create?
-            </h1>
-          </div>
-        </div>
+        {/* Centered content */}
+        <div className="w-full max-w-2xl px-4 -mt-20 space-y-8">
+          {/* Single line greeting */}
+          <h1 className="font-mono text-[clamp(1.2rem,4vw,2rem)] font-light text-[#e0e0e0] leading-relaxed text-center">
+            What do you want to know or create?
+          </h1>
 
-        {/* Input dock */}
-        <div className="shrink-0 border-t border-[#1a1a1a] bg-black px-4 py-4">
-          <div className="max-w-2xl mx-auto space-y-2">
-            {/* Video generation hint */}
-            {detectedType && (
-              <div className="flex items-center gap-3">
-                <span className="font-mono text-[0.58rem] tracking-[0.15em] text-[#FFE500]">
-                  {VIDEO_HINT[detectedType]}
-                </span>
-                <button
-                  type="button"
-                  onClick={generateVideo}
-                  disabled={loading}
-                  className="px-3 py-1 bg-[#FFE500] text-black font-mono text-[0.6rem] font-black tracking-widest uppercase disabled:opacity-40 hover:bg-white transition-colors cursor-pointer"
-                >
-                  {loading ? "..." : "GENERATE →"}
-                </button>
-              </div>
-            )}
-
-            {/* Error */}
-            {error && (
-              <div className="border border-[#FF3333] bg-[rgba(255,51,51,0.05)] px-3 py-2 font-mono text-[0.65rem] text-[#FF6666]">
-                {error}
-              </div>
-            )}
-
-            {/* Input row */}
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                sendChat();
-              }}
-              className="flex gap-2"
-            >
-              <div className="flex-1 border border-[#333] focus-within:border-[#FFE500] transition-colors">
-                <input
-                  ref={inputRef}
-                  type="text"
-                  value={input}
-                  onChange={(e) => {
-                    setInput(e.target.value);
-                    setError(null);
-                  }}
-                  onKeyDown={handleKey}
-                  placeholder="Ask anything · @handle · wallet address"
-                  disabled={loading}
-                  autoFocus
-                  className="w-full bg-black text-white px-4 py-3 outline-none placeholder-[#333] font-mono text-sm"
-                />
-              </div>
+          {/* Video generation hint */}
+          {detectedType && (
+            <div className="flex items-center justify-center gap-3">
+              <span className="font-mono text-[0.58rem] tracking-[0.15em] text-[#FFE500]">
+                {VIDEO_HINT[detectedType]}
+              </span>
               <button
-                type="submit"
-                disabled={loading || !input.trim()}
-                className="px-5 py-3 bg-[#FFE500] text-black font-mono font-black text-sm tracking-widest uppercase disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white transition-colors"
+                type="button"
+                onClick={generateVideo}
+                disabled={loading}
+                className="px-3 py-1 bg-[#FFE500] text-black font-mono text-[0.6rem] font-black tracking-widest uppercase disabled:opacity-40 hover:bg-white transition-colors cursor-pointer"
               >
-                {loading ? "..." : "→"}
+                {loading ? "..." : "GENERATE →"}
               </button>
-            </form>
+            </div>
+          )}
 
-            <p className="font-mono text-[0.55rem] tracking-wide text-[#333]">
-              ENTER to send ·{" "}
-              <Link
-                href="/creator"
-                className="text-[#444] hover:text-[#FFE500]"
-              >
-                mythos studio
-              </Link>{" "}
-              ·{" "}
-              <a
-                href="https://x.com/HyperMythX"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-[#444] hover:text-[#FFE500]"
-              >
-                @HyperMythsX
-              </a>
-            </p>
-          </div>
+          {/* Error */}
+          {error && (
+            <div className="border border-[#FF3333] bg-[rgba(255,51,51,0.05)] px-3 py-2 font-mono text-[0.65rem] text-[#FF6666] text-center">
+              {error}
+            </div>
+          )}
+
+          {/* Input row */}
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              sendChat();
+            }}
+            className="flex gap-2"
+          >
+            <div className="flex-1 border border-[#333] focus-within:border-[#FFE500] transition-colors">
+              <input
+                ref={inputRef}
+                type="text"
+                value={input}
+                onChange={(e) => {
+                  setInput(e.target.value);
+                  setError(null);
+                }}
+                onKeyDown={handleKey}
+                placeholder="Ask anything · @handle · wallet address"
+                disabled={loading}
+                autoFocus
+                className="w-full bg-black text-white px-4 py-3 outline-none placeholder-[#333] font-mono text-sm"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={loading || !input.trim()}
+              className="px-5 py-3 bg-[#FFE500] text-black font-mono font-black text-sm tracking-widest uppercase disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white transition-colors"
+            >
+              {loading ? "..." : "→"}
+            </button>
+          </form>
         </div>
       </div>
     );
@@ -338,7 +309,7 @@ export default function ChatPage() {
       {/* Nav */}
       <nav className="border-b border-[#1a1a1a] px-6 py-3 flex items-center justify-between font-mono text-[0.65rem] tracking-widest uppercase shrink-0">
         <span className="text-[#FFE500] font-bold">HYPERM</span>
-        <div className="flex gap-6 text-[#555]">
+        <div className="flex gap-6 text-[#888]">
           <Link
             href="/creator"
             className="hover:text-[#FFE500] transition-colors"

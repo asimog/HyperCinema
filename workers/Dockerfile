@@ -2,6 +2,10 @@
 FROM node:20-bookworm-slim AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
+# prisma/schema.prisma must be present before npm install so that
+# the postinstall "prisma generate" step can find the schema.
+COPY prisma ./prisma
+COPY prisma.config.ts ./
 RUN npm install --include=dev --no-audit --no-fund
 
 # Stage 2: Runner

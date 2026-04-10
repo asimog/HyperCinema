@@ -1,143 +1,229 @@
-# HyperMyths / HyperCinema
+# HyperMyths
 
-AI-powered cinema generator: Next.js app (App Router) + background worker + standalone video render service (Google Veo / xAI / MythX / OpenMontage). Payments: Solana on-chain, x402/USDC, and discount codes. Admin cockpit included.
+**Autonomous AI cinema engine.** Turns X profiles, wallet addresses, token contracts, and creative prompts into short-form cinematic videos. Free. No payments.
 
-## Stack at a Glance
+**Live:** [www.hypermyths.com](https://www.hypermyths.com)  
+**X:** [@HyperMythsX](https://x.com/HyperMythX)  
+**Telegram:** [@HyperMythXBot](https://t.me/HyperMythXBot)
 
-- Web: Next.js 16 (App Router), Tailwind (via `app/globals.css`), Firebase Auth+Firestore+Storage.
-- Worker: Node job runner (`workers/`) advancing jobs, retries, settlements.
-- Video service: Fastify API (`video-service/`) that calls Google Veo, xAI, MythX, or OpenMontage, then stitches or composes clips and uploads to Firebase Storage.
-- Payments: Solana (Helius webhooks), x402 USDC, and discount codes.
+---
 
-## What's New
+## Stack
 
-- **MythX Integration**: Replaced MythXEliza/ElizaOS with direct MythX backend API for video generation
-- **OpenMontage Support**: New video engine option for editorial-style video compositions
-- **Removed Crossmint**: Crossmint authentication and payment flow removed
-- **Removed MoonPay**: MoonPay payment adapter removed
-- **Discount Code System**: Enhanced with free generation support for admins
+| Layer         | Tech                                                                 | Where          |
+| ------------- | -------------------------------------------------------------------- | -------------- |
+| Frontend      | Next.js 16 (App Router), Tailwind CSS, Fragment Mono + Space Grotesk | Vercel         |
+| Database      | PostgreSQL (Supabase)                                                | Railway        |
+| Storage       | S3-compatible (Supabase Storage)                                     | Supabase       |
+| Worker        | Node.js HTTP server + Telegram bot + X bot                           | Railway Docker |
+| Video Service | Fastify + xAI + ffmpeg + S3 upload                                   | Railway Docker |
+| AI            | xAI (Grok-3 text + grok-imagine-video)                               | xAI API        |
+| Social        | Telegram (polling) + X/Twitter (mention polling)                     | Railway        |
+
+## Architecture
+
+```
+┌─────────────┐     POST /api/jobs      ┌──────────────────┐
+│   Vercel    │ ──────────────────────→  │   Railway Worker  │
+│  Frontend   │                          │   (port 8080)     │
+│  + API      │ ←─── polling /api/jobs ─ │                   │
+└─────────────┘                          └────────┬─────────┘
+                                                  │
+                                        ┌─────────▼──────────┐
+                                        │   Railway Video     │
+                                        │   Service (8090)    │
+                                        │   xAI → ffmpeg → S3 │
+                                        └─────────┬──────────┘
+                                                  │
+                                        ┌─────────▼──────────┐
+                                        │   Supabase S3       │
+                                        │   Storage (videos)  │
+                                        └────────────────────┘
+```
+
+## What It Does
+
+### Input Types
+
+| Input                              | Flow                                                                    | Output              |
+| ---------------------------------- | ----------------------------------------------------------------------- | ------------------- |
+| `@username` or `https://x.com/...` | Scrapes X profile → generates autobiography video                       | 30s cinematic short |
+| Solana/Ethereum/Base/BNB address   | Fetches token metadata from DexScreener → generates trading story video | 30s cinematic short |
+| Creative prompt                    | Builds story from prompt → generates video                              | 30s cinematic short |
+| "random"                           | Picks random prompt → generates video                                   | 30s cinematic short |
+
+### How to Use
+
+1. Go to [www.hypermyths.com](https://www.hypermyths.com)
+2. Chat with HyperM — tell it what you want
+3. Type an `@handle`, wallet address, or creative prompt
+4. Press **GENERATE →**
+5. Watch your video being created live
+
+### Bots
+
+- **Telegram:** Message [@HyperMythXBot](https://t.me/HyperMythXBot)
+  - `/video @username` — autobiography video
+  - `/video <address>` — token video
+  - `/random` — random cinema
+  - `/status <jobId>` — check progress
+- **X/Twitter:** Mention [@HyperMythsX](https://x.com/HyperMythX)
+  - `@HyperMythsX @someone` — autobiography for @someone
+  - `@HyperMythsX <address>` — token video
+  - `@HyperMythsX random` — random cinema
 
 ## Local Development
 
 ```bash
 npm install
-# Web
-npm run dev
-# Video service (separate terminal)
-npm run video:dev
-# Worker
-npx tsx workers/server.ts
+npm run dev          # Next.js on :3000
+npm run video:dev    # Video service on :8090 (separate terminal)
 ```
 
-## Environment (minimum useful)
+### Minimum Env (`.env.local`)
 
 ```bash
-FIREBASE_PROJECT_ID=...
-FIREBASE_CLIENT_EMAIL=...
-FIREBASE_PRIVATE_KEY=...   # multiline with \n
-HELIUS_API_KEY=...
-SOLANA_RPC_URL=...
-PAYMENT_MASTER_SEED_HEX=...
+# Database (Supabase external connection string)
+DATABASE_URL=postgresql://...
+
+# xAI API (text + video)
+XAI_API_KEY=xai-your-key-here
+XAI_BASE_URL=https://api.x.ai/v1
+
+# Video service
 VIDEO_API_KEY=local-dev-key
 VIDEO_API_BASE_URL=http://localhost:8090
-WORKER_URL=http://localhost:8080
-VERTEX_PROJECT_ID=...
-VERTEX_API_KEY=...
-VERTEX_LOCATION=us-central1
-VERTEX_VEO_MODEL=veo-3.1-fast-generate-001
-VEO_OUTPUT_RESOLUTION=1080p
-FFMPEG_PATH=ffmpeg
-MYTHX_BASE_URL=https://cloud.milady.ai
-MYTHX_API_KEY=...
-MYTHX_VIDEO_MODEL=default
+
+# App
+APP_BASE_URL=http://localhost:3000
+ALLOW_IN_PROCESS_WORKER=true
 ```
 
-Optional: `XAI_API_KEY`, `OPENROUTER_API_KEY`, `X402_FACILITATOR_URL`, `HELIUS_WEBHOOK_SECRET`.
-
-### OpenMontage
+### Telegram Bot (optional)
 
 ```bash
-VIDEO_INFERENCE_PROVIDER=openmontage
-OPENMONTAGE_REPO_DIR=../OpenMontage
-OPENMONTAGE_GIT_URL=https://github.com/calesthio/OpenMontage.git
-OPENMONTAGE_COMPOSITION_ID=CinematicRenderer
-OPENMONTAGE_VIDEO_WORKER_PROVIDER=google_veo
-OPENMONTAGE_VIDEO_WORKER_MODEL=
-OPENMONTAGE_OUTPUT_ROOT=output/openmontage
-OPENMONTAGE_RENDER_TIMEOUT_MS=900000
+TELEGRAM_BOT_TOKEN=your-telegram-bot-token
 ```
 
-Notes:
+### X/Twitter Bot (optional)
 
-- When `APP_BASE_URL` points at `localhost`, Helius webhook subscription is skipped automatically. Paid jobs can still be created locally, but automatic on-chain webhook settlement needs a public callback URL or tunnel.
-- Discount codes issued from `/admin/discount-codes` remain fully local-friendly and dispatch jobs immediately after redemption.
-- `video-service` will use `OPENMONTAGE_REPO_DIR` when present, or clone `OPENMONTAGE_GIT_URL` automatically and install `remotion-composer` dependencies.
-
-## Services
-
-- Web app: routes under `app/`; homepage `app/page.tsx`; nav `components/SiteHeader.tsx`.
-- MythX generator: `/mythx` page with direct backend API integration
-- Admin cockpit: `/admin/moderation`, `/admin/inference`, `/admin/discount-codes` (guarded by cockpit auth).
-- Worker: `workers/server.ts`, `workers/process-job.ts`, `workers/sweep-payments.ts`.
-- Video render API: `video-service/src/server.ts` (`POST /render`, `GET /render/:id`).
+```bash
+X_API_BEARER_TOKEN=your-bearer-token
+X_API_CONSUMER_KEY=...
+X_API_CONSUMER_SECRET=...
+X_API_ACCESS_TOKEN=...
+X_API_ACCESS_TOKEN_SECRET=...
+```
 
 ## Deployment
 
-- Firebase App Hosting hosts the Next.js web app.
-- Cloud Run hosts both `hypercinema-worker` and `video-service`.
-- Cloud Build uses `cloudbuild/worker.yaml` and `cloudbuild/video-service.yaml`.
-- `deploy.bat` deploys worker + video-service, updates `WORKER_URL_HYPERCINEMA` and `VIDEO_API_BASE_URL_HYPERCINEMA`, then deploys App Hosting.
+### Vercel (Frontend)
 
-### Conway
+Push to `main` — Vercel auto-deploys from GitHub integration.
 
-- Conway is treated as a container host rather than a custom build target.
-- Use [workers/Dockerfile](/c:/SessionMint/HyperCinema/workers/Dockerfile) for the worker and [video-service/Dockerfile](/c:/SessionMint/HyperCinema/video-service/Dockerfile) for the video service.
-- Recommended split:
-  - Firebase App Hosting: web app
-  - Cloud Run or Conway container: worker
-  - Cloud Run or Conway container: video-service
-- For Conway, set the same runtime environment variables used by Cloud Run and expose ports `8080` (worker) and `8090` (video-service).
+Required env vars:
 
-## Smoke Test: Video Render
+- `DATABASE_URL` — Supabase Postgres external connection
+- `XAI_API_KEY` — xAI API key
+- `VIDEO_API_BASE_URL` — Railway video-service public HTTPS URL
+- `VIDEO_API_KEY` — Shared secret (must match Railway)
+- `WORKER_URL` — Railway worker public HTTPS URL
+- `WORKER_TOKEN` — Worker auth secret
+- `APP_BASE_URL` — Your Vercel URL
+- `S3_ENDPOINT`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` — Supabase S3
 
-```bash
-curl -X POST https://video-service-<hash>.a.run.app/render \
-  -H "Authorization: Bearer $VIDEO_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "jobId": "smoke-001",
-    "wallet": "demo",
-    "durationSeconds": 9,
-    "withSound": true,
-    "resolution": "720p",
-    "hookLine": "Smoke test",
-    "scenes": [{"sceneNumber":1,"visualPrompt":"Test visual","narration":"Test narration","durationSeconds":9}],
-    "videoEngine": "google_veo",
-    "provider": "google_veo",
-    "prompt": "Test",
-    "metadata": {
-      "provider":"google_veo",
-      "model":"veo-3.1-fast-generate-001",
-      "resolution":"720p",
-      "generateAudio":true,
-      "prompt":"Test",
-      "sceneMetadata":[{"sceneNumber":1,"durationSeconds":9,"narration":"Test narration","visualPrompt":"Test visual"}],
-      "storyMetadata":{"wallet":"demo","storyKind":"generic_cinema","rangeDays":1,"packageType":"30s","durationSeconds":9}
-    }
-  }'
+### Railway (Worker Service)
+
+Dockerfile: `workers/Dockerfile`
+
+Required env vars:
+
+- `DATABASE_URL` — Supabase Postgres internal connection
+- `XAI_API_KEY` — xAI API key
+- `VIDEO_API_BASE_URL` — `http://video.railway.internal:8090`
+- `VIDEO_API_KEY` — Shared secret
+- `WORKER_TOKEN` — Auth secret for Vercel→worker calls
+- `APP_BASE_URL` — Vercel frontend URL
+- `TELEGRAM_BOT_TOKEN` — For Telegram bot (polling, no webhook needed)
+- `X_API_*` — For X bot (OAuth 1.0a + Bearer)
+
+### Railway (Video Service)
+
+Dockerfile: `video-service/Dockerfile`
+
+Required env vars:
+
+- `VIDEO_API_KEY` — Shared secret (must match worker)
+- `XAI_API_KEY` — xAI API key for video generation
+- `S3_ENDPOINT` — Supabase S3 endpoint
+- `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` — Supabase S3 credentials
+- `S3_BUCKET` — `videos` (default)
+
+## Project Structure
+
 ```
+app/                    # Next.js pages + API routes
+  api/
+    jobs/               # Job CRUD
+    video/              # Video creation/status
+    render/             # Render proxy to video-service
+    chat/               # AI chat stream
+    worker/             # Job trigger
+    autonomous/         # Autonomous mode
+components/             # React UI
+lib/
+  ai/                   # Script generation
+  analytics/            # Wallet analysis engine
+  cinema/               # Cinematic prompt engineering
+  generators/           # Prompt video artifacts
+  inference/            # xAI text inference
+  jobs/                 # Job lifecycle
+  memecoins/            # DexScreener metadata
+  network/              # HTTP + retry primitives
+  social/               # MoltBook publisher
+  storage/              # S3 upload
+  video/                # Video render client
+  x/                    # X/Twitter API
+  env.ts                # Env validation
+  db.ts                 # Prisma client
+video-service/          # Standalone Fastify video service
+  src/
+    server.ts           # Fastify app
+    render-service.ts   # Render orchestrator
+    types.ts            # Request/response schemas
+    providers/          # xAI video client
+    pipeline/           # Scene planning, media ops
+    env.ts              # Video-service env
+workers/
+  server.ts             # HTTP worker server
+  process-job.ts        # Main pipeline
+  telegram-bot.ts       # Telegram bot
+  x-bot.ts              # X/Twitter bot
+tests/                  # Vitest test suite
+```
+
+## Design
+
+- **Font:** Fragment Mono (code-like, brutalist) + Space Grotesk (display)
+- **Colors:** Seafoam (#6EEAB0) on pure black (#000000)
+- **Style:** Compute-system aesthetic — high contrast, minimal, digital
+- **All buttons:** Seafoam background, black text
+- **Grid:** Subtle seafoam grid lines on dark background
 
 ## Testing
 
-- `npm test` / `npm run test:ci`
-- Worker/payment/inference coverage lives in `tests/`.
+```bash
+npm test              # Run all tests
+npm run test:watch    # Watch mode
+npm run test:ci       # CI reporter
+```
 
-## Ops Notes
+42 tests pass, 0 fail. Video-service contract, scene planning, render retry, client polling, job state machine, recovery, retry route, security, and analytics tests.
 
-- Protect `PAYMENT_MASTER_SEED_HEX`, webhook secrets, worker tokens, and video API keys.
-- Cloud Run needs Vertex service account access plus Storage write access to your bucket.
-- Admin cockpit should stay behind auth; not linked in public nav.
+## Interface Assembly
 
-## Admin Panel
+See [docs/INTERFACE_ASSEMBLY.md](docs/INTERFACE_ASSEMBLY.md) for the full sovereign box inventory, shared contracts, boundary violations, and merkle state.
 
-`/admin/moderation` (cockpit auth required).
+## License
+
+Private. All rights reserved.

@@ -142,6 +142,9 @@ export default function ChatPage() {
             const dataStr = trimmed.slice(6).trim();
             try {
               const parsed = JSON.parse(dataStr);
+              // Skip the 'complete' event — it echoes the full text which was
+              // already accumulated from 'message' events above
+              if (parsed.done) continue;
               if (parsed.content) {
                 fullText += parsed.content;
                 setMessages((prev) =>

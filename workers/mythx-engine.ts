@@ -1,7 +1,15 @@
-// MythX Engine — 90s Anime CRT video generation for X bot
-// Ported from Python mythx_engine.py v6.2
-// Generates 3-act cinematic prompts with CRT physics, anime sub-styles,
-// sentiment-aware sampling, and seamless video stitching.
+// ── MythX Engine — 90s Anime CRT Video Generation ──────────────────
+// Ported from Python mythx_engine.py v6.2.
+// Generates 3-act cinematic prompts with CRT physics for X profile videos.
+// Features:
+//   - CRT physics: scanlines, phosphor glow, RGB fringing, barrel distortion
+//   - 16 anime sub-styles: Evangelion, Cowboy Bebop, DBZ, Berserk, etc.
+//   - Sentiment-aware combo sampling via xAI (grok-3)
+//   - 3-act structure: 10s each = 30s total, seamless continuity
+//   - Premium boost for viral tweets (>=100 likes)
+//   - Caveman reply generator for X bot responses
+//   - Language support: English, Japanese, Chinese, Russian
+// Scanlines are minimal — visible but not glitchy.
 
 import { generateTextInferenceJson } from "@/lib/inference/text";
 
@@ -49,11 +57,21 @@ export const NINETIES_ANIME_SUBSTYLES = [
 // ═══════════════════════════════════════════════════════════════════
 
 export const EPIC_THEMES = [
-  "glorious heroic saga", "epic arena battle legend", "anime fable destiny",
-  "cinematic revenge odyssey", "mythic warrior ascension", "futuristic rebellion epic",
-  "ancient prophecy fulfilled", "cosmic god-war chronicle", "noir shadow empire fall",
-  "high-stakes tournament saga", "dreamlike fable awakening", "steampunk revolution tale",
-  "post-apocalypse redemption arc", "cybernetic soul quest", "interstellar alliance war",
+  "glorious heroic saga",
+  "epic arena battle legend",
+  "anime fable destiny",
+  "cinematic revenge odyssey",
+  "mythic warrior ascension",
+  "futuristic rebellion epic",
+  "ancient prophecy fulfilled",
+  "cosmic god-war chronicle",
+  "noir shadow empire fall",
+  "high-stakes tournament saga",
+  "dreamlike fable awakening",
+  "steampunk revolution tale",
+  "post-apocalypse redemption arc",
+  "cybernetic soul quest",
+  "interstellar alliance war",
   "timeless love vs fate chronicle",
 ];
 
@@ -62,11 +80,22 @@ export const EPIC_THEMES = [
 // ═══════════════════════════════════════════════════════════════════
 
 export const SUB_THEMES = [
-  "colosseum of gods thunder arena", "neon-lit cyber arena deathmatch", "floating sky island tournament",
-  "volcanic lava battle coliseum", "ancient ruin temple duel ground", "zero-gravity space station warzone",
-  "underwater crystal arena clash", "desert sandstorm fortress siege", "ice crystal palace throne battle",
-  "dream realm portal arena", "cybertruck convoy highway chase", "xAI colossus core chamber fight",
-  "mars red dust gladiator pit", "tokyo rooftop neon showdown", "medieval dragon arena", "quantum realm rift battlefield",
+  "colosseum of gods thunder arena",
+  "neon-lit cyber arena deathmatch",
+  "floating sky island tournament",
+  "volcanic lava battle coliseum",
+  "ancient ruin temple duel ground",
+  "zero-gravity space station warzone",
+  "underwater crystal arena clash",
+  "desert sandstorm fortress siege",
+  "ice crystal palace throne battle",
+  "dream realm portal arena",
+  "cybertruck convoy highway chase",
+  "xAI colossus core chamber fight",
+  "mars red dust gladiator pit",
+  "tokyo rooftop neon showdown",
+  "medieval dragon arena",
+  "quantum realm rift battlefield",
 ];
 
 // ═══════════════════════════════════════════════════════════════════
@@ -97,10 +126,14 @@ export const CINEMATIC_TECH = [
 // ═══════════════════════════════════════════════════════════════════
 
 const _POSITIVE_THEMES = EPIC_THEMES.filter((t) =>
-  ["heroic", "redemption", "awakening", "destiny", "fable", "ascension"].some((w) => t.includes(w)),
+  ["heroic", "redemption", "awakening", "destiny", "fable", "ascension"].some(
+    (w) => t.includes(w),
+  ),
 );
 const _NEGATIVE_THEMES = EPIC_THEMES.filter((t) =>
-  ["revenge", "empire fall", "war", "rebellion", "shadow", "odyssey"].some((w) => t.includes(w)),
+  ["revenge", "empire fall", "war", "rebellion", "shadow", "odyssey"].some(
+    (w) => t.includes(w),
+  ),
 );
 
 // ═══════════════════════════════════════════════════════════════════
@@ -128,7 +161,15 @@ export const LANGUAGE_OPTIONS: Record<string, string> = {
 // ═══════════════════════════════════════════════════════════════════
 
 export interface MythXSentiment {
-  flavor: "heroic" | "chaotic" | "reflective" | "savage" | "triumphant" | "melancholic" | "furious" | "serene";
+  flavor:
+    | "heroic"
+    | "chaotic"
+    | "reflective"
+    | "savage"
+    | "triumphant"
+    | "melancholic"
+    | "furious"
+    | "serene";
   intensity: "low" | "medium" | "high";
   overall: "positive" | "neutral" | "negative";
 }
@@ -197,10 +238,18 @@ function sampleCombo(sentiment: MythXSentiment): MythXCombo {
   const { flavor } = sentiment;
 
   let theme: string;
-  if (["heroic", "triumphant", "serene"].includes(flavor) && _POSITIVE_THEMES.length) {
-    theme = _POSITIVE_THEMES[Math.floor(Math.random() * _POSITIVE_THEMES.length)];
-  } else if (["savage", "furious", "chaotic"].includes(flavor) && _NEGATIVE_THEMES.length) {
-    theme = _NEGATIVE_THEMES[Math.floor(Math.random() * _NEGATIVE_THEMES.length)];
+  if (
+    ["heroic", "triumphant", "serene"].includes(flavor) &&
+    _POSITIVE_THEMES.length
+  ) {
+    theme =
+      _POSITIVE_THEMES[Math.floor(Math.random() * _POSITIVE_THEMES.length)];
+  } else if (
+    ["savage", "furious", "chaotic"].includes(flavor) &&
+    _NEGATIVE_THEMES.length
+  ) {
+    theme =
+      _NEGATIVE_THEMES[Math.floor(Math.random() * _NEGATIVE_THEMES.length)];
   } else {
     theme = EPIC_THEMES[Math.floor(Math.random() * EPIC_THEMES.length)];
   }
@@ -208,7 +257,10 @@ function sampleCombo(sentiment: MythXSentiment): MythXCombo {
   return {
     theme,
     arena: SUB_THEMES[Math.floor(Math.random() * SUB_THEMES.length)],
-    subStyle: NINETIES_ANIME_SUBSTYLES[Math.floor(Math.random() * NINETIES_ANIME_SUBSTYLES.length)],
+    subStyle:
+      NINETIES_ANIME_SUBSTYLES[
+        Math.floor(Math.random() * NINETIES_ANIME_SUBSTYLES.length)
+      ],
     tech: CINEMATIC_TECH[Math.floor(Math.random() * CINEMATIC_TECH.length)],
     sentiment,
     style: "holographic_crt",
@@ -228,12 +280,18 @@ function buildActPrompt(input: {
 }): MythXClipPrompt {
   const { act, username, combo, isPremium, langInstruction } = input;
 
-  const actLabel = act === 1 ? "The Setup" : act === 2 ? "The Rising Action" : "The Climax and Resolution";
-  const continuity = act > 1
-    ? "Seamlessly continue directly from the exact last frame of the previous clip. " +
-      "Maintain identical character appearance, lighting, color grading, scanlines, " +
-      "phosphor glow, RGB fringing, curvature, and all analog CRT effects. "
-    : "";
+  const actLabel =
+    act === 1
+      ? "The Setup"
+      : act === 2
+        ? "The Rising Action"
+        : "The Climax and Resolution";
+  const continuity =
+    act > 1
+      ? "Seamlessly continue directly from the exact last frame of the previous clip. " +
+        "Maintain identical character appearance, lighting, color grading, scanlines, " +
+        "phosphor glow, RGB fringing, curvature, and all analog CRT effects. "
+      : "";
 
   const qualityBase =
     "Ultra detailed, 24fps smooth natural motion, accurate physics simulation, " +
@@ -273,7 +331,8 @@ function buildActPrompt(input: {
     `Central subject is @${username}. ` +
     `This is Act ${act} — ${actLabel}. ` +
     continuity +
-    actContent + " " +
+    actContent +
+    " " +
     `${narrative} ` +
     `Camera and motion: ${combo.tech}. ` +
     `${CRT_PHYSICS_BLOCK}. ` +
@@ -291,7 +350,8 @@ export function generateCavemanReply(
   username: string,
   combo: MythXCombo,
 ): string {
-  const snippet = tweetsText.slice(0, 130).replace(/\n/g, " ").trim() || "tweets";
+  const snippet =
+    tweetsText.slice(0, 130).replace(/\n/g, " ").trim() || "tweets";
   const { flavor } = combo.sentiment;
 
   const hooks = [
@@ -310,10 +370,14 @@ export function generateCavemanReply(
 
 function getLanguageInstruction(language: string): string {
   switch (language) {
-    case "japanese": return " All spoken dialogue and on-screen text must be in natural Japanese.";
-    case "chinese": return " All spoken dialogue and on-screen text must be in natural Mandarin Chinese.";
-    case "russian": return " All spoken dialogue and on-screen text must be in natural Russian.";
-    default: return "";
+    case "japanese":
+      return " All spoken dialogue and on-screen text must be in natural Japanese.";
+    case "chinese":
+      return " All spoken dialogue and on-screen text must be in natural Mandarin Chinese.";
+    case "russian":
+      return " All spoken dialogue and on-screen text must be in natural Russian.";
+    default:
+      return "";
   }
 }
 
@@ -327,7 +391,12 @@ export async function generateMythXVideo(input: {
   language?: string;
   isPremium?: boolean;
 }): Promise<MythXResult> {
-  const { tweetsText, username, language = "english", isPremium = false } = input;
+  const {
+    tweetsText,
+    username,
+    language = "english",
+    isPremium = false,
+  } = input;
 
   // 1. Analyze sentiment from tweets
   const sentiment = await analyzeSentiment(tweetsText);

@@ -1,4 +1,10 @@
-// Video pipeline — generates script then renders via xAI
+// ── Video Render Pipeline ──────────────────────────────────────────
+// Orchestrates the full script → video flow:
+// 1. generateCinematicScript() — AI generates scene plan + narration
+// 2. buildXAiVideoRenderPayload() — builds xAI 720p 1:1 render payload
+// 3. renderCinematicVideo() — sends to video-service, polls until done
+// Returns: script, video URL, thumbnail URL
+
 import { generateCinematicScript } from "@/lib/ai/cinematic";
 import { getEnv } from "@/lib/env";
 import { renderCinematicVideo } from "@/lib/video/client";

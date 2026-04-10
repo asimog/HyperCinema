@@ -1,3 +1,6 @@
+// ── Database — Prisma Client Singleton ─────────────────────────────
+// Shared Prisma client for all lib/ modules. Direct pg adapter.
+// Returns undefined during build-time (no DATABASE_URL).
 import { PrismaClient, Prisma } from "@prisma/client";
 
 const globalForPrisma = globalThis as unknown as {
@@ -20,13 +23,19 @@ function getPrismaClient(): PrismaClient {
   // Prisma v7 requires explicit connection config:
   //   prisma+postgres:// → Prisma Postgres / Accelerate (accelerateUrl)
   //   postgresql:// / postgres:// → direct connection via pg adapter
-  if (databaseUrl.startsWith("prisma+postgres://") || databaseUrl.startsWith("prisma://")) {
-    _db = globalForPrisma.prisma ?? new PrismaClient({ accelerateUrl: databaseUrl });
+  if (
+    databaseUrl.startsWith("prisma+postgres://") ||
+    databaseUrl.startsWith("prisma://")
+  ) {
+    _db =
+      globalForPrisma.prisma ??
+      new PrismaClient({ accelerateUrl: databaseUrl });
   } else {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { Pool } = require("pg") as typeof import("pg");
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { PrismaPg } = require("@prisma/adapter-pg") as typeof import("@prisma/adapter-pg");
+    const { PrismaPg } =
+      require("@prisma/adapter-pg") as typeof import("@prisma/adapter-pg");
     const pool = new Pool({ connectionString: databaseUrl });
     const adapter = new PrismaPg(pool);
     _db = globalForPrisma.prisma ?? new PrismaClient({ adapter });

@@ -1,3 +1,8 @@
+// ── Root Layout — Fonts, Metadata, Site Shell ──────────────────────
+// Fonts: Fragment Mono (body/code), Space Grotesk (display)
+// Metadata: title, description, viewport, theme color
+// Wraps all pages with AppClientProviders + SiteHeader + SiteFooter
+
 import type { Metadata, Viewport } from "next";
 import { Fragment_Mono, Space_Grotesk } from "next/font/google";
 import { AppClientProviders } from "@/components/providers/AppClientProviders";

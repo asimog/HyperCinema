@@ -1,11 +1,22 @@
-// MythX video pipeline — integrates 90s Anime CRT engine with video rendering
-// Takes 3-act MythX prompts → generates scenes → renders via xAI → stitches into 30s video
+// ── MythX Video Pipeline — CRT Engine → Video Rendering ────────────
+// Integrates 90s Anime CRT engine with the video render pipeline.
+// 1. generateMythXVideo() — generates 3-act CRT prompts with sentiment analysis
+// 2. buildMythXWalletStory() — converts X profile data to WalletStory
+// 3. buildMythXCinematicScript() — converts CRT prompts to CinematicScene[]
+// 4. renderCinematicVideo() — sends to video-service → polls → returns URLs
 
-import { generateTextInferenceJson, generateTextInference } from "@/lib/inference/text";
+import {
+  generateTextInferenceJson,
+  generateTextInference,
+} from "@/lib/inference/text";
 import { getEnv } from "@/lib/env";
 import { renderCinematicVideo } from "@/lib/video/client";
 import { buildXAiVideoRenderPayload } from "@/lib/video/xai";
-import { generateMythXVideo, type MythXResult, type MythXClipPrompt } from "@/workers/mythx-engine";
+import {
+  generateMythXVideo,
+  type MythXResult,
+  type MythXClipPrompt,
+} from "@/workers/mythx-engine";
 import { GeneratedCinematicScript, WalletStory } from "@/lib/types/domain";
 import { logger } from "@/lib/logging/logger";
 
@@ -41,7 +52,10 @@ function buildMythXWalletStory(input: {
 }
 
 // Build cinematic script from MythX 3-act prompts
-function buildMythXCinematicScript(prompts: MythXClipPrompt[], story: WalletStory): GeneratedCinematicScript {
+function buildMythXCinematicScript(
+  prompts: MythXClipPrompt[],
+  story: WalletStory,
+): GeneratedCinematicScript {
   return {
     hookLine: `@${story.subjectName} — a 90s anime CRT legend`,
     scenes: prompts.map((clip, i) => ({
@@ -70,7 +84,16 @@ export async function generateMythXVideo(input: {
   thumbnailUrl: string | null;
   script: GeneratedCinematicScript;
 }> {
-  const { jobId, username, tweetsText, displayName, profileUrl, transcript, language, isPremium } = input;
+  const {
+    jobId,
+    username,
+    tweetsText,
+    displayName,
+    profileUrl,
+    transcript,
+    language,
+    isPremium,
+  } = input;
 
   // 1. Generate MythX 3-act prompts with CRT physics
   const mythxResult = await generateMythXVideo({

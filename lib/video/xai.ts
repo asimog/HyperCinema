@@ -1,3 +1,8 @@
+// ── xAI Video Render Payload Builder ───────────────────────────────
+// Constructs xAI-specific render payloads from WalletStory + script.
+// Sets 720p 1:1 square format with scene metadata and continuity hints.
+// Used by: lib/video/pipeline.ts, lib/video/mythx-pipeline.ts
+
 import { GeneratedCinematicScript, WalletStory } from "@/lib/types/domain";
 
 export interface XAiVideoSceneMetadata {
@@ -60,11 +65,19 @@ function buildPrompt(input: {
     "Create a coherent cinematic short with strong visual continuity across all scenes.",
     "Keep the same protagonist, tone, and visual world across the full video.",
     "Avoid subtitles, debug text, overlays, and inconsistent character drift unless explicitly requested.",
-    story.requestedPrompt ? `Creative direction: ${compact(story.requestedPrompt)}` : "",
+    story.requestedPrompt
+      ? `Creative direction: ${compact(story.requestedPrompt)}`
+      : "",
     story.subjectName ? `Subject: ${compact(story.subjectName)}.` : "",
-    story.subjectDescription ? `Brief: ${compact(story.subjectDescription)}.` : "",
-    story.sourceMediaUrl ? `Primary source reference: ${story.sourceMediaUrl}.` : "",
-    story.sourceTranscript ? `Source transcript:\n${story.sourceTranscript}` : "",
+    story.subjectDescription
+      ? `Brief: ${compact(story.subjectDescription)}.`
+      : "",
+    story.sourceMediaUrl
+      ? `Primary source reference: ${story.sourceMediaUrl}.`
+      : "",
+    story.sourceTranscript
+      ? `Source transcript:\n${story.sourceTranscript}`
+      : "",
     `Hook: ${compact(input.script.hookLine)}`,
     "Scene plan:",
     sceneLines,
@@ -91,7 +104,9 @@ export function buildXAiVideoRenderPayload(input: {
       "continuity-first",
       "high-coherence",
       "text-free-by-default",
-      ...(input.walletStory.experience === "mythx" ? ["mythx", "autobiographical"] : []),
+      ...(input.walletStory.experience === "mythx"
+        ? ["mythx", "autobiographical"]
+        : []),
     ],
     sceneMetadata: input.script.scenes.map((scene) => ({
       sceneNumber: scene.sceneNumber,

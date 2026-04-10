@@ -1,5 +1,13 @@
-// Render service — xAI only
-// Generates clips via xAI, concatenates with ffmpeg, uploads to S3
+// ── Render Service — xAI Video Pipeline ────────────────────────────
+// Full render orchestrator: claim job → generate clips → concat → upload.
+// 1. buildSceneChunks() — splits scenes into ≤8s clips
+// 2. xAI generateClip() — generates each clip via /videos/generations
+// 3. stageClipFiles() — downloads all clips to temp dir
+// 4. concatClips() — FFmpeg concat manifest → final.mp4
+// 5. generateThumbnail() — FFmpeg extract frame 1
+// 6. uploadLocalFile() — S3 upload → public URL
+// Fire-and-forget: kickRender() runs in background, tracked via activeRenders Set.
+
 import { promises as fs } from "fs";
 import path from "path";
 import {
@@ -103,7 +111,11 @@ export class RenderService {
       };
     }
 
-    return { mode: "async", id: created.record.id, jobId: created.record.jobId };
+    return {
+      mode: "async",
+      id: created.record.id,
+      jobId: created.record.jobId,
+    };
   }
 
   // Get render job status by id
@@ -213,8 +225,16 @@ export class RenderService {
     const outputThumbPath = path.join(directory, "thumbnail.jpg");
 
     try {
-      await concatClips({ clipPaths, outputPath: outputVideoPath, workingDir: directory });
-      await generateThumbnail({ videoPath: outputVideoPath, outputPath: outputThumbPath, workingDir: directory });
+      await concatClips({
+        clipPaths,
+        outputPath: outputVideoPath,
+        workingDir: directory,
+      });
+      await generateThumbnail({
+        videoPath: outputVideoPath,
+        outputPath: outputThumbPath,
+        workingDir: directory,
+      });
 
       const [videoUrl, thumbnailUrl] = await Promise.all([
         uploadLocalFile({

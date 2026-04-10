@@ -1,3 +1,10 @@
+// ── Worker HTTP Server ─────────────────────────────────────────────
+// Background job processor. Receives job dispatch requests from Vercel,
+// runs the full analytics → script → video → upload pipeline.
+// Endpoints: POST / (process job), POST /retry-job, POST /moltbook-sync,
+//            GET /healthz
+// Telegram bot and X bot are in separate files (not imported here).
+
 import { logger } from "@/lib/logging/logger";
 import { createServer } from "http";
 import {

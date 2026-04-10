@@ -1,3 +1,9 @@
+// ── Job Processing Pipeline ────────────────────────────────────────
+// Main entry point: processJob(jobId).
+// Flow: analytics → report → script → video → upload → publish.
+// Handles: token videos, MythX autobiographies, prompt videos.
+// Calls: lib/analytics, lib/ai, lib/video, lib/storage, lib/social.
+
 import { analyzeWalletProfile } from "../lib/analytics";
 import {
   adaptWalletAnalysisToLegacyArtifacts,

@@ -1,8 +1,13 @@
-// S3-compatible video storage — Supabase Storage S3 API
-// Uploads completed video URLs to persistent cloud storage so
-// temporary xAI CDN URLs don't expire before users can view them.
+// ── S3 Storage — Supabase Video Upload ─────────────────────────────
+// Downloads videos from source URL → uploads to Supabase S3 → returns public URL.
+// Falls back to original URL if S3 not configured or upload fails.
+// Used by: workers/process-job.ts (post-render upload)
 
-import { S3Client, HeadBucketCommand, CreateBucketCommand } from "@aws-sdk/client-s3";
+import {
+  S3Client,
+  HeadBucketCommand,
+  CreateBucketCommand,
+} from "@aws-sdk/client-s3";
 import { Upload } from "@aws-sdk/lib-storage";
 import { getEnv } from "@/lib/env";
 import { logger } from "@/lib/logging/logger";
@@ -33,7 +38,9 @@ function buildPublicUrl(key: string): string {
     return `${env.S3_PUBLIC_URL.replace(/\/+$/, "")}/${key}`;
   }
   // Supabase Storage public URL format
-  const supabaseProjectRef = env.S3_ENDPOINT?.match(/https:\/\/([^.]+)\.supabase\.co/)?.[1];
+  const supabaseProjectRef = env.S3_ENDPOINT?.match(
+    /https:\/\/([^.]+)\.supabase\.co/,
+  )?.[1];
   if (supabaseProjectRef) {
     return `https://${supabaseProjectRef}.supabase.co/storage/v1/object/public/${env.S3_BUCKET}/${key}`;
   }
@@ -41,7 +48,10 @@ function buildPublicUrl(key: string): string {
   return `${env.S3_ENDPOINT?.replace(/\/+$/, "")}/${env.S3_BUCKET}/${key}`;
 }
 
-async function ensureBucketExists(client: S3Client, bucket: string): Promise<void> {
+async function ensureBucketExists(
+  client: S3Client,
+  bucket: string,
+): Promise<void> {
   try {
     await client.send(new HeadBucketCommand({ Bucket: bucket }));
   } catch {
@@ -91,7 +101,9 @@ export async function uploadVideoToStorage(
         Key: key,
         Body: response.body as unknown as ReadableStream,
         ContentType: contentType,
-        ...(contentLength ? { ContentLength: parseInt(contentLength, 10) } : {}),
+        ...(contentLength
+          ? { ContentLength: parseInt(contentLength, 10) }
+          : {}),
       },
       queueSize: 4,
       partSize: 1024 * 1024 * 10, // 10 MB parts

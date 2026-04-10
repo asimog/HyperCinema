@@ -1,4 +1,9 @@
-// Scene planning — splits scenes into fixed-length clips for xAI
+// ── Scene Planning — Split Scenes into Fixed-Length Clips ──────────
+// 1. buildSceneChunks() — flattens scenes into clip chunks ≤maxClipSeconds
+// 2. splitDuration() — composes clip durations from [8, 6, 4] to match target
+// 3. chunkPrompt() — builds xAI prompt with continuity hints (stateRef, anchors)
+// 4. normalizeScenes() — fills missing numbers, sorts, floors durations
+
 import { NormalizedRenderRequest, RenderScene } from "../types";
 
 // One clip chunk derived from a scene
@@ -58,11 +63,16 @@ function splitDuration(totalSeconds: number, maxSeconds: number): number[] {
   };
 
   // Pick the plan closest to target, prefer fewer longer clips
-  const chooseBetter = (a: CandidatePlan | null, b: CandidatePlan): CandidatePlan => {
+  const chooseBetter = (
+    a: CandidatePlan | null,
+    b: CandidatePlan,
+  ): CandidatePlan => {
     if (!a) return b;
     if (b.deltaAbs !== a.deltaAbs) return b.deltaAbs < a.deltaAbs ? b : a;
-    if (b.prefersLonger !== a.prefersLonger) return b.prefersLonger > a.prefersLonger ? b : a;
-    if (b.chunkCount !== a.chunkCount) return b.chunkCount < a.chunkCount ? b : a;
+    if (b.prefersLonger !== a.prefersLonger)
+      return b.prefersLonger > a.prefersLonger ? b : a;
+    if (b.chunkCount !== a.chunkCount)
+      return b.chunkCount < a.chunkCount ? b : a;
     return a;
   };
 
@@ -116,7 +126,8 @@ function chunkPrompt(basePrompt: string, chunk: SceneChunk): string {
   if (chunk.chunkIndex === 0) {
     // First chunk — establish continuity
     if (chunk.stateRef) lines.push(`Continuity stateRef: ${chunk.stateRef}`);
-    if (chunk.continuityAnchors?.length) lines.push(`Continuity anchors: ${chunk.continuityAnchors.join(", ")}`);
+    if (chunk.continuityAnchors?.length)
+      lines.push(`Continuity anchors: ${chunk.continuityAnchors.join(", ")}`);
     lines.push(
       chunk.continuityPrompt ??
         "Maintain continuity with previous chunks. No fabricated facts.",
@@ -124,7 +135,8 @@ function chunkPrompt(basePrompt: string, chunk: SceneChunk): string {
   } else {
     // Later chunks — carry forward continuity
     if (chunk.stateRef) lines.push(`Reuse stateRef: ${chunk.stateRef}`);
-    if (chunk.continuityAnchors?.length) lines.push(`Keep anchors visible: ${chunk.continuityAnchors.join(", ")}`);
+    if (chunk.continuityAnchors?.length)
+      lines.push(`Keep anchors visible: ${chunk.continuityAnchors.join(", ")}`);
     lines.push(
       chunk.continuityPrompt
         ? `Continue with: ${chunk.continuityPrompt}`
@@ -157,7 +169,10 @@ export function buildSceneChunks(input: {
     const sceneMetadata = sceneMetadataList.find(
       (item) => item.sceneNumber === scene.sceneNumber,
     );
-    const durations = splitDuration(scene.durationSeconds, input.maxClipSeconds);
+    const durations = splitDuration(
+      scene.durationSeconds,
+      input.maxClipSeconds,
+    );
     const chunkCount = durations.length;
 
     durations.forEach((durationSeconds, chunkIndex) => {

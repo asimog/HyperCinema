@@ -1,5 +1,8 @@
-// Video service HTTP client — xAI only
-// Posts render request, polls until video URL is ready
+// ── Video Service HTTP Client ───────────────────────────────────────
+// Posts render requests to the video-service and polls for completion.
+// Handles both sync (immediate videoUrl) and async (poll with retries) flows.
+// Used by: lib/video/pipeline.ts, lib/video/mythx-pipeline.ts
+
 import { getEnv } from "@/lib/env";
 import { fetchWithTimeout } from "@/lib/network/http";
 import {
@@ -83,7 +86,8 @@ export async function renderCinematicVideo(params: {
       if (!response.ok) {
         const body = await response.text();
         const msg = `Video render request failed (${response.status}): ${body}`;
-        if (isRetryableHttpStatus(response.status)) throw new RetryableError(msg);
+        if (isRetryableHttpStatus(response.status))
+          throw new RetryableError(msg);
         throw new Error(msg);
       }
 
@@ -106,11 +110,14 @@ export async function renderCinematicVideo(params: {
     throw new Error("Video API did not return a render ID.");
   }
 
-  for (let attempt = 0; attempt < env.VIDEO_RENDER_MAX_POLL_ATTEMPTS; attempt += 1) {
+  for (
+    let attempt = 0;
+    attempt < env.VIDEO_RENDER_MAX_POLL_ATTEMPTS;
+    attempt += 1
+  ) {
     await sleep(env.VIDEO_RENDER_POLL_INTERVAL_MS);
 
-    const pollUrl =
-      startPayload.statusUrl ?? `${baseUrl}/render/${renderId}`;
+    const pollUrl = startPayload.statusUrl ?? `${baseUrl}/render/${renderId}`;
 
     let pollResponse: Response;
     try {
@@ -125,7 +132,8 @@ export async function renderCinematicVideo(params: {
           if (!response.ok) {
             const body = await response.text();
             const msg = `Video poll failed (${response.status}): ${body || "empty"}`;
-            if (isRetryableHttpStatus(response.status)) throw new RetryableError(msg);
+            if (isRetryableHttpStatus(response.status))
+              throw new RetryableError(msg);
             throw new Error(msg);
           }
 
@@ -135,7 +143,8 @@ export async function renderCinematicVideo(params: {
       );
     } catch (error) {
       // Transient errors — keep polling
-      if (error instanceof RetryableError || error instanceof TypeError) continue;
+      if (error instanceof RetryableError || error instanceof TypeError)
+        continue;
       throw error;
     }
 
@@ -146,7 +155,12 @@ export async function renderCinematicVideo(params: {
       throw new Error(poll.error ?? "Video render failed.");
     }
 
-    if (status === "completed" || status === "complete" || status === "ready" || poll.videoUrl) {
+    if (
+      status === "completed" ||
+      status === "complete" ||
+      status === "ready" ||
+      poll.videoUrl
+    ) {
       if (!poll.videoUrl) {
         throw new Error("Render complete but videoUrl is missing.");
       }

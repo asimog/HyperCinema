@@ -1,5 +1,8 @@
-// Memecoin metadata — DexScreener API only (free, no auth)
-// Supports: Solana, Ethereum, Base, BSC via public DexScreener API
+// ── Memecoin Metadata — DexScreener Only ───────────────────────────
+// Free, no-auth token metadata from DexScreener API.
+// Supports: Solana, Ethereum, Base, BSC.
+// Returns: name, symbol, image, links, market snapshot.
+// No Helius, no Pump SDK, no Solana web3.js.
 
 import {
   SupportedTokenChain,

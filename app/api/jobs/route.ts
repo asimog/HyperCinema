@@ -1,3 +1,8 @@
+// ── Jobs API — Create & List Video Generation Jobs ─────────────────
+// POST /api/jobs — creates token, prompt, or MythX video jobs
+// GET /api/jobs — lists jobs (query: wallet, status, limit)
+// Rate limited: 5/min, 20/hour per IP+subject
+
 import {
   createPromptVideoJob,
   createTokenVideoJob,

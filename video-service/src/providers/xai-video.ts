@@ -1,3 +1,8 @@
+// ── xAI Video Client — Clip Generation with Polling ────────────────
+// Calls xAI POST /videos/generations → polls GET /videos/{requestId} → returns video URL.
+// Handles: immediate sync responses, async polling, inline base64 video.
+// Progress callback (onProgress) for render job heartbeat updates.
+
 import { setTimeout as sleep } from "timers/promises";
 import { getVideoServiceEnv } from "../env";
 
@@ -40,7 +45,9 @@ function normalizeValue(value?: string | null): string | undefined {
   return trimmed.length ? trimmed : undefined;
 }
 
-function extractRequestId(payload: XAiVideoStartResponse | XAiVideoStatusResponse): string | null {
+function extractRequestId(
+  payload: XAiVideoStartResponse | XAiVideoStatusResponse,
+): string | null {
   return payload.request_id?.trim() || payload.id?.trim() || null;
 }
 
@@ -90,7 +97,11 @@ function extractErrorMessage(payload: XAiVideoStatusResponse): string | null {
   if (typeof payload.error === "string" && payload.error.trim()) {
     return payload.error.trim();
   }
-  if (payload.error && typeof payload.error === "object" && typeof payload.error.message === "string") {
+  if (
+    payload.error &&
+    typeof payload.error === "object" &&
+    typeof payload.error.message === "string"
+  ) {
     return payload.error.message.trim();
   }
   return null;
@@ -104,7 +115,10 @@ export class XAiVideoClient {
   }> {
     const env = getVideoServiceEnv();
     const apiKey = normalizeValue(input.apiKey) ?? env.XAI_API_KEY ?? null;
-    const baseUrl = (input.baseUrl?.trim() || env.XAI_BASE_URL).replace(/\/+$/, "");
+    const baseUrl = (input.baseUrl?.trim() || env.XAI_BASE_URL).replace(
+      /\/+$/,
+      "",
+    );
 
     if (!apiKey) {
       throw new Error("XAI_API_KEY is required for xAI video generation.");
@@ -121,7 +135,10 @@ export class XAiVideoClient {
         model: input.model || env.XAI_VIDEO_MODEL,
         prompt: input.prompt,
         image_url: normalizeImageUrl(input.imageUrl),
-        duration_seconds: Math.max(1, Math.min(15, Math.floor(input.durationSeconds))),
+        duration_seconds: Math.max(
+          1,
+          Math.min(15, Math.floor(input.durationSeconds)),
+        ),
         resolution: input.resolution,
         aspect_ratio: input.aspectRatio ?? "16:9",
       }),
@@ -129,7 +146,9 @@ export class XAiVideoClient {
 
     if (!startResponse.ok) {
       const body = await startResponse.text();
-      throw new Error(`xAI video start failed (${startResponse.status}): ${body}`);
+      throw new Error(
+        `xAI video start failed (${startResponse.status}): ${body}`,
+      );
     }
 
     const started = (await startResponse.json()) as XAiVideoStartResponse;
@@ -151,21 +170,29 @@ export class XAiVideoClient {
       await sleep(env.XAI_POLL_INTERVAL_MS);
       await input.onProgress?.();
 
-      const statusResponse = await fetch(`${baseUrl}/videos/${encodeURIComponent(requestId)}`, {
-        method: "GET",
-        headers,
-      });
+      const statusResponse = await fetch(
+        `${baseUrl}/videos/${encodeURIComponent(requestId)}`,
+        {
+          method: "GET",
+          headers,
+        },
+      );
 
       if (!statusResponse.ok) {
         const body = await statusResponse.text();
-        throw new Error(`xAI video polling failed (${statusResponse.status}): ${body}`);
+        throw new Error(
+          `xAI video polling failed (${statusResponse.status}): ${body}`,
+        );
       }
 
-      const statusPayload = (await statusResponse.json()) as XAiVideoStatusResponse;
+      const statusPayload =
+        (await statusResponse.json()) as XAiVideoStatusResponse;
       const status = normalizeStatus(statusPayload);
 
       if (status === "failed" || status === "error" || status === "cancelled") {
-        throw new Error(extractErrorMessage(statusPayload) ?? "xAI video generation failed.");
+        throw new Error(
+          extractErrorMessage(statusPayload) ?? "xAI video generation failed.",
+        );
       }
 
       const videoUris = extractVideoUrls(statusPayload);
@@ -177,7 +204,9 @@ export class XAiVideoClient {
         videoUris.length
       ) {
         if (!videoUris.length) {
-          throw new Error("xAI video generation completed without a video URL.");
+          throw new Error(
+            "xAI video generation completed without a video URL.",
+          );
         }
 
         return {

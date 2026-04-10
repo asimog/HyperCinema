@@ -1,4 +1,8 @@
-// Production env validation with Zod — xAI only, KISS
+// ── Environment Validation — Zod Schema ────────────────────────────
+// Validates and caches all env vars at startup.
+// xAI-only text + video, OpenRouter fallback, S3 storage.
+// No Firebase, no Vertex, no ElizaOS, no OpenMontage.
+
 import { z } from "zod";
 
 function trimEnvValue(value: string | undefined): string | undefined {

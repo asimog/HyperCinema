@@ -1,4 +1,9 @@
-// Video service config — xAI + S3 only
+// ── Video Service Environment Config ───────────────────────────────
+// Zod-validated env vars for the video-service only.
+// xAI-only: no Firebase, no Vertex, no OpenMontage, no ElizaOS.
+// S3-only: Supabase Storage for video uploads.
+// Cached after first parse for performance.
+
 import { z } from "zod";
 
 // Trim whitespace from env strings
@@ -40,9 +45,17 @@ const schema = z.object({
   S3_PUBLIC_URL: z.string().url().optional(),
 
   // How often recovery loop runs
-  RENDER_RECOVERY_INTERVAL_MS: z.coerce.number().int().min(1_000).default(30_000),
+  RENDER_RECOVERY_INTERVAL_MS: z.coerce
+    .number()
+    .int()
+    .min(1_000)
+    .default(30_000),
   // Stale render threshold — reclaim if stuck this long
-  RENDER_STALE_MS: z.coerce.number().int().min(60_000).default(5 * 60_000),
+  RENDER_STALE_MS: z.coerce
+    .number()
+    .int()
+    .min(60_000)
+    .default(5 * 60_000),
   // Max renders to recover per batch
   RENDER_RECOVERY_BATCH_LIMIT: z.coerce.number().int().positive().default(20),
 });

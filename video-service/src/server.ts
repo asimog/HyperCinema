@@ -1,4 +1,14 @@
-import Fastify, { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+// ── Video Service — Fastify HTTP Server ────────────────────────────
+// Standalone video rendering microservice (xAI only).
+// Endpoints: POST /render, GET /render/:id, GET /healthz.
+// Auth: Bearer VIDEO_API_KEY.
+// Recovery loop: resumes stale renders on startup + periodic intervals.
+
+import Fastify, {
+  FastifyInstance,
+  FastifyReply,
+  FastifyRequest,
+} from "fastify";
 import { ZodError } from "zod";
 import { getVideoServiceEnv } from "./env";
 import { parseRenderRequest } from "./types";
@@ -45,13 +55,19 @@ function extractBearer(header: string | undefined): string | null {
   return header.trim();
 }
 
-function buildStatusUrl(request: FastifyRequest, renderId: string, configuredBase?: string): string {
+function buildStatusUrl(
+  request: FastifyRequest,
+  renderId: string,
+  configuredBase?: string,
+): string {
   if (configuredBase) {
     return `${configuredBase.replace(/\/+$/, "")}/render/${renderId}`;
   }
   const protoHeader = request.headers["x-forwarded-proto"];
   const protocol =
-    typeof protoHeader === "string" ? protoHeader.split(",")[0]!.trim() : request.protocol;
+    typeof protoHeader === "string"
+      ? protoHeader.split(",")[0]!.trim()
+      : request.protocol;
   const host = request.headers.host;
   return `${protocol}://${host}/render/${renderId}`;
 }
@@ -94,10 +110,7 @@ export function buildVideoService(input?: {
         void recoverable
           .resumePendingJobs?.(env().RENDER_RECOVERY_BATCH_LIMIT)
           .catch((error) => {
-            app.log.error(
-              { err: error },
-              "video-service recovery loop failed",
-            );
+            app.log.error({ err: error }, "video-service recovery loop failed");
           });
       }, env().RENDER_RECOVERY_INTERVAL_MS);
     });

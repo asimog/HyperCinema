@@ -1,3 +1,10 @@
+// ── Cinematic Script Generator ──────────────────────────────────────
+// Converts a WalletStory into a structured cinematic script (hookLine + scenes).
+// Primary path: calls xAI (grok-3) with prompt template + structured JSON.
+// Fallback path: builds scenes from story cards when AI fails.
+// MythX path: routes to 90s Anime CRT engine for X profile autobiographies.
+// Output feeds directly into lib/video/pipeline.ts for rendering.
+
 import { generateTextInferenceJson } from "@/lib/inference/text";
 import {
   alignSceneStatesToCount,

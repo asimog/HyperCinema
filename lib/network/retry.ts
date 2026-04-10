@@ -1,3 +1,8 @@
+// ── Retry — Exponential Backoff with RetryableError ────────────────
+// withRetry(fn, { attempts, baseDelayMs, maxDelayMs }) — retries on RetryableError.
+// isRetryableHttpStatus() — 429, 500, 502, 503, 504 are retryable.
+// Used by: all HTTP calls across the codebase.
+
 export class RetryableError extends Error {
   constructor(message: string, options?: ErrorOptions) {
     super(message, options);
@@ -10,7 +15,13 @@ function sleep(ms: number): Promise<void> {
 }
 
 export function isRetryableHttpStatus(status: number): boolean {
-  return status === 408 || status === 409 || status === 425 || status === 429 || status >= 500;
+  return (
+    status === 408 ||
+    status === 409 ||
+    status === 425 ||
+    status === 429 ||
+    status >= 500
+  );
 }
 
 export interface RetryOptions {
@@ -19,7 +30,11 @@ export interface RetryOptions {
   maxDelayMs?: number;
   jitterMs?: number;
   shouldRetry?: (error: unknown) => boolean;
-  onRetry?: (input: { attempt: number; error: unknown; delayMs: number }) => void;
+  onRetry?: (input: {
+    attempt: number;
+    error: unknown;
+    delayMs: number;
+  }) => void;
 }
 
 export async function withRetry<T>(
@@ -44,7 +59,10 @@ export async function withRetry<T>(
         throw error;
       }
 
-      const exponential = Math.min(maxDelayMs, baseDelayMs * 2 ** (attempt - 1));
+      const exponential = Math.min(
+        maxDelayMs,
+        baseDelayMs * 2 ** (attempt - 1),
+      );
       const jitter = Math.floor(Math.random() * jitterMs);
       const delayMs = exponential + jitter;
       options.onRetry?.({ attempt, error, delayMs });
@@ -56,4 +74,3 @@ export async function withRetry<T>(
     ? lastError
     : new Error("Retry operation failed with unknown error");
 }
-

@@ -1,5 +1,7 @@
-// Text inference — xAI primary, OpenRouter fallback
-// KISS: two providers, nothing else.
+// ── Text Inference — xAI Primary, OpenRouter Fallback ──────────────
+// KISS: try xAI first, fall back to OpenRouter if it fails.
+// Handles both streaming and JSON responses.
+// Used by: lib/ai/cinematic.ts, lib/ai/report.ts
 
 import { fetchWithTimeout } from "@/lib/network/http";
 import {

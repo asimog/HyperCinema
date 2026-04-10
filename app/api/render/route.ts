@@ -1,6 +1,8 @@
-// Internal render endpoint — receives render requests from lib/video/client.ts
-// and dispatches to xAI /videos/generations. Returns async { id, jobId }
-// so the client can poll GET /api/render/:id for completion.
+// ── Render API — Proxy to xAI Video Generation ────────────────────
+// POST /api/render — starts xAI video generation, returns request ID
+// GET /api/render/:id — polls xAI for completion, returns video URL
+// Auth: Bearer VIDEO_API_KEY
+// Used by: lib/video/client.ts when VIDEO_API_BASE_URL points to Vercel
 
 import { NextRequest, NextResponse } from "next/server";
 import { getEnv } from "@/lib/env";
@@ -26,7 +28,9 @@ function resolveAspectRatioSize(aspectRatio: string | undefined): string {
 
 export async function POST(request: NextRequest) {
   const env = getEnv();
-  const token = extractBearer(request.headers.get("authorization") ?? undefined);
+  const token = extractBearer(
+    request.headers.get("authorization") ?? undefined,
+  );
   if (!token || token !== env.VIDEO_API_KEY) {
     return unauthorized();
   }
@@ -41,21 +45,32 @@ export async function POST(request: NextRequest) {
   // Extract xAI-specific payload (sent by lib/video/client.ts)
   const xai = body.xai as Record<string, unknown> | undefined;
   const prompt = (xai?.prompt ?? body.prompt ?? "") as string;
-  const model = (xai?.model ?? body.model ?? env.XAI_VIDEO_MODEL ?? "grok-imagine-video") as string;
+  const model = (xai?.model ??
+    body.model ??
+    env.XAI_VIDEO_MODEL ??
+    "grok-imagine-video") as string;
   const resolution = (xai?.resolution ?? body.resolution ?? "720p") as string;
   const aspectRatio = (xai?.aspectRatio ?? "1:1") as string;
   const durationSeconds = (body.durationSeconds as number | undefined) ?? 10;
   const jobId = (body.jobId as string | undefined) ?? "";
 
   // First scene image (optional)
-  const scenes = xai?.sceneMetadata as Array<{ imageUrl?: string | null }> | undefined;
+  const scenes = xai?.sceneMetadata as
+    | Array<{ imageUrl?: string | null }>
+    | undefined;
   const imageUrl = scenes?.[0]?.imageUrl ?? null;
 
   const apiKey = env.XAI_VIDEO_API_KEY ?? env.XAI_API_KEY;
-  const xaiBase = (env.XAI_VIDEO_BASE_URL ?? env.XAI_BASE_URL).replace(/\/+$/, "");
+  const xaiBase = (env.XAI_VIDEO_BASE_URL ?? env.XAI_BASE_URL).replace(
+    /\/+$/,
+    "",
+  );
 
   if (!apiKey) {
-    return NextResponse.json({ error: "XAI_API_KEY not configured" }, { status: 503 });
+    return NextResponse.json(
+      { error: "XAI_API_KEY not configured" },
+      { status: 503 },
+    );
   }
 
   const xaiBody: Record<string, unknown> = {
@@ -81,7 +96,10 @@ export async function POST(request: NextRequest) {
   const startText = await startResp.text();
   if (!startResp.ok) {
     return NextResponse.json(
-      { error: `xAI video start failed (${startResp.status})`, details: startText },
+      {
+        error: `xAI video start failed (${startResp.status})`,
+        details: startText,
+      },
       { status: startResp.status },
     );
   }
@@ -90,11 +108,16 @@ export async function POST(request: NextRequest) {
   try {
     started = JSON.parse(startText);
   } catch {
-    return NextResponse.json({ error: "xAI returned invalid JSON", raw: startText }, { status: 502 });
+    return NextResponse.json(
+      { error: "xAI returned invalid JSON", raw: startText },
+      { status: 502 },
+    );
   }
 
   // If xAI returned a video URL immediately (sync response), return it now
-  const immediateUrl = (started.video_url ?? started.videoUrl) as string | undefined;
+  const immediateUrl = (started.video_url ?? started.videoUrl) as
+    | string
+    | undefined;
   if (immediateUrl) {
     return NextResponse.json({
       id: (started.id ?? started.request_id ?? "immediate") as string,
@@ -106,7 +129,9 @@ export async function POST(request: NextRequest) {
   }
 
   // Async — return request ID so caller can poll /api/render/:id
-  const requestId = ((started.request_id ?? started.id) as string | undefined)?.trim();
+  const requestId = (
+    (started.request_id ?? started.id) as string | undefined
+  )?.trim();
   if (!requestId) {
     return NextResponse.json(
       { error: "xAI did not return a request id", raw: startText },

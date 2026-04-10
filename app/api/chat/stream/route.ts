@@ -1,3 +1,9 @@
+// ── Chat Stream API — SSE AI Chat with Concierge ───────────────────
+// POST /api/chat/stream — streams AI responses via Server-Sent Events
+// Rate limited: 10/min, 60/hour per IP
+// Provider: xAI (grok-3), falls back to OpenRouter if configured
+// System prompt: "You are HyperM — sharp, concise, crypto-native."
+
 import { NextRequest } from "next/server";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { getRequestIp } from "@/lib/security/request-ip";

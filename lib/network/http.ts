@@ -1,5 +1,9 @@
 import { RetryableError } from "@/lib/network/retry";
 
+// ── HTTP — Fetch with Timeout ──────────────────────────────────────
+// Wraps fetch() with an AbortSignal timeout.
+// Used by: all HTTP calls (inference, video, DexScreener, X API).
+
 export async function fetchWithTimeout(
   input: RequestInfo | URL,
   init: RequestInit = {},
@@ -43,4 +47,3 @@ export async function fetchWithTimeout(
     }
   }
 }
-

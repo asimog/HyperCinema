@@ -1,3 +1,7 @@
+// ── Logger — Structured JSON Logging ───────────────────────────────
+// logger.info/warn/error(category, context) → JSON to stdout/stderr/stdwarn.
+// Used by: every module in the codebase for observability.
+
 export interface LogContext {
   component?: string;
   stage?: string;
@@ -48,4 +52,3 @@ export const logger = {
     emit("error", message, context);
   },
 };
-

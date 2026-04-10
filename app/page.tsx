@@ -1,6 +1,7 @@
-// HyperM — AI chat agent.
-// Streams responses from xAI Grok. Detects @handles + wallet addresses and
-// offers one-click video generation inline.
+// ── Homepage — HyperM Chat + Video Generator ───────────────────────
+// Chat: AI chat via /api/chat/stream (SSE streaming)
+// Generate: detects @handle/wallet/prompt → creates job → redirects to /job/[id]
+// Design: seafoam (#6EEAB0) on pure black, Fragment Mono, subtle grid lines
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";

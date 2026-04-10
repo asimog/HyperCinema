@@ -3,7 +3,6 @@ import {
   alignSceneStatesToCount,
   buildSceneContinuityPrompt,
 } from "@/lib/analytics/videoCoherence";
-import { buildCardsAgentDeck } from "@/lib/cards-agent";
 import {
   buildCinematographyKnowledgeLines,
   buildCreativeAssemblyLines,
@@ -54,7 +53,9 @@ interface TokenImageReference {
   impactScore: number;
 }
 
-export function buildPumpImageReferences(story: WalletStory): TokenImageReference[] {
+export function buildPumpImageReferences(
+  story: WalletStory,
+): TokenImageReference[] {
   return rankTokenMetadataForStory(story).map((item) => ({
     mint: item.mint,
     symbol: item.symbol,
@@ -81,8 +82,9 @@ export function assignSceneImageUrls(
 
   return scenes.map((scene, index) => ({
     ...scene,
-    imageUrl:
-      isHttpUrl(scene.imageUrl) ? scene.imageUrl : dedupedPool[index % dedupedPool.length]!,
+    imageUrl: isHttpUrl(scene.imageUrl)
+      ? scene.imageUrl
+      : dedupedPool[index % dedupedPool.length]!,
   }));
 }
 
@@ -104,7 +106,10 @@ function normalizeSceneDurations(
     ),
   }));
 
-  const scaledTotal = scaled.reduce((sum, scene) => sum + scene.durationSeconds, 0);
+  const scaledTotal = scaled.reduce(
+    (sum, scene) => sum + scene.durationSeconds,
+    0,
+  );
   const diff = targetDuration - scaledTotal;
   if (diff !== 0 && scaled.length) {
     scaled[scaled.length - 1]!.durationSeconds += diff;
@@ -125,7 +130,11 @@ function buildFallbackHookLine(story: WalletStory): string {
   return `${subject} is staged as a ${creativeStoryLabel(story.storyKind)}, and the opening frame wants to land immediately.`;
 }
 
-function scaleIndex(index: number, sourceLength: number, targetLength: number): number {
+function scaleIndex(
+  index: number,
+  sourceLength: number,
+  targetLength: number,
+): number {
   if (sourceLength <= 1 || targetLength <= 1) {
     return 0;
   }
@@ -167,12 +176,14 @@ function buildSceneDirectiveRefs(story: WalletStory, targetCount: number) {
 
   return alignedStates.map((state, index) => {
     const promptScene =
-      promptScenes[scaleIndex(index, promptScenes.length, targetCount)] ?? undefined;
+      promptScenes[scaleIndex(index, promptScenes.length, targetCount)] ??
+      undefined;
 
     return {
       stateRef: state.stateRef,
       continuityNote:
-        promptScene?.continuityNote ?? buildSceneContinuityPrompt(identity, state),
+        promptScene?.continuityNote ??
+        buildSceneContinuityPrompt(identity, state),
       promptScene,
     };
   });
@@ -191,7 +202,9 @@ function enrichScenesWithCoherence(
   }));
 }
 
-function buildCinematicPromptInput(story: WalletStory): Record<string, unknown> {
+function buildCinematicPromptInput(
+  story: WalletStory,
+): Record<string, unknown> {
   const cardsAgentDeck = buildCardsAgentDeck({
     requestKind: story.storyKind,
     subjectName: story.subjectName,
@@ -244,10 +257,7 @@ function buildCinematicPromptInput(story: WalletStory): Record<string, unknown> 
   };
 }
 
-function buildScriptSystemPrompt(
-  template: string,
-  story: WalletStory,
-): string {
+function buildScriptSystemPrompt(template: string, story: WalletStory): string {
   const allowOnScreenText = allowsOnScreenText({
     requestedPrompt: story.requestedPrompt,
     subjectDescription: story.subjectDescription,
@@ -279,42 +289,54 @@ export function buildFallbackCinematicScript(
   tokenImageReferences: TokenImageReference[],
 ): GeneratedCinematicScript {
   if (story.storyKind !== "token_video") {
-    const cards =
-      story.storyCards?.length
-        ? story.storyCards
-        : buildStoryCards({
-            requestKind: story.storyKind,
-            subjectName: story.subjectName,
-            subjectDescription: story.subjectDescription,
-            requestedPrompt: story.requestedPrompt,
-            storyBeats: story.storyBeats,
-            audioEnabled: story.audioEnabled,
-          });
+    const cards = story.storyCards?.length
+      ? story.storyCards
+      : buildStoryCards({
+          requestKind: story.storyKind,
+          subjectName: story.subjectName,
+          subjectDescription: story.subjectDescription,
+          requestedPrompt: story.requestedPrompt,
+          storyBeats: story.storyBeats,
+          audioEnabled: story.audioEnabled,
+        });
     const sceneCount = Math.min(4, Math.max(3, cards.length));
-    const duration = Math.max(2, Math.round(story.durationSeconds / sceneCount));
+    const duration = Math.max(
+      2,
+      Math.round(story.durationSeconds / sceneCount),
+    );
     const defaultNarrationFallback = `${story.subjectName ?? "The scene"} opens with a clear emotional hook that pulls the audience straight into the world, setting up a compelling arc that builds toward a memorable payoff.`;
-    const roughScenes: CinematicScene[] = Array.from({ length: sceneCount }, (_, index) => {
-      const card = cards[index] ?? cards[cards.length - 1];
-      const narrationCandidate =
-        card?.narrationCue ??
-        card?.teaser ??
-        story.narrativeSummary ??
-        defaultNarrationFallback;
-      return {
-        sceneNumber: index + 1,
-        visualPrompt:
-          card?.visualCue ??
-          `${creativeStoryLabel(story.storyKind)} opening image with a clear emotional hook.`,
-        narration: narrationCandidate.length >= 10 ? narrationCandidate : defaultNarrationFallback,
-        durationSeconds: duration,
-        imageUrl: null,
-        stateRef: `creative-${story.storyKind ?? "cinema"}-scene-${index + 1}`,
-        continuityNote:
-          card?.transitionLabel ?? "Carry the same emotional spine into the next cut.",
-      };
-    });
+    const roughScenes: CinematicScene[] = Array.from(
+      { length: sceneCount },
+      (_, index) => {
+        const card = cards[index] ?? cards[cards.length - 1];
+        const narrationCandidate =
+          card?.narrationCue ??
+          card?.teaser ??
+          story.narrativeSummary ??
+          defaultNarrationFallback;
+        return {
+          sceneNumber: index + 1,
+          visualPrompt:
+            card?.visualCue ??
+            `${creativeStoryLabel(story.storyKind)} opening image with a clear emotional hook.`,
+          narration:
+            narrationCandidate.length >= 10
+              ? narrationCandidate
+              : defaultNarrationFallback,
+          durationSeconds: duration,
+          imageUrl: null,
+          stateRef: `creative-${story.storyKind ?? "cinema"}-scene-${index + 1}`,
+          continuityNote:
+            card?.transitionLabel ??
+            "Carry the same emotional spine into the next cut.",
+        };
+      },
+    );
 
-    const normalizedScenes = normalizeSceneDurations(roughScenes, story.durationSeconds);
+    const normalizedScenes = normalizeSceneDurations(
+      roughScenes,
+      story.durationSeconds,
+    );
     return {
       hookLine: buildFallbackHookLine(story),
       scenes: normalizedScenes,
@@ -329,29 +351,40 @@ export function buildFallbackCinematicScript(
       "Momentum and emotion kept taking turns holding the wheel.",
     story.funObservations?.[0] ??
       "The final beat landed like trench folklore instead of a spreadsheet.",
-  ].map((n) => n.length >= 10 ? n : "A quiet moment settles over the trading floor as the session winds down.");
-  const roughScenes: CinematicScene[] = Array.from({ length: 3 }, (_, index) => {
-    const promptScene = directives[index]?.promptScene ?? promptScenes[index];
-    const defaultVisuals = [
-      "Open on the protagonist entering a neon trading room with trailer-grade tension.",
-      "Push into the volatile middle act with continuity-first motion and token anchors still in frame.",
-      "Close on an aftermath tableau that feels earned, bruised, and strangely triumphant.",
-    ];
+  ].map((n) =>
+    n.length >= 10
+      ? n
+      : "A quiet moment settles over the trading floor as the session winds down.",
+  );
+  const roughScenes: CinematicScene[] = Array.from(
+    { length: 3 },
+    (_, index) => {
+      const promptScene = directives[index]?.promptScene ?? promptScenes[index];
+      const defaultVisuals = [
+        "Open on the protagonist entering a neon trading room with trailer-grade tension.",
+        "Push into the volatile middle act with continuity-first motion and token anchors still in frame.",
+        "Close on an aftermath tableau that feels earned, bruised, and strangely triumphant.",
+      ];
 
-    return {
-      sceneNumber: index + 1,
-      visualPrompt:
-        promptScene?.providerPrompts.veo ?? promptScene?.visualStyle ?? defaultVisuals[index]!,
-      narration:
-        promptScene?.narrationHook ?? safeDefaultNarration[index]!,
-      durationSeconds: Math.max(2, Math.round(story.durationSeconds / 3)),
-      imageUrl: tokenImageReferences[index]?.imageUrl ?? null,
-      stateRef: directives[index]?.stateRef,
-      continuityNote: directives[index]?.continuityNote,
-    };
-  });
+      return {
+        sceneNumber: index + 1,
+        visualPrompt:
+          promptScene?.providerPrompts.veo ??
+          promptScene?.visualStyle ??
+          defaultVisuals[index]!,
+        narration: promptScene?.narrationHook ?? safeDefaultNarration[index]!,
+        durationSeconds: Math.max(2, Math.round(story.durationSeconds / 3)),
+        imageUrl: tokenImageReferences[index]?.imageUrl ?? null,
+        stateRef: directives[index]?.stateRef,
+        continuityNote: directives[index]?.continuityNote,
+      };
+    },
+  );
 
-  const normalizedScenes = normalizeSceneDurations(roughScenes, story.durationSeconds);
+  const normalizedScenes = normalizeSceneDurations(
+    roughScenes,
+    story.durationSeconds,
+  );
   const scenesWithImages = assignSceneImageUrls(
     normalizedScenes,
     tokenImageReferences.map((reference) => reference.imageUrl),

@@ -1,24 +1,9 @@
-import { extractPumpTrades } from "@/lib/pump/filter";
-import type { EnhancedTransaction } from "helius-sdk/enhanced/types";
+// Pump activity filter — stub (pump module removed)
 import { PumpTradeLike } from "./types";
 
-export async function filterPumpActivity(input: {
+export async function filterPumpActivity(_input: {
   wallet: string;
-  transactions: EnhancedTransaction[];
+  transactions: unknown[];
 }): Promise<PumpTradeLike[]> {
-  const trades = await extractPumpTrades(input.wallet, input.transactions);
-
-  // extractPumpTrades already excludes NFTs/non-Pump token transfers.
-  return trades.map((trade) => ({
-    timestamp: trade.timestamp,
-    signature: trade.signature,
-    source: trade.source,
-    mint: trade.mint,
-    symbol: trade.symbol,
-    name: trade.name,
-    image: trade.image,
-    side: trade.side,
-    tokenAmount: trade.tokenAmount,
-    solAmount: trade.solAmount,
-  }));
+  return [];
 }

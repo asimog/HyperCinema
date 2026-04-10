@@ -98,15 +98,11 @@ export async function generateVideo(
     return xaiResult;
   }
 
-  // Fallback to OpenMontage for multi-clip compositions
-  logger.info("producer_falling_back_to_openmontage", {
-    component: "agents_producer",
-    stage: "generateVideo",
-    jobId,
-    reason: xaiResult.error ?? "xAI render failed",
-  });
-
-  return renderWithOpenMontage(script.scenes, direction.aspectRatio);
+  return {
+    success: false,
+    error:
+      xaiResult.error ?? "xAI render failed. No fallback providers configured.",
+  };
 }
 
 /**

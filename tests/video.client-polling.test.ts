@@ -40,12 +40,12 @@ describe("video client polling", () => {
       VIDEO_RENDER_MAX_POLL_ATTEMPTS: 1,
       VIDEO_RENDER_POLL_INTERVAL_MS: 1,
       VIDEO_RESOLUTION: "1080p",
-      VIDEO_ENGINE: "google_veo",
+      VIDEO_ENGINE: "xai",
     });
     mocks.getInferenceRuntimeConfig.mockResolvedValue({
       video: {
-        provider: "google_veo",
-        model: "veo-3.1-fast-generate-001",
+        provider: "xai",
+        model: "grok-imagine-video",
         baseUrl: "https://video.example.com",
       },
     });

@@ -19,6 +19,10 @@ const envSchema = z.object({
   XAI_TEXT_MODEL: z.string().min(1).optional(),
   XAI_VIDEO_MODEL: z.string().min(1).default("grok-imagine-video"),
 
+  // ── OpenRouter (text fallback) ─────────────────────────────────
+  OPENROUTER_API_KEY: z.string().min(1).optional(),
+  OPENROUTER_BASE_URL: z.string().url().default("https://openrouter.ai/api/v1"),
+
   // ── Video render service ────────────────────────────────────────
   VIDEO_API_KEY: z.string().default("local-dev-key"),
   VIDEO_API_BASE_URL: z.string().url().optional(),
@@ -74,6 +78,8 @@ export function getEnv(): Env {
     XAI_BASE_URL: trimEnvValue(process.env.XAI_BASE_URL),
     XAI_TEXT_MODEL: trimOptionalEnvValue(process.env.XAI_TEXT_MODEL),
     XAI_VIDEO_MODEL: trimOptionalEnvValue(process.env.XAI_VIDEO_MODEL),
+    OPENROUTER_API_KEY: trimOptionalEnvValue(process.env.OPENROUTER_API_KEY),
+    OPENROUTER_BASE_URL: trimEnvValue(process.env.OPENROUTER_BASE_URL),
     VIDEO_API_KEY: trimOptionalEnvValue(process.env.VIDEO_API_KEY),
     VIDEO_API_BASE_URL: trimEnvValue(process.env.VIDEO_API_BASE_URL),
     X_API_BEARER_TOKEN: trimOptionalEnvValue(process.env.X_API_BEARER_TOKEN),

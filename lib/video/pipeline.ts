@@ -18,13 +18,13 @@ export async function buildAndRenderVideo(input: {
   const script = await generateCinematicScript(input.walletStory);
   const env = getEnv();
 
-  // Build xAI-specific render payload
+  // Build xAI-specific render payload — 720p, 1:1 square
   const xaiPayload = buildXAiVideoRenderPayload({
     walletStory: input.walletStory,
     script,
     model: env.XAI_VIDEO_MODEL,
     resolution: "720p",
-    aspectRatio: "16:9",
+    aspectRatio: "1:1",
   });
 
   // Send to video service, poll until done

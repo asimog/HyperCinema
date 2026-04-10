@@ -1,4 +1,4 @@
-// Inference runtime config — xAI only
+// Inference runtime config — xAI primary, OpenRouter fallback
 import { getEnv } from "@/lib/env";
 
 export interface ProviderRuntimeSelection {

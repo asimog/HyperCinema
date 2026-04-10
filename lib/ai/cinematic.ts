@@ -14,6 +14,13 @@ import {
   sourceReferenceLabel,
 } from "@/lib/cinema/sourceReference";
 import { buildStoryCards } from "@/lib/cinema/storyCards";
+import {
+  generateMythXVideo,
+  CRT_PHYSICS_BLOCK,
+  NINETIES_ANIME_SUBSTYLES,
+  EPIC_THEMES,
+  CINEMATIC_TECH,
+} from "@/workers/mythx-engine";
 import { logger } from "@/lib/logging/logger";
 import {
   isHttpUrl,
@@ -396,10 +403,76 @@ export function buildFallbackCinematicScript(
   };
 }
 
+// Generate MythX cinematic script using 90s Anime CRT engine
+async function generateMythXCinematicScript(
+  story: WalletStory,
+  tweetsText: string,
+): Promise<GeneratedCinematicScript> {
+  const username = story.subjectName?.replace(/^@/, "") ?? story.wallet;
+  const isPremium = false; // Could be set based on tweet likes later
+
+  try {
+    // Generate 3-act MythX prompts with CRT physics
+    const mythxResult = await generateMythXVideo({
+      tweetsText,
+      username,
+      language: "english",
+      isPremium,
+    });
+
+    // Convert MythX prompts to CinematicScene format
+    const scenes: CinematicScene[] = mythxResult.prompts.map((clip) => ({
+      sceneNumber: clip.act,
+      visualPrompt: clip.prompt,
+      narration: `Act ${clip.act}: @${username}'s ${mythxResult.combo.subStyle} ${mythxResult.combo.theme}`,
+      durationSeconds: clip.durationSeconds,
+      imageUrl: null,
+      stateRef: `mythx-crt-act-${clip.act}`,
+      continuityNote:
+        clip.act > 1
+          ? `Seamlessly continue from Act ${clip.act - 1}. Maintain identical character appearance, lighting, color grading, scanlines, phosphor glow, RGB fringing, curvature, and all analog CRT effects.`
+          : `Opening act. ${mythxResult.combo.tech}.`,
+    }));
+
+    const normalizedScenes = normalizeSceneDurations(
+      scenes,
+      story.durationSeconds,
+    );
+
+    logger.info("mythx_crt_script_generated", {
+      component: "ai_cinematic",
+      stage: "generate_script",
+      wallet: story.wallet,
+      acts: scenes.length,
+      combo: mythxResult.combo.subStyle,
+    });
+
+    return {
+      hookLine: `@${username} — a ${mythxResult.combo.subStyle} 90s CRT legend`,
+      scenes: normalizedScenes,
+    };
+  } catch (error) {
+    logger.warn("mythx_crt_engine_failed_fallback", {
+      component: "ai_cinematic",
+      stage: "generate_script",
+      wallet: story.wallet,
+      errorCode: "mythx_crt_failed",
+      errorMessage: error instanceof Error ? error.message : "Unknown error",
+    });
+    // Fall back to standard cinematic script
+    return buildFallbackCinematicScript(story, []);
+  }
+}
+
 export async function generateCinematicScript(
   story: WalletStory,
 ): Promise<GeneratedCinematicScript> {
   const tokenImageReferences = buildPumpImageReferences(story);
+
+  // MythX stories use the 90s Anime CRT engine
+  if (story.storyKind === "mythx" && story.sourceTranscript) {
+    return generateMythXCinematicScript(story, story.sourceTranscript);
+  }
 
   try {
     const templatePath = path.join(

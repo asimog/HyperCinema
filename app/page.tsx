@@ -28,8 +28,8 @@ function detectInputType(input: string): "mythx" | "hashmyth" | null {
 }
 
 const VIDEO_HINT: Record<string, string> = {
-  mythx: "MYTHX VIDEO",
-  hashmyth: "HASHMYTH VIDEO",
+  mythx: "🎬 MYTHX — AI autobiography video",
+  hashmyth: "📊 HASHMYTH — trading story video",
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -103,7 +103,21 @@ export default function ChatPage() {
     setLoading(true);
     setMessageCount((c) => c + 1);
 
-    const systemPrompt = `You are HyperM — sharp, concise, crypto-native. You know DeFi, memecoins, Solana, Ethereum, X (Twitter) culture deeply. Keep answers brief and direct. No filler. If asked about generating videos, tell the user to type a wallet address or @handle and hit the yellow GENERATE button.`;
+    const systemPrompt = `You are HyperMythX — an autonomous AI cinema engine and memecoin storyteller. You are sharp, concise, crypto-native, and creative. You know DeFi, memecoins, Solana, Ethereum, Base, BNB, X (Twitter) culture deeply.
+
+Your capabilities:
+1. **MythX** — Tell a user's X (Twitter) autobiography from their @handle. Scrapes their tweets and weaves a cinematic short film about their personality, ideas, and story. Never about money — about personality, ideas, and narrative.
+2. **HashMyth** — Generate a cinematic video about any wallet address or token contract (Solana, Ethereum, Base, BNB). Turns trading activity into a story. Covers Pump.fun (Solana), FOUR.MEME (BNB), and Clanker.world (Base) tokens.
+3. **Random Cinema** — Generate an original cinematic short from a creative prompt.
+4. **Chat** — Answer questions about crypto, DeFi, memecoins, blockchain, and culture. Be sharp and direct.
+
+How to use:
+- Type an @handle (e.g. @elonmusk) → MythX autobiography video
+- Type a wallet or token address → HashMyth trading story video
+- Type "random" or a creative prompt → Random cinema video
+- Ask me anything about crypto → I'll answer
+
+Keep answers brief and direct. No filler. No fluff. Crypto-native tone. If a user wants to generate a video, tell them to just type their @handle, wallet address, or creative prompt and press Enter — it's free, no payments required.`;
 
     try {
       const history = [...messages, userMsg];
@@ -221,13 +235,15 @@ export default function ChatPage() {
       <div className="min-h-dvh bg-black text-white flex flex-col items-center justify-center">
         {/* Nav */}
         <nav className="fixed top-0 left-0 right-0 border-b border-[#1a1a1a] bg-black/80 backdrop-blur px-6 py-3 flex items-center justify-between font-mono text-[0.65rem] tracking-widest uppercase z-10">
-          <span className="text-[#FFE500] font-bold">HYPERM</span>
+          <Link href="/" className="text-[#FFE500] font-bold hover:underline">
+            HYPERMYTHX
+          </Link>
           <div className="flex gap-6 text-[#888]">
             <Link
               href="/creator"
               className="hover:text-[#FFE500] transition-colors"
             >
-              MYTHOS
+              CREATOR
             </Link>
             <Link
               href="/autonomous"
@@ -235,6 +251,14 @@ export default function ChatPage() {
             >
               FEED
             </Link>
+            <a
+              href="https://x.com/HyperMythX"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-[#FFE500] transition-colors"
+            >
+              @HYPERMYTHSX
+            </a>
           </div>
         </nav>
 
@@ -242,8 +266,12 @@ export default function ChatPage() {
         <div className="w-full max-w-2xl px-4 -mt-20 space-y-8">
           {/* Single line greeting */}
           <h1 className="font-mono text-[clamp(1.2rem,4vw,2rem)] font-light text-[#e0e0e0] leading-relaxed text-center">
-            What do you want to know or create?
+            Autonomous AI cinema engine
           </h1>
+          <p className="font-mono text-[0.65rem] text-[#666] text-center tracking-wide">
+            MythX autobiography · HashMyth trading stories · Random cinema ·
+            Crypto chat
+          </p>
 
           {/* Video generation hint */}
           {detectedType && (
@@ -311,13 +339,15 @@ export default function ChatPage() {
     <div className="min-h-dvh bg-black text-white flex flex-col">
       {/* Nav */}
       <nav className="border-b border-[#1a1a1a] px-6 py-3 flex items-center justify-between font-mono text-[0.65rem] tracking-widest uppercase shrink-0">
-        <span className="text-[#FFE500] font-bold">HYPERM</span>
+        <Link href="/" className="text-[#FFE500] font-bold hover:underline">
+          HYPERMYTHX
+        </Link>
         <div className="flex gap-6 text-[#888]">
           <Link
             href="/creator"
             className="hover:text-[#FFE500] transition-colors"
           >
-            MYTHOS
+            CREATOR
           </Link>
           <Link
             href="/autonomous"
@@ -325,6 +355,14 @@ export default function ChatPage() {
           >
             FEED
           </Link>
+          <a
+            href="https://x.com/HyperMythX"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-[#FFE500] transition-colors"
+          >
+            @HYPERMYTHSX
+          </a>
         </div>
       </nav>
 

@@ -21,7 +21,8 @@
       "Bash(supabase *)",
       "Bash(vercel *)",
       "Bash(railway *)",
-      "Bash(set *)"
+      "Bash(set *)",
+      "Bash(powershell *)"
     ]
   },
   "$version": 3

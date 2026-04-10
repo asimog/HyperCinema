@@ -369,7 +369,7 @@ export function buildFallbackCinematicScript(
       return {
         sceneNumber: index + 1,
         visualPrompt:
-          promptScene?.providerPrompts.veo ??
+          promptScene?.providerPromps?.veo ??
           promptScene?.visualStyle ??
           defaultVisuals[index]!,
         narration: promptScene?.narrationHook ?? safeDefaultNarration[index]!,

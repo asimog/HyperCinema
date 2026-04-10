@@ -22,7 +22,8 @@
       "Bash(vercel *)",
       "Bash(railway *)",
       "Bash(set *)",
-      "Bash(powershell *)"
+      "Bash(powershell *)",
+      "Bash(taskkill *)"
     ]
   },
   "$version": 3

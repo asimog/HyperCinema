@@ -26,6 +26,25 @@ export async function enforceRateLimit(input: {
   rules: RateLimitRule[];
   now?: Date;
 }): Promise<RateLimitResult> {
+  // Fail-open: if DB is unavailable, allow all requests
+  if (!db) {
+    return { allowed: true, retryAfterSec: 0 };
+  }
+
+  try {
+    return await _enforceRateLimitWithDb(input);
+  } catch {
+    // DB error — fail-open so users aren't blocked by infra issues
+    return { allowed: true, retryAfterSec: 0 };
+  }
+}
+
+async function _enforceRateLimitWithDb(input: {
+  scope: string;
+  key: string;
+  rules: RateLimitRule[];
+  now?: Date;
+}): Promise<RateLimitResult> {
   const now = input.now ?? new Date();
   const nowSec = Math.floor(now.getTime() / 1000);
   const encodedKey = encodeKey(`${input.scope}:${input.key}`);

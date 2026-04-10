@@ -565,15 +565,22 @@ function configToDoc(config: InferenceRuntimeConfig): {
 }
 
 export async function getInferenceRuntimeConfig(): Promise<InferenceRuntimeConfig> {
-  const row = await db.inferenceConfig.findUnique({
-    where: { id: "inference_config" },
-  });
+  // Fail-safe: fall back to env defaults if DB is unavailable
+  if (!db) return defaultsFromEnv();
 
-  if (!row) {
+  try {
+    const row = await db.inferenceConfig.findUnique({
+      where: { id: "inference_config" },
+    });
+
+    if (!row) {
+      return defaultsFromEnv();
+    }
+
+    return normalizeDoc(docToConfig(row));
+  } catch {
     return defaultsFromEnv();
   }
-
-  return normalizeDoc(docToConfig(row));
 }
 
 function mergeSurfaceConfig<TProvider extends string>(input: {

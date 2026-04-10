@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
       body.provider as TextInferenceProviderId | undefined,
     );
 
-    const model = selection.model ?? "grok-2-latest";
+    const model = selection.model ?? "grok-3";
     const apiKey = selection.apiKey;
     const baseUrl = selection.baseUrl;
 

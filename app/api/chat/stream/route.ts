@@ -1,15 +1,18 @@
 import { NextRequest } from "next/server";
-import { getEnv } from "@/lib/env";
-import {
-  getInferenceRuntimeConfig,
-  resolveTextProviderSelection,
-} from "@/lib/inference/config";
-import { TextInferenceProviderId } from "@/lib/inference/providers";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { getRequestIp } from "@/lib/security/request-ip";
 import { logger } from "@/lib/logging/logger";
 
 export const runtime = "nodejs";
+
+// Hardcoded xAI config — TEXT_INFERENCE_PROVIDER is xAI, uses XAI_TEXT_API_KEY
+const XAI_BASE_URL =
+  process.env.XAI_BASE_URL ||
+  process.env.XAI_TEXT_BASE_URL ||
+  "https://api.x.ai/v1";
+const XAI_API_KEY =
+  process.env.XAI_TEXT_API_KEY || process.env.XAI_API_KEY || null;
+const XAI_MODEL = process.env.XAI_TEXT_MODEL || "grok-3";
 
 const RATE_LIMIT_RULES = [
   { name: "chat_stream_per_minute", windowSec: 60, limit: 10 },
@@ -76,16 +79,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const env = getEnv();
-    const runtime = await getInferenceRuntimeConfig();
-    const { provider, selection } = resolveTextProviderSelection(
-      runtime,
-      body.provider as TextInferenceProviderId | undefined,
-    );
-
-    const model = selection.model ?? "grok-3";
-    const apiKey = selection.apiKey;
-    const baseUrl = selection.baseUrl;
+    const model = XAI_MODEL;
+    const apiKey = XAI_API_KEY;
+    const baseUrl = XAI_BASE_URL;
 
     if (!apiKey) {
       return new Response(
@@ -122,20 +118,23 @@ export async function POST(request: NextRequest) {
     }
 
     // Stream via standard /chat/completions (OpenAI-compatible, works with all xAI keys)
-    const stream = await fetch(`${baseUrl.replace(/\/+$/, "")}/chat/completions`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
+    const stream = await fetch(
+      `${baseUrl.replace(/\/+$/, "")}/chat/completions`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model,
+          messages: messages.map((m) => ({ role: m.role, content: m.content })),
+          temperature: body.temperature ?? 0.7,
+          max_tokens: body.maxTokens ?? 4096,
+          stream: true,
+        }),
       },
-      body: JSON.stringify({
-        model,
-        messages: messages.map((m) => ({ role: m.role, content: m.content })),
-        temperature: body.temperature ?? 0.7,
-        max_tokens: body.maxTokens ?? 4096,
-        stream: true,
-      }),
-    });
+    );
 
     if (!stream.ok) {
       const errorBody = await stream.text();

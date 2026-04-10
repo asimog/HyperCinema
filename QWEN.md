@@ -1,0 +1,2 @@
+## Qwen Added Memories
+- HyperCinema architecture: Vercel frontend (www.hypermyths.com), xAI for LLM inference, xAI for video generation, X bot (@HyperMythX), X API for tweet scraping, Telegram bot (@HyperMythXBot), public RPCs for 3 chain types: FOUR.MEME BNB, Clanker.world Base, Pump on Solana. No payments logic. All in Railway project 31e10f0f-b2fc-4b4d-bb0d-85d98bba5b93 with Postgres + Docker services. Workers service runs Telegram bot + X bot + job processing. Video-service handles xAI video generation + Supabase S3 storage.

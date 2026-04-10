@@ -2,13 +2,14 @@
 
 :root {
   --background: #000000;
-  --foreground: #ffffff;
+  --foreground: #f0f0f0;
   --panel: #0a0a0a;
   --panel-soft: #080808;
-  --line: rgba(255, 255, 255, 0.12);
-  --line-strong: rgba(255, 255, 255, 0.25);
-  --muted: #666666;
-  --text-subtle: #999999;
+  --line: rgba(255, 255, 255, 0.15);
+  --line-strong: rgba(255, 255, 255, 0.3);
+  --muted: #a0a0a0;
+  --text-secondary: #c8c8c8;
+  --text-tertiary: #888888;
   --accent: #ffe500;
   --accent-strong: #e6ce00;
   --accent-soft: #fff9cc;
@@ -182,7 +183,7 @@ textarea {
   gap: 0.75rem;
   padding: 0.85rem 0.5rem;
   border-radius: 0.75rem;
-  color: var(--muted);
+  color: var(--text-tertiary);
   font-family: var(--font-ibm-plex-mono), monospace;
   font-size: 0.8rem;
   letter-spacing: 0.08em;
@@ -285,7 +286,7 @@ textarea {
   padding: 0.4rem 0.74rem;
   border-radius: 0.2rem;
   border: 1px solid transparent;
-  color: var(--muted);
+  color: var(--text-tertiary);
   font-family: var(--font-ibm-plex-mono), monospace;
   font-size: 0.66rem;
   letter-spacing: 0.1em;
@@ -463,7 +464,7 @@ textarea {
 
 .route-summary {
   margin: 0;
-  color: rgba(222, 229, 235, 0.72);
+  color: var(--text-secondary);
   font-size: 0.96rem;
   line-height: 1.58;
 }
@@ -591,7 +592,7 @@ textarea {
 .trend-card p,
 .trend-hero p {
   margin: 0;
-  color: var(--text-subtle);
+  color: var(--text-secondary);
 }
 
 .trend-hero {
@@ -718,8 +719,8 @@ textarea {
 .button-secondary,
 .cinema-secondary-button {
   background: #000;
-  border-color: #333;
-  color: #999;
+  border-color: #444;
+  color: #ccc;
 }
 
 .button-primary:hover,
@@ -756,7 +757,7 @@ textarea {
 .mini-item-card span,
 .summary-card span,
 .module-preview span {
-  color: var(--muted);
+  color: var(--text-tertiary);
   font-size: 0.72rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -779,7 +780,7 @@ textarea {
 
 .surface-card p {
   margin: 0.65rem 0 0;
-  color: var(--text-subtle);
+  color: var(--text-secondary);
   font-size: 0.92rem;
 }
 
@@ -798,7 +799,7 @@ textarea {
 
 .summary-card p {
   margin: 0;
-  color: var(--text-subtle);
+  color: var(--text-secondary);
   font-size: 0.95rem;
   line-height: 1.65;
 }
@@ -809,7 +810,7 @@ textarea {
 }
 
 .field span {
-  color: rgba(198, 209, 219, 0.62);
+  color: var(--text-tertiary);
   font-size: 0.68rem;
   letter-spacing: 0.16em;
   text-transform: uppercase;
@@ -875,7 +876,7 @@ select {
 .inline-note {
   border: 1px solid rgba(255, 255, 255, 0.12);
   background: rgba(155, 200, 192, 0.06);
-  color: var(--text-subtle);
+  color: var(--text-secondary);
 }
 
 .inline-note code {
@@ -1014,7 +1015,7 @@ select {
 
 .home-studio-copy p {
   margin: 0;
-  color: var(--text-subtle);
+  color: var(--text-secondary);
   font-size: 0.9rem;
 }
 
@@ -1260,7 +1261,7 @@ select {
 }
 
 .toggle-row span {
-  color: var(--text-subtle);
+  color: var(--text-secondary);
   font-size: 0.92rem;
 }
 
@@ -2639,14 +2640,14 @@ select {
 .footer-brand {
   font-family: var(--font-ibm-plex-mono), monospace;
   font-size: 0.7rem;
-  color: #555;
+  color: #aaa;
   display: flex;
   align-items: center;
   gap: 0.5rem;
 }
 
 .footer-divider {
-  color: #333;
+  color: #555;
 }
 
 .footer-link {
@@ -2668,7 +2669,7 @@ select {
 .footer-nav-link {
   font-family: var(--font-ibm-plex-mono), monospace;
   font-size: 0.7rem;
-  color: #555;
+  color: #aaa;
   text-decoration: none;
   transition: color 0.15s;
 }

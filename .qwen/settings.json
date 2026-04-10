@@ -23,7 +23,8 @@
       "Bash(railway *)",
       "Bash(set *)",
       "Bash(powershell *)",
-      "Bash(taskkill *)"
+      "Bash(taskkill *)",
+      "Bash(git show *)"
     ]
   },
   "$version": 3

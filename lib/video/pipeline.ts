@@ -36,7 +36,7 @@ type VideoPayloadBuilder = (params: VideoPayloadParams) => VideoPayloadResult;
 
 const VIDEO_PROVIDER_BUILDERS: Partial<Record<VideoInferenceProviderId, VideoPayloadBuilder>> = {
   xai: ({ walletStory, script, model }) => ({
-    xai: buildXAiVideoRenderPayload({ walletStory, script, model, resolution: "720p" }),
+    xai: buildXAiVideoRenderPayload({ walletStory, script, model, resolution: "720p", aspectRatio: "1:1" }),
   }),
   elizaos: ({ walletStory, script, model }) => ({
     elizaos: buildElizaOSVideoRenderPayload({

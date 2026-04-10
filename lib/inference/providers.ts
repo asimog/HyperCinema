@@ -79,7 +79,7 @@ export const TEXT_INFERENCE_PROVIDER_OPTIONS: ProviderOption<TextInferenceProvid
     label: "xAI",
     description: "Grok text inference via xAI Responses API. Primary provider.",
     implemented: true,
-    defaultModel: "grok-4.20-reasoning",
+    defaultModel: "grok-3",
     envHint: "XAI_TEXT_API_KEY",
     fields: ["apiKey", "baseUrl", "model"],
   },

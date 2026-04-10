@@ -279,7 +279,7 @@ export async function renderWithOpenMontage(
               wallet: "agent-pipeline",
               durationSeconds: totalDuration,
               withSound: false,
-              resolution: env.VIDEO_RESOLUTION ?? "480p",
+              resolution: env.VIDEO_RESOLUTION ?? "720p",
               hookLine: scenes[0]?.narration ?? "Opening scene",
               scenes: scenePayload,
               videoEngine: "openmontage",

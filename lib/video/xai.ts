@@ -15,7 +15,7 @@ export interface XAiVideoRenderPayload {
   provider: "xai";
   model: string;
   resolution: "480p" | "720p";
-  aspectRatio: "16:9";
+  aspectRatio: "1:1" | "16:9" | "9:16";
   prompt: string;
   styleHints: string[];
   sceneMetadata: XAiVideoSceneMetadata[];
@@ -78,12 +78,13 @@ export function buildXAiVideoRenderPayload(input: {
   script: GeneratedCinematicScript;
   model?: string;
   resolution?: "480p" | "720p";
+  aspectRatio?: "1:1" | "16:9" | "9:16";
 }): XAiVideoRenderPayload {
   return {
     provider: "xai",
     model: input.model ?? "grok-imagine-video",
     resolution: input.resolution ?? "720p",
-    aspectRatio: "16:9",
+    aspectRatio: input.aspectRatio ?? "1:1",
     prompt: buildPrompt(input),
     styleHints: [
       "cinematic",

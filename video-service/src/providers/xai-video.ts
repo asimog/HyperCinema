@@ -4,7 +4,7 @@ import { getVideoServiceEnv } from "../env";
 export interface GenerateXAiClipInput {
   model: string;
   resolution: "480p" | "720p";
-  aspectRatio?: "16:9";
+  aspectRatio?: "1:1" | "16:9" | "9:16";
   prompt: string;
   durationSeconds: number;
   imageUrl?: string | null;

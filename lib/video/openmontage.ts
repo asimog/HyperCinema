@@ -83,7 +83,7 @@ export function buildOpenMontageRenderPayload(input: {
   return {
     provider: "openmontage",
     compositionId: input.compositionId ?? "CinematicRenderer",
-    resolution: input.resolution ?? "1080p",
+    resolution: input.resolution ?? "720p",
     prompt: buildPrompt(input),
     workerProvider: input.workerProvider,
     workerModel: input.workerModel,

@@ -783,7 +783,7 @@ export function buildGoogleVeoRenderPayload(input: {
   return {
     provider: "google_veo",
     model: input.model ?? "veo-3.1-fast-generate-001",
-    resolution: input.resolution ?? "1080p",
+    resolution: input.resolution ?? "720p",
     generateAudio,
     prompt: buildPrompt({
       story: input.walletStory,

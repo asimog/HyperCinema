@@ -5,8 +5,6 @@ import {
   executeRetryFailedJobCommand,
 } from "./commands";
 import { processJob } from "./process-job";
-import { setupTelegramBot } from "./telegram-bot";
-import { startXBotPolling } from "./x-bot";
 
 class BodyTooLargeError extends Error {
   constructor() {
@@ -203,11 +201,6 @@ const server = createServer(async (request, response) => {
 server.requestTimeout = 30_000;
 server.headersTimeout = 35_000;
 
-// ── Start background bots ────────────────────────────────────────────
-
-const telegramBot = setupTelegramBot();
-const xBotInterval = startXBotPolling();
-
 // ── Graceful shutdown ────────────────────────────────────────────────
 
 function gracefulShutdown(signal: string) {
@@ -216,21 +209,6 @@ function gracefulShutdown(signal: string) {
     stage: "shutdown",
     signal,
   });
-
-  // Stop Telegram bot polling
-  if (telegramBot) {
-    telegramBot.stopPolling();
-    logger.info("tg_bot_stopped", {
-      component: "telegram-bot",
-      stage: "shutdown",
-    });
-  }
-
-  // Stop X bot polling interval
-  if (xBotInterval) {
-    clearInterval(xBotInterval);
-    logger.info("x_bot_stopped", { component: "x-bot", stage: "shutdown" });
-  }
 
   // Close HTTP server
   server.close(() => {
